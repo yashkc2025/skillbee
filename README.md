@@ -131,3 +131,8 @@ fix: fix alignment issue on mobile
 
 - Deployment handled via GitHub Actions (CI/CD)
 - Store secrets and keys in `.env` (never commit them)
+
+## Tech Stack
+
+![image](https://github.com/user-attachments/assets/c90b0112-56ef-4b81-9960-1c99ecbddca9)
+
