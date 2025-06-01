@@ -96,7 +96,7 @@ npm run format
 Use clear, structured commit messages:
 
 ```
-type(scope): short description
+type: short description
 ```
 
 **Types:**
