@@ -1,10 +1,15 @@
 # 🛠️ Software Engineering Project – May 2025
 
-The below will be how to set up the git repo and everything but i am adding how to run the controllers and do api calls to chcek if everything is working in backend properly.I have added an extra file db.py because the previous structure was causing a loop between the files.Everything else is the same as Yathin had updated before for the database except for the changes i made in routes.py and the new file controllers.py for the logic.
+The below will be how to set up the git repo and everything but i am adding how to run the controllers and do api calls to check if everything is working in backend properly.I have added an extra file db.py because the previous structure was causing a loop between the files.Everything else is the same as Yathin had updated before for the database except for the changes i made in routes.py and the new file controllers.py for the logic.
+
+How to run?
+open integrated terminal in directory of backend 
+then python run.py
+after that we install extension of Rapid API client and follow below instructions:
 
 For context i will be using Rapid API client as an extension in VS code for this.
 
-for parent registration i have the route: ​http://127.0.0.1:5000/auth/parent_register so i will paste this on to the spce given in the extension then select the required method(post) and send a json body.
+for parent registration i have the route: ​http://127.0.0.1:5000/auth/parent_register so i will paste this on to the sapce given in the extension then select the required method(post) and send a json body.
 
 the body i used:
 
@@ -13,6 +18,7 @@ the body i used:
 "password":"abc",
 "profile_image":""}
 
+and then evaluate whether the correct status code and message are being displayed or not. 
 
 for children registration the route used: http://127.0.0.1:5000/auth/children_register
 
