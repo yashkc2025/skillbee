@@ -8,7 +8,7 @@ then install the dependencies:
 pip install -r requirements.txt
 then python run.py
 
-after that we install extension of Rapid API client and follow below instructions:
+After that we install extension of Rapid API client and follow below instructions:
 
 For context i will be using Rapid API client as an extension in VS code for this.
 
