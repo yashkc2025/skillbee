@@ -1,4 +1,4 @@
-from . import db
+from .db import db
 from sqlalchemy import CheckConstraint, Index, UniqueConstraint
 from sqlalchemy.dialects.sqlite import JSON
 from datetime import datetime
