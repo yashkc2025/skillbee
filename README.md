@@ -4,7 +4,10 @@ The below will be how to set up the git repo and everything but i am adding how 
 
 How to run?
 open integrated terminal in directory of backend 
+then install the dependencies:
+pip install -r requirements.txt
 then python run.py
+
 after that we install extension of Rapid API client and follow below instructions:
 
 For context i will be using Rapid API client as an extension in VS code for this.
