@@ -1,0 +1,15 @@
+{
+    "auth": {
+        "parent": {
+            "login": "/auth/parent_login",
+            "register": "/auth/parent_register"
+        },
+        "child": {
+            "login": "/auth/child_login",
+            "register": "/auth/child_register"
+        },
+        "admin": {
+            "login": "/auth/admin_login"
+        }
+    }
+}
