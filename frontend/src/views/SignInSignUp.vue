@@ -9,39 +9,38 @@
                         <div class="user-btn-box" v-if=!userType>
                             <button class="btn user-btn" @click="admin">Admin</button>
                             <button class="btn user-btn" @click="parent">Parent</button>
-                            <button class="btn user-btn" @click="child">Independent Child</button>
+                            <button class="btn user-btn" @click="child">Child</button>
                         </div>
                         <form v-if="userType" @submit.prevent="loginUser">
                             <div v-if="userType === 'Child'">
                                 <div class="input-field">
-                                    <i class="username-icon"></i>
+                                    <i class="username-icon">i</i>
                                     <input type="text" placeholder="Username" v-model="register.username" required />
                                 </div>
                             </div>
 
                             <div v-if="userType === 'Parent'">
                                 <div class="input-field">
-                                    <i class="email_icon"></i>
+                                    <i class="email_icon">i</i>
                                     <input type="email" placeholder="Email" v-model="register.email" required />
                                 </div>
                             </div>
 
                             <div class="input-field">
-                                <i class="password-icon"></i>
+                                <i class="password-icon">i</i>
                                 <input type="password" placeholder="Password" v-model="login.password" required />
                             </div>
                             <button class="btn solid" type="submit">Login</button>
                         </form>
 
-                        <div v-if="isForm" class="sign-in-form">
+                        <div v-if="isForm" class="sign-in-form-btn">
                             <p style="margin: 0; color: grey;">--------------------------------- &nbsp; or &nbsp;
                                 ---------------------------------</p>
                             <h2 class="title">Sign in <span>as </span> </h2>
                             <div class="forms-btn">
                                 <button class="btn" v-if="userType !== 'Admin'" @click="admin">Admin</button>
                                 <button class="btn" v-if="userType !== 'Parent'" @click="parent">Parent</button>
-                                <button class="btn" v-if="userType !== 'Child'" @click="child">Independent
-                                    Child</button>
+                                <button class="btn" v-if="userType !== 'Child'" @click="child">Child</button>
                             </div>
                         </div>
 
@@ -50,42 +49,42 @@
                     <!-- Sign Up Form -->
                     <div class="sign-up-form" v-else>
                         <h2 class="title">Sign up <span>as {{ userType }} </span> </h2>
-                        <div class="user-btn-box" v-if=!userType>
+                        <div class="user-btn-box btn-box-signup" v-if=!userType>
                             <button class="btn user-btn" @click="parent">Parent</button>
                             <button class="btn user-btn" @click="child">Independent Child</button>
                         </div>
                         <form v-if="userType" @submit.prevent="registerUser">
                             <div class="input-field">
-                                <font-awesome-icon :icon="['fas', 'user']" />
+                                <i class="name-icon">i</i>
                                 <input type="text" placeholder="Name" required>
                             </div>
 
                             <div class="input-field">
-                                <i class="email-icon"></i>
+                                <i class="email-icon">i</i>
                                 <input type="email" placeholder="Email" v-model="register.email" required />
                             </div>
 
                             <div v-if="userType === 'Child'">
                                 <div class="input-field">
-                                    <i class="username_icon"></i>
+                                    <i class="username_icon">i</i>
                                     <input type="text" placeholder="Username" v-model="register.username" required />
                                 </div>
                             </div>
 
                             <div class="input-field">
-                                <i class="bx bx-lock"></i>
+                                <i class="bx bx-lock">i</i>
                                 <input type="password" placeholder="Password" v-model="register.password" required />
                             </div>
 
                             <div v-if="userType === 'Child'">
                                 <div class="input-field">
-                                    <i class="calender-icon"></i>
+                                    <i class="calender-icon">i</i>
                                     <input type="date" placeholder="Date of Birth" v-model="register.dob" required />
                                 </div>
                             </div>
                             <div v-if="userType === 'Child'">
                                 <div class="input-field">
-                                    <i class="school-icon"></i>
+                                    <i class="school-icon">i</i>
                                     <input type="text" placeholder="School" v-model="register.school" required />
                                 </div>
                             </div>
@@ -175,8 +174,8 @@ export default {
                 alert(`Logging in Parent: ${this.login.email}`);
             } else if (this.userType === 'Child' && this.login.username && this.login.password) {
                 alert(`Logging in Child: ${this.login.username}`);
-            } else if (this.userType === 'Admin' && this.login.username && this.login.password) {
-                alert(`Logging in Admin: ${this.login.username}`);
+            } else if (this.userType === 'Admin' && this.login.password) {
+                alert(`Logging in Admin:`);
             } else {
                 alert('Please fill in all required fields.');
             }
@@ -211,27 +210,26 @@ export default {
 <style scoped>
 .body {
     font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
 }
 
 :global(body) {
     background-color: rgba(255, 240, 240, 0.6);
     margin: 0;
     padding: 0;
-    min-height: 100vh;
+
 }
 
 .container {
-    position: fixed;
-    left: 20%;
-    top: 10%;
-    width: 60%;
-    min-height: 80%;
+    position: absolute;
+    width: 800px;
+    height: 550px;
     background: #f6f5f7;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     overflow: hidden;
-    border-radius: 4%;
+    border-radius: 2rem;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
@@ -241,10 +239,7 @@ export default {
     height: 100%;
     top: 0;
     left: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.4s ease;
+    transition: all 0.3s ease;
 }
 
 .signin-signup {
@@ -264,10 +259,16 @@ export default {
     margin: 0 auto;
 }
 
+.sign-in-form-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0 auto;
+}
+
 form {
-    border-radius: 10px;
     padding: 2rem;
-    width: 300px;
+    width: 82%;
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -325,7 +326,11 @@ span {
     flex-direction: column;
     align-items: center;
     gap: 1rem;
-    width: 300px;
+    width: 210%;
+}
+
+.btn-box-signup {
+    width: 138%;
 }
 
 .user-btn {
@@ -355,34 +360,27 @@ span {
     position: absolute;
     width: 150%;
     height: 100%;
-    top: 0;
     right: -100%;
     display: flex;
     align-items: center;
-    justify-content: center;
     transition: all 1s ease-in-out;
     background-color: #ef476f;
-    /* border-radius: 20%; */
 }
 
 .slide {
     color: #fff;
-    border-radius: 10px;
     padding: 2rem;
-    width: 300px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 25%;
 }
 
 .left-slide {
     position: absolute;
-    left: 3%;
+    left: 0;
 }
 
 .right-slide {
     position: absolute;
-    right: 3%;
+    right: 0;
 }
 
 .sign-up-mode .forms-container {
@@ -391,5 +389,74 @@ span {
 
 .sign-up-mode .slider-container {
     right: 50%;
+}
+
+@media screen and (min-width: 550px) and (max-width: 800px) {
+    .container {
+        height: 90%;
+        border-radius: 2rem;
+        width: 90%;
+    }
+}
+
+@media screen and (max-width: 550px) {
+    .container {
+        height: 90%;
+        width: 90%;
+        border-radius: 2rem 2rem;
+    }
+
+    .forms-container {
+        width: 100%;
+        height: 80%;
+        top: 0;
+    }
+
+    .slider-container {
+        width: 100%;
+        top: 80%;
+        right: 0;
+        height: 150%;
+        flex-direction: column;
+    }
+
+    .slide {
+        width: 80%;
+        height: 7%;
+        justify-items: center;
+    }
+
+    .content h2 {
+        margin-top: -8%;
+        margin-bottom: 0;
+    }
+
+    .content p {
+        margin-bottom: 3px;
+    }
+
+    .left-slide {
+        margin-top: 1rem;
+        left: auto;
+    }
+
+    .right-slide {
+        right: auto;
+        bottom: 0;
+    }
+
+    .title {
+        top: 10%;
+    }
+
+    .sign-up-mode .forms-container {
+        top: 20%;
+        left: 0;
+    }
+
+    .sign-up-mode .slider-container {
+        top: -130%;
+        right: 0;
+    }
 }
 </style>
