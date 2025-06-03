@@ -6,6 +6,8 @@
   --color-thunder: #073b4c;
   --color-sky: #70d6ff;
 
+  --color-light: #fef8f8;
+  --color-border: #e6e6e6;
   --color-background: #fef8f8;
 
   --color-text-dark: #111;
@@ -27,6 +29,8 @@
   --size-xl: 45px;
   --size-2xl: 65px;
   --size-3xl: 85px;
+
+  --border-radius: var(--size-sm);
 }
 
 *,
