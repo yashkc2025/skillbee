@@ -1,6 +1,36 @@
-@import './base.css';
 @import './fonts.css';
+@import './base.css';
 
 #app {
-  margin: 0 auto;
+  height: 100%;
+}
+
+/* width */
+::-webkit-scrollbar {
+  width: 15px;
+  height: 15px;
+  margin-top: 0;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: var(--accent-500);
+  background-clip: content-box;
+  border: 5px solid transparent;
+  border-radius: var(--size-sm);
+}
+
+::selection {
+  background: var(--accent-200);
+}
+
+.Vue-Toastification__toast {
+  border-radius: var(--size-md);
+  min-height: 45px !important;
+  padding: var(--size-xs) !important;
 }
