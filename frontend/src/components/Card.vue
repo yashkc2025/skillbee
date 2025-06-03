@@ -13,7 +13,5 @@
   flex-direction: column;
   border: 1px solid #e6e6e6;
   border-radius: var(--border-radius);
-  /* Testin only */
-  width: 400px;
 }
 </style>
