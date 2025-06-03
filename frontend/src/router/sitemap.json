@@ -1,0 +1,18 @@
+{
+    "auth": {
+        "parent": {
+            "login": "/auth/parent_login",
+            "register": "/auth/parent_register",
+            "forgot": "/auth/parent_forgot_password"
+        },
+        "child": {
+            "login": "/auth/child_login",
+            "register": "/auth/child_register",
+            "forgot": "/auth/child_forgot_password"
+        },
+        "admin": {
+            "login": "/auth/admin_login",
+            "forgot": "/auth/admin_forgot_password"
+        }
+    }
+}

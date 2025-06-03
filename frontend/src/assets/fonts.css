@@ -1,0 +1,80 @@
+@font-face {
+  font-family: 'Delius';
+  src: url('/fonts/Delius-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Itim';
+  src: url('/fonts/Itim-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Jua';
+  src: url('/fonts/Jua-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* === VAG Rounded Next font faces === */
+
+@font-face {
+  font-family: 'VAGRoundedNext';
+  src: url('/fonts/vag/VAG-Rounded-Next-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'VAGRoundedNext';
+  src: url('/fonts/vag/VAG-Rounded-Next-Bold-It.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'VAGRoundedNext';
+  src: url('/fonts/vag/VAG-Rounded-Next-Black.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'VAGRoundedNext';
+  src: url('/fonts/vag/VAG-Rounded-Next-Black-It.otf') format('opentype');
+  font-weight: 800;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'VAGRoundedNext';
+  src: url('/fonts/vag/VAG-Rounded-Next-ExtraBlack.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'VAGRoundedNext';
+  src: url('/fonts/vag/VAG-Rounded-Next-ExtraBlack-It.otf') format('opentype');
+  font-weight: 900;
+  font-style: italic;
+}
+
+.ft-text {
+  font-family: 'Delius', sans-serif;
+}
+
+.ft-head-1 {
+  font-family: 'VAGRoundedNext', sans-serif;
+  font-weight: 700;
+}
+
+.ft-head-2 {
+  font-family: 'VAGRoundedNext', sans-serif;
+  font-weight: 800;
+}
+
+.ft-head-3 {
+  font-family: 'VAGRoundedNext', sans-serif;
+  font-weight: 900;
+}
