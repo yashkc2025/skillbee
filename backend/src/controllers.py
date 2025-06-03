@@ -5,6 +5,8 @@ from .demoData import createDummyData
 from werkzeug.security import generate_password_hash,check_password_hash
 from datetime import datetime
 import uuid
+from sqlalchemy.exc import IntegrityError
+import hashlib, time, random, string
 
 
 def parent_regisc(request):
@@ -137,3 +139,90 @@ def admin_loginc():
         return jsonify({"error": "Invalid credentials"}), 401
 
 
+        return jsonify({'message':'Child Registered'}), 201
+    
+def generate_custom_token(email):
+    timestamp = str(time.time())
+    random_str = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    raw_token = email + timestamp + random_str
+    return hashlib.sha256(raw_token.encode()).hexdigest()
+
+def parent_loginc(request):
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+
+    # Check for missing fields
+    if not email or not password:
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    # Look up parent in the database
+    parent = Parent.query.filter_by(email_id=email).first()
+    if not parent or not check_password_hash(parent.password, password):
+        return jsonify({'error': 'Invalid email or password'}), 401
+    
+    # generate session token
+    token = generate_custom_token(email)
+
+# store session info 
+    session_info = {
+        'parent_id': str(parent.parent_id),
+        'email': parent.email_id,
+        'login_time': time.time()
+    }
+
+    # Store session in DB
+    new_session = Session(session_id=token, session_information=session_info)
+    db.session.add(new_session)
+    db.session.commit()
+
+    # Respond to client
+    return jsonify({
+        'session': {
+            'token': token
+        },
+        'user': {
+            'id': str(parent.parent_id)
+        }
+    }), 200
+    
+def child_loginc(request):
+    data = request.get_json()
+    identifier = data.get('email_or_username')
+    password = data.get('password')
+
+    # Check for missing fields
+    if not identifier or not password:
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    # Look up child in the database
+    child = Child.query.filter(
+        (Child.username == identifier) | (Child.email_id == identifier)
+    ).first()
+    if not child or not check_password_hash(child.password, password):
+        return jsonify({'error': 'Invalid email or password'}), 401
+    
+    # generate session token
+    token = generate_custom_token(identifier)
+
+# store session info 
+    session_info = {
+        'parent_id': str(child.child_id),
+        'email': identifier,
+        'login_time': time.time()
+    }
+
+    # Store session in DB
+    new_session = Session(session_id=token, session_information=session_info)
+    db.session.add(new_session)
+    db.session.commit()
+
+    # Respond to client
+    return jsonify({
+        'session': {
+            'token': token
+        },
+        'user': {
+            'id': str(child.child_id)
+        }
+    }), 200
