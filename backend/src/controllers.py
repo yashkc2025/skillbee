@@ -8,6 +8,7 @@ from datetime import datetime
 
 
 def parent_regisc(request):
+    # Function for parent registration that will later be sent as a request to the routes
     data=request.get_json()
     name=data.get('name')
     email=data.get('email_id')
@@ -29,6 +30,7 @@ def parent_regisc(request):
         return jsonify({'message':'Parent Registered'}), 201
 
 def child_regisc(request):
+    # Function for children registration that will later be sent as a request to the routes
     data=request.get_json()
     name=data.get('name')
     email=data.get('email_id')

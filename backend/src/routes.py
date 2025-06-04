@@ -14,8 +14,10 @@ def dummyData():
 
 @api.route('/auth/parent_register',methods=['POST'])
 def parent_register():
+    # Route for Parent Registration
     return parent_regisc(request)
 
 @api.route('/auth/children_register',methods=['POST'])
 def child_register():
+    # Route for Children Registration
     return child_regisc(request)
