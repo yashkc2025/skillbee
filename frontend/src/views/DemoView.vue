@@ -1,22 +1,38 @@
 <script setup lang="ts">
-import Card from '@/components/Card.vue';
-import CardItem from '@/components/CardItem.vue';
+import sitemap from "../router/sitemap.json";
 
+const navOptions = [
+  {
+    label: "Dashboard",
+    link: sitemap.child_app.dashboard,
+  },
+  {
+    label: "Lessons",
+    link: sitemap.child_app.lessons,
+  },
+  {
+    label: "Achievements",
+    link: sitemap.child_app.achievements,
+  },
+  {
+    label: "Settings",
+    link: sitemap.child_app.settings,
+  },
+];
 </script>
 
 <template>
   <main>
-    <Card>
-      <CardItem>
-        <p class="ft-head-1 text-xl">I am a heading!</p>
-      </CardItem>
-      <CardItem>
-        <p class="text-sm ft-delius">This is part of a UI system created for an ed-tech platform. A product
-          loved
-          by both students and educators.
-        </p>
-      </CardItem>
-    </Card>
+    <div class="navbar">
+      <section class="logo-parent">
+        <img src="/logo.png" alt="" />
+      </section>
+      <section class="items-parent">
+        <a :href="n.link" class="nav-items" v-for="n in navOptions" :key="n.label">{{
+          n.label
+          }}</a>
+      </section>
+    </div>
   </main>
 </template>
 
@@ -26,5 +42,49 @@ main {
   justify-content: center;
   align-items: center;
   height: 100vh;
+}
+
+.navbar {
+  padding: var(--size-2xs) var(--size-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  display: flex;
+  flex-direction: row;
+  background-color: var(--color-text-light);
+  box-shadow: 0 8px 32px var(--color-border);
+  gap: var(--size-sm);
+}
+
+.items-parent {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+a {
+  color: var(--color-text-dark);
+  text-decoration: none;
+  padding: var(--size-2xs) var(--size-xs);
+  border-radius: calc(var(--border-radius) / 2);
+  font-size: var(--font-sm);
+  /* border-radius: var(--border-radius); */
+  border: 1px solid none;
+  font-family: "VAGRoundedNext";
+  font-weight: 400;
+}
+
+a:hover {
+  background-color: var(--color-background);
+  border-color: var(--color-border);
+}
+
+.logo-parent {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+img {
+  width: 15px;
 }
 </style>
