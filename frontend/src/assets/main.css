@@ -1,35 +1,36 @@
+@import './fonts.css';
 @import './base.css';
 
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-weight: normal;
+  height: 100%;
 }
 
-a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
+/* width */
+::-webkit-scrollbar {
+  width: 15px;
+  height: 15px;
+  margin-top: 0;
 }
 
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
+/* Track */
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
 }
 
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: var(--accent-500);
+  background-clip: content-box;
+  border: 5px solid transparent;
+  border-radius: var(--size-sm);
+}
 
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
+::selection {
+  background: var(--accent-200);
+}
+
+.Vue-Toastification__toast {
+  border-radius: var(--size-md);
+  min-height: 45px !important;
+  padding: var(--size-xs) !important;
 }

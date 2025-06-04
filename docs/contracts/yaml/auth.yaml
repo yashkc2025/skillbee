@@ -1,0 +1,220 @@
+openapi: 3.0.3
+info:
+  title: Authentication API
+  version: 1.0.0
+  description: API for Parent and Child authentication
+
+paths:
+  /auth/parent_register:
+    post:
+      summary: Registers a parent account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParentRegisterRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '400':
+          description: Bad Request – Missing or malformed fields
+        '409':
+          description: Conflict – Email already registered
+
+  /auth/parent_login:
+    post:
+      summary: Authenticates an existing parent account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParentLoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '400':
+          description: Bad Request – Missing required fields
+        '401':
+          description: Unauthorized – Invalid email or password
+
+  /auth/children_register:
+    post:
+      summary: Registers a new child account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChildRegisterRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '400':
+          description: Bad Request – Invalid/missing fields
+        '409':
+          description: Conflict – Email or username already in use
+
+  /auth/children_login:
+    post:
+      summary: Authenticates a child account via username or email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChildLoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '400':
+          description: Bad Request – Missing or malformed input
+        '401':
+          description: Unauthorized – Invalid credentials
+        '404':
+          description: Not Found – User does not exist
+
+  /auth/get_user:
+    get:
+      summary: Fetches the currently authenticated user's profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetUserResponse'
+        '401':
+          description: Unauthorized – Invalid credentials
+        '403':
+          description: Bad Request – Missing or malformed token
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ParentRegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        profile_image:
+          type: string
+          description: base64 encoded image
+          nullable: true
+
+    ParentLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    ChildRegisterRequest:
+      type: object
+      required: [email, password, username, dob, school]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        username:
+          type: string
+        dob:
+          type: string
+          format: date
+        school:
+          type: string
+        profile_image:
+          type: string
+          description: base64 encoded image
+          nullable: true
+
+    ChildLoginRequest:
+      type: object
+      required: [email_or_username, password]
+      properties:
+        email_or_username:
+          type: string
+        password:
+          type: string
+
+    AuthSuccessResponse:
+      type: object
+      properties:
+        session:
+          type: object
+          description: Contains token and other session data
+          properties:
+            token:
+              type: string
+            # Add more fields as needed
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+
+    GetUserResponse:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            role:
+              type: string
+              enum: [parent, child]
+            name:
+              type: string
+              nullable: true
+            username:
+              type: string
+              nullable: true
+            email:
+              type: string
+            dob:
+              type: string
+              format: date
+              nullable: true
+            school:
+              type: string
+              nullable: true
+            profile_image:
+              type: string
+              nullable: true
+              description: base64 or null
