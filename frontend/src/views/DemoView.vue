@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import Navbar from "@/components/child/Navbar.vue";
+import AdminNavbar from "@/components/admin/AdminNavbar.vue";
+import ChildNavbar from "@/components/child/ChildNavbar.vue";
 </script>
 
 <template>
   <main>
-    <Navbar />
+    <ChildNavbar />
+    <AdminNavbar />
   </main>
 </template>
 
@@ -14,5 +16,7 @@ main {
   justify-content: center;
   align-items: center;
   height: 100vh;
+  gap: 20px;
+  flex-direction: column;
 }
 </style>
