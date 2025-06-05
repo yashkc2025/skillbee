@@ -7,7 +7,7 @@ class Admin(db.Model):
     admin_id = db.Column(db.Integer, primary_key=True)
     email_id = db.Column(db.Text, nullable=False, index=True)
     password = db.Column(db.Text, nullable=False)
-
+    
 
 class Session(db.Model):
     session_id = db.Column(db.Text, primary_key=True)
