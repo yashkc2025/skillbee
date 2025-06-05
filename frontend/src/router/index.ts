@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DemoView from '@/views/DemoView.vue'
 import ChildDashboard from '@/views/child/ChildDashboard.vue'
-// import ParentLoginView from './auth/ParentLoginView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

@@ -22,7 +22,7 @@ const navOptions = [
 </script>
 
 <template>
-  <div class="navbar">
+  <div class="navbar box-shadow">
     <section class="logo-parent">
       <img src="/logo.png" alt="" />
     </section>
@@ -45,8 +45,8 @@ const navOptions = [
   display: flex;
   flex-direction: row;
   background-color: var(--color-text-light);
-  box-shadow: 0 8px 32px var(--color-border);
   gap: var(--size-xl);
+  max-width: fit-content;
 }
 
 .items-parent,
@@ -58,7 +58,6 @@ const navOptions = [
 
 a {
   color: var(--color-text-dark);
-  text-decoration: none;
   padding: var(--size-2xs) var(--size-xs);
   border-radius: calc(var(--border-radius) / 2);
   font-size: var(--font-sm);
@@ -66,10 +65,11 @@ a {
   border: 1px solid none;
   font-family: "VAGRoundedNext";
   font-weight: 400;
+  text-decoration: none;
 }
 
 a:hover {
-  background-color: var(--color-background);
+  background-color: var(--color-hover);
   border-color: var(--color-border);
 }
 

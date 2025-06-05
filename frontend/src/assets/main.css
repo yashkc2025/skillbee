@@ -34,3 +34,12 @@
   min-height: 45px !important;
   padding: var(--size-xs) !important;
 }
+
+.box-shadow {
+  box-shadow: 0 8px 32px var(--color-border);
+}
+
+.hover:hover {
+  background-color: var(--color-hover);
+  border-color: var(--color-border);
+}

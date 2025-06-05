@@ -22,7 +22,7 @@ const navOptions = [
 </script>
 
 <template>
-  <div class="navbar">
+  <div class="navbar box-shadow">
     <section class="logo-parent">
       <img src="/logo.png" alt="" />
     </section>
@@ -44,7 +44,6 @@ const navOptions = [
   border-radius: var(--border-radius);
   display: flex;
   flex-direction: row;
-  background-color: var(--color-text-light);
   box-shadow: 0 8px 32px var(--color-border);
   gap: var(--size-xl);
 }
@@ -69,7 +68,7 @@ a {
 }
 
 a:hover {
-  background-color: var(--color-background);
+  background-color: var(--color-hover);
   border-color: var(--color-border);
 }
 
