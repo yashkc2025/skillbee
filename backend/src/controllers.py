@@ -74,11 +74,6 @@ def parent_loginc(request):
     """
     Handle parent login request by validating credentials and generating a session token.
 
-    This function expects a JSON payload containing 'email' and 'password'.
-    It authenticates the parent using the provided credentials, generates a custom
-    session token, stores the session in the database, and returns a response
-    with the session token and parent ID.
-
     Args:
         request (flask.Request): The incoming HTTP request object containing JSON data.
 
@@ -123,11 +118,6 @@ def parent_loginc(request):
 def child_loginc(request):
     """
     Handle child login request by validating credentials and generating a session token.
-
-    This function expects a JSON payload containing 'email_or_username' and 'password'.
-    It authenticates the parent using the provided credentials, generates a custom
-    session token, stores the session in the database, and returns a response
-    with the session token and parent ID.
 
     Args:
         request (flask.Request): The incoming HTTP request object containing JSON data.

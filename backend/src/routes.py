@@ -22,8 +22,15 @@ def child_register():
 
 @api.route('/auth/parent_login',methods=['POST'])
 def parent_login():
+    """
+    Route for parent login
+    """
+    
     return parent_loginc(request)
 
 @api.route('/auth/children_login', methods=['POST'])
 def child_login():
+    """ 
+    Route for child login
+    """
     return child_loginc(request)
