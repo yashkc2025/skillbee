@@ -2,7 +2,7 @@ from flask import Blueprint,request
 from .models import Admin, Session, Parent, Child, Skill, Lesson, LessonHistory, Activity, ActivityHistory, Quiz, QuizHistory, Badge, BadgeHistory
 from .db import db
 from .demoData import createDummyData
-from .controllers import parent_regisc,child_regisc
+from .controllers import parent_regisc,child_regisc,admin_loginc
 
 
 api = Blueprint('api', __name__)
@@ -21,3 +21,8 @@ def parent_register():
 def child_register():
     # Route for Children Registration
     return child_regisc(request)
+
+@api.route('/auth/admin_login',methods=['POST'])
+def admin_login():
+    # Route for admin login
+    return admin_loginc()
