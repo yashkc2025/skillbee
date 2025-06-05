@@ -31,6 +31,9 @@ const navOptions = [
         n.label
         }}</a>
     </section>
+    <section class="third-parent">
+      <a class="danger" href="">Logout</a>
+    </section>
   </div>
 </template>
 
@@ -43,10 +46,11 @@ const navOptions = [
   flex-direction: row;
   background-color: var(--color-text-light);
   box-shadow: 0 8px 32px var(--color-border);
-  gap: var(--size-sm);
+  gap: var(--size-xl);
 }
 
-.items-parent {
+.items-parent,
+.third-parent {
   display: flex;
   flex-direction: row;
   gap: 10px;
@@ -76,6 +80,11 @@ a:hover {
 }
 
 img {
-  width: 15px;
+  width: 35px;
+  padding: var(--size-2xs) var(--size-xs);
+}
+
+.danger {
+  color: var(--color-pink);
 }
 </style>
