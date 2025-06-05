@@ -3,7 +3,6 @@ import HomeView from '../views/HomeView.vue'
 import SignInSignUp from '../views/SignInSignUp.vue'
 import DemoView from '@/views/DemoView.vue'
 // import ParentLoginView from './auth/ParentLoginView.vue'
-import SignInSignUp from '../views/SignInSignUp.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -15,7 +14,7 @@ const router = createRouter({
     },
 
     {
-      path: '/signin-signup',
+      path: '/login_register',
       name: 'sign',
       component: SignInSignUp,
     },
@@ -25,11 +24,6 @@ const router = createRouter({
       component: DemoView,
     },
 
-    {
-      path: '/signin-signup',
-      name: 'sign',
-      component: SignInSignUp,
-    },
     // {
     //   path: '/auth/parent_login',
     //   name: 'Login as Parent',
