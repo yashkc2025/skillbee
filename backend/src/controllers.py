@@ -99,7 +99,7 @@ def parent_loginc(request):
     session_info = {
         'parent_id': str(parent.parent_id),
         'email': parent.email_id,
-        'login_time': time.time()
+        'login_time': datetime.now().isoformat()
     }
 
     new_session = Session(session_id=token, session_information=session_info)
@@ -108,7 +108,8 @@ def parent_loginc(request):
 
     return jsonify({
         'session': {
-            'token': token
+            'token': token,
+            'login_time': session_info['login_time']
         },
         'user': {
             'id': str(parent.parent_id)
@@ -146,7 +147,7 @@ def child_loginc(request):
     session_info = {
         'parent_id': str(child.child_id),
         'email': identifier,
-        'login_time': time.time()
+        'login_time': datetime.now().isoformat()
     }
 
     new_session = Session(session_id=token, session_information=session_info)
@@ -155,7 +156,8 @@ def child_loginc(request):
 
     return jsonify({
         'session': {
-            'token': token
+            'token': token,
+            'login_time': session_info['login_time']
         },
         'user': {
             'id': str(child.child_id)
