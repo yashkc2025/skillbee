@@ -34,5 +34,9 @@ the body used:
   "profile_image": ""
 }
 
+How to run the tests?
+You need to have pytest installed for this.Once its installed you can just go to the terminal and type pytest and it will run all the required test.But if you want to run any specific test(function) then type :
+pytest test_auth.py -k test_parent_register_success
+
 
 Urjaswi Banerjee
