@@ -16,7 +16,7 @@ def parent_regisc(request):
     pic=data.get('profile_image')
     if pic == '':
         pic = None
-    if None in (name,email,password):
+    if not all([name,email,password]):
         return jsonify({'error':'Invalid/Missing fields'}), 400
     else:
         parent=Parent.query.filter_by(email_id=email).first()
@@ -27,7 +27,26 @@ def parent_regisc(request):
         new_parent=Parent(name=name,email_id=email,password=hashed_password,profile_image=pic)
         db.session.add(new_parent)
         db.session.commit()
-        return jsonify({'message':'Parent Registered'}), 201
+        # return jsonify({'message':'Parent Registered'}), 201
+        session_id = str(uuid.uuid4())
+        session_info = {
+            "parent_id": new_parent.parent_id,
+            "email_id": new_parent.email_id,
+            "login_time": datetime.now().isoformat()
+        }
+        new_session = Session(session_id=session_id, session_information=session_info)
+        db.session.add(new_session)
+        db.session.commit()
+        return jsonify({
+        "session": {
+            "token": session_id,
+            "login_time": session_info["login_time"]
+        },
+        "user": {
+            "id": new_parent.parent_id
+        }
+    }), 201
+    
 
 def child_regisc(request):
     # Function for children registration that will later be sent as a request to the routes
@@ -46,10 +65,9 @@ def child_regisc(request):
             dob = datetime.strptime(dob_str, '%Y-%m-%d').date()
         except ValueError:
             return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
-   
     else:
         dob = None
-    if None in (name,username,password,dob):
+    if not all([name,username,password,dob]):
         return jsonify({'error':'Invalid/Missing fields'}), 400
     else:
         children=Child.query.filter_by(username=username).first()
@@ -60,7 +78,27 @@ def child_regisc(request):
                         school=school,profile_image=pic)
         db.session.add(new_child)
         db.session.commit()
-        return jsonify({'message':'Child Registered'}), 201
+        # return jsonify({'message':'Child Registered'}), 201
+        session_id = str(uuid.uuid4())
+        session_info = {
+            "child_id": new_child.child_id,
+            # "name":new_child.name,
+            "username": new_child.username,
+            # "dob":new_child.dob,
+            "login_time": datetime.now().isoformat()
+        }
+        new_session = Session(session_id=session_id, session_information=session_info)
+        db.session.add(new_session)
+        db.session.commit()
+        return jsonify({
+        "session": {
+            "token": session_id,
+            "login_time": session_info["login_time"]
+        },
+        "user": {
+            "id": new_child.child_id
+        }
+    }), 201
     
 
 def admin_create():
