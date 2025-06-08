@@ -40,7 +40,7 @@ def test_children_register_success():
     "email_id": "testchild@gmail.com",
     "password": "abcdef",
     "username": "ubbbbbbb",
-    "dob": "2009-09-09",
+    "dob": "2015-09-09",
     "school": "abcd",
     "profile_image": ""
 })

@@ -3,7 +3,7 @@ from .db import db
 from .models import Admin, Session, Parent, Child, Skill, Lesson, LessonHistory, Activity, ActivityHistory, Quiz, QuizHistory, Badge, BadgeHistory
 from .demoData import createDummyData
 from werkzeug.security import generate_password_hash,check_password_hash
-from datetime import datetime
+from datetime import datetime,date
 import uuid
 
 
@@ -47,6 +47,9 @@ def parent_regisc(request):
         }
     }), 201
     
+def age_calc(dob):
+    today = date.today()
+    return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
 
 def child_regisc(request):
     # Function for children registration that will later be sent as a request to the routes
@@ -70,35 +73,39 @@ def child_regisc(request):
     if not all([name,username,password,dob]):
         return jsonify({'error':'Invalid/Missing fields'}), 400
     else:
-        children=Child.query.filter_by(username=username).first()
-        if children:
-            return jsonify({'error':'Username already registered'}), 409
-        hashed_password=generate_password_hash(password)
-        new_child=Child(name=name,email_id=email,username=username,password=hashed_password,dob=dob,
-                        school=school,profile_image=pic)
-        db.session.add(new_child)
-        db.session.commit()
-        # return jsonify({'message':'Child Registered'}), 201
-        session_id = str(uuid.uuid4())
-        session_info = {
-            "child_id": new_child.child_id,
-            # "name":new_child.name,
-            "username": new_child.username,
-            # "dob":new_child.dob,
-            "login_time": datetime.now().isoformat()
-        }
-        new_session = Session(session_id=session_id, session_information=session_info)
-        db.session.add(new_session)
-        db.session.commit()
-        return jsonify({
-        "session": {
-            "token": session_id,
-            "login_time": session_info["login_time"]
-        },
-        "user": {
-            "id": new_child.child_id
-        }
-    }), 201
+        age = age_calc(dob)
+        if age < 8 or age > 14:
+            return jsonify({'error': 'Only children aged 8 to 14 can register'}), 400
+        else:
+            children=Child.query.filter_by(username=username).first()
+            if children:
+                return jsonify({'error':'Username already registered'}), 409
+            hashed_password=generate_password_hash(password)
+            new_child=Child(name=name,email_id=email,username=username,password=hashed_password,dob=dob,
+                            school=school,profile_image=pic)
+            db.session.add(new_child)
+            db.session.commit()
+            # return jsonify({'message':'Child Registered'}), 201
+            session_id = str(uuid.uuid4())
+            session_info = {
+                "child_id": new_child.child_id,
+                # "name":new_child.name,
+                "username": new_child.username,
+                # "dob":new_child.dob,
+                "login_time": datetime.now().isoformat()
+            }
+            new_session = Session(session_id=session_id, session_information=session_info)
+            db.session.add(new_session)
+            db.session.commit()
+            return jsonify({
+            "session": {
+                "token": session_id,
+                "login_time": session_info["login_time"]
+            },
+            "user": {
+                "id": new_child.child_id
+            }
+        }), 201
     
 
 def admin_create():
