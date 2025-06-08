@@ -6,6 +6,8 @@ from . import create_app
 # Swagger(api)
 app=create_app()
 
+# Testing functions for registration apis
+
 def test_parent_register_success():
     # to test the registration function of parent success
     tester = app.test_client()
@@ -40,7 +42,7 @@ def test_children_register_success():
     "email_id": "testchild@gmail.com",
     "password": "abcdef",
     "username": "ubbbbbbb",
-    "dob": "2009-09-09",
+    "dob": "2014-09-09",
     "school": "abcd",
     "profile_image": ""
 })
@@ -64,6 +66,81 @@ def test_children_register_failure():
     data = response.get_json()
     assert "error" in data
 
+# Testing functions for login apis
+
+def test_parent_login_success():
+    """ Test successful login of a registered parent user. """
+    tester = app.test_client()
+
+    response = tester.post('/auth/parent_login', json={
+        "email": "testparent@example.com",
+        "password": "1234"
+    })
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert "user" in data or "error" in data
+    
+
+def test_parent_login_failure():
+    """ Test failed login attempt due to missing email field."""
+    
+    tester = app.test_client()
+
+    response = tester.post('/auth/parent_login', json={
+        "email": "",
+        "password": "1234"
+    })
+    assert response.status_code in (400, 401)
+    data = response.get_json()
+    assert "user" in data or "error" in data
+    
+    response = tester.post('/auth/parent_login', json={
+        "email": "wrong_email",
+        "password": "random_password"
+    })
+    assert response.status_code == 401
+    data = response.get_json()
+    assert "user" in data or "error" in data
+    
+    
+def test_children_login_success():
+    """ Test successful login of a registered child. """
+    
+    tester = app.test_client()
+
+    response = tester.post('/auth/children_login', json={
+        "email_or_username": "testchild@gmail.com",
+        "password": "abcdef"
+    })
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert "user" in data
+    assert "session" in data
+    assert "token" in data["session"]
+    
+    
+def test_children_login_failure():
+    """ Test failed login attempt of a children due to missing or invalid fields. """
+    
+    tester = app.test_client()
+    
+    response = tester.post('/auth/children_login', json={
+        "email_or_username": "",
+        "password": "abcdef"
+    })
+    assert response.status_code in (400, 401)
+    data = response.get_json()
+    assert "error" in data
+
+    response = tester.post('/auth/children_login', json={
+        "email_or_username": "nonexistent_user",
+        "password": "wrongpass"
+    })
+    assert response.status_code == 401
+    data = response.get_json()
+    assert "error" in data
 
 
 
