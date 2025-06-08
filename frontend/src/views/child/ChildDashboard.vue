@@ -4,6 +4,7 @@ import { getTodayName } from "@/fx/utils";
 import Card from "@/components/Card.vue";
 import CardItem from "@/components/CardItem.vue";
 import Grid from "@/components/Grid.vue";
+import DashboardPointsCharts from "@/components/child/DashboardPointsCharts.vue";
 
 const skillTypes = [
   { label: "🧠 Critical Thinking", link: "" },
@@ -82,11 +83,11 @@ const stats = [
         <div class="stats-grid">
           <Grid :stats="stats" />
         </div>
-        <div class="chart">
-          <Card />
+        <div class="chart box-shadow">
+          <DashboardPointsCharts />
         </div>
-        <div class="chart">
-          <Card />
+        <div class="chart box-shadow">
+          <DashboardPointsCharts />
         </div>
       </div>
       <SkillTemplate />
@@ -115,15 +116,25 @@ const stats = [
 .top-section {
   display: flex;
   flex-direction: row;
+  align-items: stretch;
   gap: var(--size-sm);
+  /* background-color: red; */
 }
 
-.top-section>div {
-  width: 30%;
+.stats-grid {
+  width: 20%;
 }
 
 .chart {
-  min-width: 30%;
-  min-height: 100%;
+  /* min-width: 30%; */
+  /* min-height: 100%; */
+  /* width: 30%; */
+
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
 }
 </style>

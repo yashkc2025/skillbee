@@ -10,10 +10,10 @@ const props = defineProps<{
 </script>
 
 <template>
-  <div>
-    <h3 class="grid-title">{{ props.title }}</h3>
+  <div class="grid-parent">
+    <!-- <h3 class="grid-title">{{ props.title }}</h3> -->
     <div class="grid">
-      <div v-for="(stat, index) in stats" :key="index" class="grid-card">
+      <div v-for="(stat, index) in stats" :key="index" class="grid-card box-shadow">
         <p class="label">{{ stat.label }}</p>
         <p class="value">{{ stat.answer || stat.count || "-" }}</p>
       </div>
@@ -40,7 +40,7 @@ const props = defineProps<{
   padding: var(--size-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  /* box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); */
   transition: box-shadow 0.2s ease, transform 0.2s ease;
   display: flex;
   flex-direction: column;
@@ -54,7 +54,7 @@ const props = defineProps<{
 }
 
 .label {
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   color: #666;
   margin-bottom: 0.25rem;
 }
