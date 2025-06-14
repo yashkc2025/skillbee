@@ -53,10 +53,6 @@ const props = defineProps({
     type: Number,
     default: 15
   },
-  currentProgress: {
-    type: Number,
-    default: 100
-  },
   labelColor: {
     type: String,
     default: '#fff'
@@ -79,7 +75,7 @@ const chartOptions = ref({
   series: [
     {
       type: 'bar',
-      data: [props.currentProgress],
+      data: [props.progress],
       barWidth: props.width,
       itemStyle: {
         color: props.barColor,
