@@ -32,7 +32,7 @@ const props = defineProps<{
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--size-sm);
+  gap: var(--size-xs);
 }
 
 .grid-card {

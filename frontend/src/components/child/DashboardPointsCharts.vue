@@ -1,131 +1,96 @@
 <template>
-  <!-- Responsive Chart -->
-  <v-chart :option="option" autoresize class="chart" />
+  <div class="chart-wrapper">
+    <v-chart :option="chartOptions" autoresize style="width: 100%; height: 220px" />
+  </div>
 </template>
 
 <script setup>
+import { ref } from "vue";
 import { use } from "echarts/core";
 import VChart from "vue-echarts";
-import { LineChart } from "echarts/charts";
-import {
-  TitleComponent,
-  TooltipComponent,
-  GridComponent,
-  LegendComponent,
-} from "echarts/components";
-import { CanvasRenderer } from "echarts/renderers";
 
-use([
-  LineChart,
-  TitleComponent,
+// ECharts Core Modules
+import { CanvasRenderer } from "echarts/renderers";
+import { HeatmapChart } from "echarts/charts";
+import {
+  CalendarComponent,
   TooltipComponent,
-  GridComponent,
-  LegendComponent,
+  VisualMapComponent,
+} from "echarts/components";
+
+// Register the components you need
+use([
   CanvasRenderer,
+  HeatmapChart,
+  CalendarComponent,
+  TooltipComponent,
+  VisualMapComponent,
 ]);
 
-// Generate sample data with actual dates
-const generateDateData = () => {
+// Generate dummy GitHub-style heatmap data
+const generateCalendarData = () => {
+  const year = new Date().getFullYear();
+  const start = new Date(year, 0, 1);
+  const end = new Date(year, 11, 31);
   const data = [];
-  const startDate = new Date("2025-01-01");
-  const endDate = new Date("2025-05-01"); // 4 months later
-
-  for (let i = 0; i < 15; i++) {
-    const randomTime =
-      startDate.getTime() + Math.random() * (endDate.getTime() - startDate.getTime());
-    const randomDate = new Date(randomTime);
-
-    data.push({
-      date: randomDate.toISOString().split("T")[0], // YYYY-MM-DD format
-      revenue: Math.floor(Math.random() * 5), // Random revenue between 0-4
-    });
+  for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+    const formatted = date.toISOString().split("T")[0];
+    data.push([formatted, Math.floor(Math.random() * 10)]);
   }
-
   return data;
 };
 
-const sampleData = generateDateData();
-
-const option = {
-  grid: {
-    top: 30,
-    left: 50,
-    right: 30,
-    bottom: 40,
-  },
-  xAxis: {
-    type: "category",
-    data: sampleData.map((item) => {
-      const date = new Date(item.date);
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "2-digit",
-        year: "2-digit",
-      });
-    }),
-  },
-  yAxis: {
-    type: "value",
-    name: "Points Earned",
-    position: "left",
-    nameLocation: "middle", // Center the label along the axis
-    nameGap: 25, // Adjust distance from the axis (tweak as needed)
-    axisLabel: {
-      formatter: function (value) {
-        return value;
-      },
+const chartOptions = ref({
+  tooltip: {
+    position: "top",
+    formatter: (params) => {
+      const date = params.data[0];
+      const count = params.data[1];
+      return `${date}: ${count} contribution${count !== 1 ? "s" : ""}`;
     },
+  },
+  visualMap: {
+    show: false,
+    min: 0,
+    max: 10,
+    inRange: {
+      color: ["#ffffff", "#fce4ec", "#f8bbd0", "#f48fb1", "#ec407a"],
+    },
+  },
+  calendar: {
+    top: 40,
+    left: 40,
+    right: 40,
+    bottom: 40,
+    range: new Date().getFullYear().toString(),
+    cellSize: ["auto", 15], // auto width, fixed height
     splitLine: {
+      show: false,
+    },
+    dayLabel: {
+      firstDay: 1,
+      nameMap: "en",
+    },
+    monthLabel: {
+      nameMap: "en",
+      margin: 15,
+    },
+    yearLabel: {
       show: false,
     },
   },
   series: [
     {
-      name: "Revenue",
-      type: "line",
-      smooth: true,
-      data: sampleData.map((item) => item.revenue),
-      lineStyle: {
-        width: 3,
-        color: "#ef476f",
-      },
-      itemStyle: {
-        color: "#ef476f",
-      },
+      type: "heatmap",
+      coordinateSystem: "calendar",
+      data: generateCalendarData(),
     },
   ],
-  dataZoom: [
-    {
-      type: "slider",
-      xAxisIndex: 0,
-      filterMode: "none",
-    },
-  ],
-  tooltip: {
-    trigger: "axis", // Show tooltip when hovering over axis (line chart)
-    axisPointer: {
-      type: "line", // Can be 'line' | 'shadow' | 'cross'
-    },
-    formatter: function (params) {
-      const data = params[0];
-      return `
-<div style="padding: 10px;">
-${data.data} Points earned on ${data.axisValue}
-</div>
-
-      `;
-    },
-    extraCssText:
-      "padding: 0 !important; border: none; border-radius: 10px; font-size: 12px",
-  },
-};
+});
 </script>
 
 <style scoped>
-.chart {
+.chart-wrapper {
   width: 100%;
-  /* height: 500px; */
-  /* min-height: 400px; */
-  background-color: var(--color-light);
 }
 </style>

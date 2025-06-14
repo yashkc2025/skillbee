@@ -5,6 +5,7 @@ import Card from "@/components/Card.vue";
 import CardItem from "@/components/CardItem.vue";
 import Grid from "@/components/Grid.vue";
 import DashboardPointsCharts from "@/components/child/DashboardPointsCharts.vue";
+import SkillsProgressBar from "@/components/child/SkillsProgressBar.vue"
 
 const skillTypes = [
   { label: "🧠 Critical Thinking", link: "" },
@@ -43,9 +44,13 @@ const SkillTemplate = () => {
       <Card title="🌟 Skill Categories">
         {skillTypes.map((s) => (
           <CardItem>
-            <a href={s.link} class="skill-card">
-              {s.label}
-            </a>
+            <div style="display: grid; grid-template-columns: 30% 10% 60%; align-items: center;">
+              <a href={s.link} class="skill-card">
+                {s.label}
+              </a>
+              <div></div>
+              <SkillsProgressBar />
+            </div>
           </CardItem>
         ))}
       </Card>
@@ -82,9 +87,6 @@ const stats = [
       <div class="top-section">
         <div class="stats-grid">
           <Grid :stats="stats" />
-        </div>
-        <div class="chart box-shadow">
-          <DashboardPointsCharts />
         </div>
         <div class="chart box-shadow">
           <DashboardPointsCharts />
