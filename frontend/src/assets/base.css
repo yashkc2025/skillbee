@@ -8,7 +8,8 @@
 
   --color-light: #fef8f8;
   --color-border: #e6e6e6;
-  --color-background: #fef8f8;
+  --color-background: #faf5f5;
+  /* --color-background: #fef8f8; */
 
   --color-text-dark: #111;
   --color-text-light: #fff;
@@ -21,6 +22,7 @@
   --font-xl: 36px;
   --font-xxl: 48px;
 
+  --size-2xs: 5px;
   --size-xs: 10px;
   --size-sm: 15px;
   --size-base: 20px;
