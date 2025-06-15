@@ -1,50 +1,63 @@
 <template>
     <ChildAppLayout>
-        <div class="lessons">
-            <input type="text" v-model="searchInput" placeholder="Search Lessons..." class="search-box" />
-            <Card :title="`Learn lessons of ${skillType.name}`">
-                <CardItem v-for="lesson in filteredLessons" :key="lesson.lesson_id" @click="openLesson(lesson)"
-                    class="card-item">
-                    <h2 class="lesson-title"
-                        :class="selectedLesson && selectedLesson.lesson_id === lesson.lesson_id ? 'lesson-title-cursor' : ''">
-                        {{ lesson.title }}
-                    </h2>
-                    <div
-                        :class="selectedLesson && selectedLesson.lesson_id === lesson.lesson_id ? 'content-buttons' : 'buttons'">
-                        <button class="btn" @click.stop="goToActivities(lesson.lesson_id)">Activities</button>
-                        <button class="btn" @click.stop="goToQuizzes(lesson.lesson_id)">Quizzes</button>
-                        <button class="btn" :class="isLessonRead(lesson.lesson_id) ? 'marked-btn' : ''"
-                            :disabled="isLessonRead(lesson.lesson_id)" @click.stop="markAsRead(lesson.lesson_id)">
-                            {{ isLessonRead(lesson.lesson_id) ? 'Marked as read' : 'Mark as read' }}
-                        </button>
-                    </div>
-                    <div v-if="selectedLesson && selectedLesson.lesson_id === lesson.lesson_id" class="lesson-contents">
-                        <p>{{ selectedLesson.content }}</p>
-                        <div v-if="isUrl(lesson.url_details)" class="reference-link">
-                            <h4 class="reference-title">Please go through reference link to learn more about lesson.
-                            </h4>
-                            <ol>
-                                <li v-for="link in Object.values(lesson.url_details)" :key="link">
-                                    <a :href="link" target="_blank">
-                                        {{ link }}
-                                    </a>
-                                </li>
-                            </ol>
-                        </div>
-                        <p v-if="getCompletedAt(lesson.lesson_id)" class="completed-lesson">
-                            Completed on: {{ getCompletedAt(lesson.lesson_id) }}
-                        </p>
-                    </div>
-                </CardItem>
+        <div class="lessons" :class="{ 'blur-bg': selectedLesson }">
+            <div class="top-section">
+                <h2 class="ft-head-1">🎉 Let’s Explore {{ skillType.name }}!</h2>
+                <input type="text" v-model="searchInput" placeholder="Type to find a lesson… 🕵️‍♂️"
+                    class="search-box" />
+            </div>
+            <div class="card-item">
+                <div v-for="lesson in filteredLessons" :key="lesson.lesson_id">
+                    <ModuleCard @click="openLesson(lesson)" :image="lesson.image" :name="lesson.title"
+                        :description="lesson.description" primary-label="📝 Activities" secondary-label="✍️ Quizzes"
+                        :tertiary-label="isLessonRead(lesson.lesson_id) ? '✔✔ Marked as read' : '✔ Mark as read'"
+                        :disabledTertiary="isLessonRead(lesson.lesson_id)" @primary="goToActivities(lesson.lesson_id)"
+                        @secondary="goToQuizzes(lesson.lesson_id)" @tertiary="markAsRead(lesson.lesson_id)" />
+                </div>
+            </div>
+            <p v-if="lessons.length === 0" class="empty-result">
+                There is no single lesson in "{{ skillType.name }}"
+            </p>
+            <p v-if="filteredLessons.length === 0 && lessons.length > 0" class="empty-result">
+                None of the lesson's title and description has "{{ searchInput }}"
+            </p>
+            <p v-if="filteredLessons.length !== 0 && lessons.length !== 0" class="empty-result">
+                Click on a lesson title to view its contents.
+            </p>
+        </div>
 
-                <p v-if="lessons.length === 0" class="empty-result">
-                    There is no single lesson in "{{ skillType.name }}"
+        <div :class="['lesson-contents', { 'show-content': selectedLesson }]">
+            <h2 class="lesson-title">📘 {{ selectedLesson?.title }}</h2>
+            <button class="back-btn" @click="selectedLesson = null">🔙 Back to Lessons</button>
+            <p>🧠 {{ selectedLesson?.content }}</p>
+            <div v-if="selectedLesson && isUrl(selectedLesson.url_details)" class="reference-link">
+                <h4 class="reference-title">🌐 Please go through reference link to learn more about lesson.
+                </h4>
+                <ol>
+                    <li v-for="link in Object.values(selectedLesson.url_details)" :key="link">🔗
+                        <a :href="link" target="_blank" class="ref-link">
+                            {{ link }}
+                        </a>
+                    </li>
+                </ol>
+            </div>
+            <div class="completed-buttons">
+                <p v-if="selectedLesson && getCompletedAt(selectedLesson.lesson_id)" class="completed-lesson">
+                    ✅ Completed on: {{ getCompletedAt(selectedLesson.lesson_id) }}
                 </p>
-
-                <p v-if="filteredLessons.length === 0 && lessons.length > 0" class="empty-result">
-                    None of the lesson's title has "{{ searchInput }}"
-                </p>
-            </Card>
+                <div v-if="selectedLesson" class="content-buttons">
+                    <AppButton type="primary" @click="goToActivities(selectedLesson.lesson_id)">📝 Activities
+                    </AppButton>
+                    <AppButton type="secondary" @click="goToQuizzes(selectedLesson.lesson_id)">✍️ Quizzes
+                    </AppButton>
+                    <AppButton type="tertiary"
+                        :class="['tertiary', { 'disabled-tertiary': isLessonRead(selectedLesson.lesson_id) }]"
+                        :disabled="isLessonRead(selectedLesson.lesson_id)"
+                        @click="markAsRead(selectedLesson.lesson_id)">
+                        {{ isLessonRead(selectedLesson.lesson_id) ? '✔✔ Marked as read' : '✔ Mark as read' }}
+                    </AppButton>
+                </div>
+            </div>
         </div>
     </ChildAppLayout>
 </template>
@@ -52,12 +65,36 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import ChildAppLayout from '@/layouts/ChildAppLayout.vue';
-import Card from '@/components/Card.vue';
-import CardItem from '@/components/CardItem.vue';
+import ModuleCard from '@/components/ModuleCard.vue';
+import AppButton from '@/components/AppButton.vue';
 import { useRouter } from 'vue-router';
 import { searchQuery } from '@/fx/utils';
 
 const router = useRouter();
+
+interface Lesson {
+    lesson_id: number;
+    image: string;
+    title: string;
+    description: string;
+    content: string;
+    url_details: Record<string, string>;
+}
+
+interface SkillType {
+    curriculum_id: number;
+    name: string;
+}
+
+interface LessonHistory {
+    lesson_id: number;
+    completed_at: string;
+}
+
+interface LessonsHistory {
+    lesson_id: number;
+    completed_at: string;
+}
 
 const skillType = { curriculum_id: 1, name: 'XYZ' };
 
@@ -65,27 +102,43 @@ const lessons = [
     {
         lesson_id: 1,
         title: 'Lesson 1',
+        image: '/files/lesson1.jpg',
+        description: 'Learn about the basics of Lesson 1',
         content: 'Lesson 1. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
         url_details: { 0: 'https://www.lipsum.com/', 1: 'https://drawsql.app/teams/student-839/diagrams/life-skills-app-for-school-aged-children' }
     },
     {
         lesson_id: 2,
         title: 'Lesson 2',
+        image: '/files/lesson2.jpeg',
+        description: 'Learn about the basics of Lesson 2',
         content: 'Lesson 2. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
         url_details: { 0: 'https//:dflsjds.com', 1: 'https//:google.com' }
     },
     {
         lesson_id: 3,
         title: 'Lesson 3',
+        image: '/files/lesson3.jpeg',
+        description: 'Learn about the basics of Lesson 3',
         content: 'Lesson 3. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
         url_details: { 0: 'https//:dflsjds.com', 1: 'https//:google.com' }
     },
     {
         lesson_id: 4,
         title: 'Ram 4',
+        image: '/files/lesson4.jpeg',
+        description: 'Learn about the basics of Ram 4',
         content: 'Ram 4. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
         url_details: {}
     },
+    {
+        lesson_id: 5,
+        title: 'Ram 5',
+        image: '/files/lesson5.jpeg',
+        description: 'Learn about the basics of Ram 5',
+        content: 'Ram 5. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.vWhat is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
+        url_details: {}
+    }
 ];
 
 const lessonsHistory = ref([
@@ -96,7 +149,7 @@ const lessonsHistory = ref([
 const searchInput = ref('');
 
 const filteredLessons = computed(() =>
-    searchQuery(lessons, searchInput.value, ['title'])
+    searchQuery(lessons, searchInput.value, ['title', 'description'])
 );
 
 function isLessonRead(lessonId: number) {
@@ -135,102 +188,158 @@ function openLesson(lesson: typeof lessons[0]) {
 }
 
 function isUrl(url_details: Record<string, string> | undefined): boolean {
-    return !!url_details && Object.keys(url_details).length > 0;
+    if (!url_details) return false;
+    return Object.values(url_details).some(v => typeof v === 'string' && v.trim() !== '');
 }
 </script>
 
 <style scoped>
-.lessons {
-    position: relative;
-}
-
-.search-box {
-    position: absolute;
-    width: 25%;
-    padding: 10px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
-    right: 0;
-    top: -10px;
-    font-family: "VAGRoundedNext";
-}
-
-.empty-result {
-    margin: 10px;
-    text-align: center;
-}
-
-.lesson-title {
-    color: var(--color-text-dark);
-    font-family: "VAGRoundedNext";
-    cursor: pointer;
-    font-size: 1.5rem;
-}
-
-.lesson-title-cursor {
-    cursor: auto;
+.top-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 25px;
 }
 
 .card-item {
-    position: relative;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+    padding: 0 20px;
 }
 
-.btn {
-    border: none;
-    outline: none;
-    background: none;
-    border-radius: calc(var(--border-radius) / 2);
-    padding: 10px 40px;
-    color: var(--color-text-dark);
+.search-box {
+    min-width: 25%;
+    width: 40%;
+    max-width: 400px;
+    height: 30px;
+    padding: 10px;
+    background: #fffbe7;
+    border: 1px solid #ccc;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     font-family: "VAGRoundedNext";
-    cursor: pointer;
-    transition: 0.5s;
-    font-size: var(--font-sm);
-    font-weight: bolder;
 }
 
-.marked-btn {
-    padding: 10px 32px;
-    color: #06d6a0;
+.search-box::placeholder {
+    font-style: italic;
 }
 
-.btn:hover {
-    background-color: var(--color-hover);
-    border-color: var(--color-border);
+.content-buttons .tertiary {
+    width: 200px;
 }
 
-.buttons {
-    position: absolute;
-    right: 20px;
-    top: 14px;
-}
-
-.content-buttons {
-    position: absolute;
-    bottom: 10px;
-    right: 20px;
-}
-
-.completed-lesson {
-    position: absolute;
-    bottom: 10px;
-    color: gray;
-    font-size: 1rem;
+.content-buttons .disabled-tertiary {
+    background: #ffb2dd;
+    color: #ad1457;
+    cursor: not-allowed;
 }
 
 .lesson-contents {
-    margin-top: 10px;
-    font-size: 1.3rem;
-    line-height: 1.7;
-    margin-bottom: 45px;
+    position: fixed;
+    top: 52%;
+    left: 50%;
+    transform: translate(-50%, 100%);
+    opacity: 0;
+    width: 80%;
+    max-height: 80vh;
+    padding: 20px 24px 20px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    background: #fff3e0;
+    font-family: 'Comic Sans MS', 'Fredoka', 'cursive';
+    font-size: var(--font-ml-lg);
+    overflow-y: auto;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: -100;
+}
+
+.lesson-contents.show-content {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1000;
+}
+
+.lesson-contents .back-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: calc(var(--border-radius) / 2);
+    background-color: #ffe082;
+    font-size: var(--font-sm);
+    color: #bf360c;
+    font-family: "VAGRoundedNext";
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.lesson-contents .back-btn:hover {
+    background-color: #ffd54f;
+}
+
+.lesson-title {
+    color: #ff6f00;
+    margin-bottom: 12px;
+    text-align: center;
+    font-family: "VAGRoundedNext";
 }
 
 .reference-link {
-    margin-top: 10px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    background-color: #e3f2fd;
+    padding: 10px 16px;
+    border-radius: var(--border-radius);
+    color: #0277bd;
 }
 
 .reference-title {
-    font-weight: 700;
+    font-size: var(--font-md);
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.ref-link {
+    color: #0288d1;
+    font-size: var(--font-md);
+}
+
+.ref-link:hover {
+    color: #01579b;
+}
+
+.completed-buttons {
+    margin-top: 20px;
+}
+
+.completed-lesson {
+    font-size: var(--font-sm);
+    color: #2e7d32;
+    background-color: #c8e6c9;
+    padding: 8px 12px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.content-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.empty-result {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.blur-bg {
+    filter: blur(5px);
+    pointer-events: none;
+    user-select: none;
 }
 </style>
