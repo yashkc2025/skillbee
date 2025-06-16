@@ -5,9 +5,8 @@ from .demoData import createDummyData
 from werkzeug.security import generate_password_hash,check_password_hash
 from datetime import datetime
 import uuid
-from sqlalchemy.exc import IntegrityError
-import hashlib, time, random, string
-
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+import time
 
 def parent_regisc(request):
     # Function for parent registration that will later be sent as a request to the routes
@@ -138,30 +137,9 @@ def admin_loginc():
     else:
         return jsonify({"error": "Invalid credentials"}), 401
 
-
-        return jsonify({'message':'Child Registered'}), 201
-    
-def generate_custom_token(email):
-    """
-    Generate a secure custom token using the user's email, current timestamp, and a random string.
-    """
-    timestamp = str(time.time())
-    random_str = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-    raw_token = email + timestamp + random_str
-    return hashlib.sha256(raw_token.encode()).hexdigest()
-
 def parent_loginc(request):
     """
     Handle parent login request by validating credentials and generating a session token.
-
-    Args:
-        request (flask.Request): The incoming HTTP request object containing JSON data.
-
-    Returns:
-        flask.Response: A JSON response with one of the following:
-            - 400 status code if required fields are missing.
-            - 401 status code if credentials are invalid.
-            - 200 status code with session token and parent ID upon successful login.
     """
     data = request.get_json()
     email = data.get('email')
@@ -173,41 +151,37 @@ def parent_loginc(request):
     parent = Parent.query.filter_by(email_id=email).first()
     if not parent or not check_password_hash(parent.password, password):
         return jsonify({'error': 'Invalid email or password'}), 401
-    
-    token = generate_custom_token(email)
 
+    token = str(uuid.uuid4())
     session_info = {
-        'parent_id': str(parent.parent_id),
+        'parent_id': parent.parent_id,
         'email': parent.email_id,
         'login_time': datetime.now().isoformat()
     }
 
-    new_session = Session(session_id=token, session_information=session_info)
-    db.session.add(new_session)
-    db.session.commit()
+    try:
+        new_session = Session(session_id=token, session_information=session_info)
+        db.session.add(new_session)
+        db.session.commit()
 
-    return jsonify({
-        'session': {
-            'token': token,
-            'login_time': session_info['login_time']
-        },
-        'user': {
-            'id': str(parent.parent_id)
-        }
-    }), 200
-    
+        return jsonify({
+            'session': {
+                'token': token,
+                'login_time': session_info['login_time']
+            },
+            'user': {
+                'id': parent.parent_id
+            }
+        }), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({'error': 'Database error occurred', 'details': str(e)}), 500
+
+
 def child_loginc(request):
     """
     Handle child login request by validating credentials and generating a session token.
-
-    Args:
-        request (flask.Request): The incoming HTTP request object containing JSON data.
-
-    Returns:
-        flask.Response: A JSON response with one of the following:
-            - 400 status code if required fields are missing.
-            - 401 status code if credentials are invalid.
-            - 200 status code with session token and parent ID upon successful login.
     """
     data = request.get_json()
     identifier = data.get('email_or_username')
@@ -222,24 +196,28 @@ def child_loginc(request):
     if not child or not check_password_hash(child.password, password):
         return jsonify({'error': 'Invalid email or password'}), 401
 
-    token = generate_custom_token(identifier)
-
+    token = str(uuid.uuid4())
     session_info = {
-        'parent_id': str(child.child_id),
+        'parent_id': child.child_id,
         'email': identifier,
         'login_time': datetime.now().isoformat()
     }
 
-    new_session = Session(session_id=token, session_information=session_info)
-    db.session.add(new_session)
-    db.session.commit()
+    try:
+        new_session = Session(session_id=token, session_information=session_info)
+        db.session.add(new_session)
+        db.session.commit()
 
-    return jsonify({
-        'session': {
-            'token': token,
-            'login_time': session_info['login_time']
-        },
-        'user': {
-            'id': str(child.child_id)
-        }
-    }), 200
+        return jsonify({
+            'session': {
+                'token': token,
+                'login_time': session_info['login_time']
+            },
+            'user': {
+                'id': child.child_id
+            }
+        }), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({'error': 'Database error occurred', 'details': str(e)}), 500
