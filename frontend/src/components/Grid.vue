@@ -11,9 +11,9 @@ const props = defineProps<{
 
 <template>
   <div class="grid-parent">
-    <!-- <h3 class="grid-title">{{ props.title }}</h3> -->
-    <div class="grid">
-      <div v-for="(stat, index) in stats" :key="index" class="grid-card box-shadow">
+    <h3 class="grid-title" v-if="props.title">{{ props.title }}</h3>
+    <div class="grid box-shadow">
+      <div v-for="(stat, index) in stats" :key="index" class="grid-card">
         <p class="label">{{ stat.label }}</p>
         <p class="value">{{ stat.answer || stat.count || "-" }}</p>
       </div>
@@ -21,47 +21,36 @@ const props = defineProps<{
   </div>
 </template>
 
-<style scoped>
+<style>
 .grid-title {
-  font-family: "VAGRoundedNext", sans-serif;
+  font-family: "VAGRoundedNext";
   margin-bottom: var(--size-xs);
   font-weight: 600;
-  font-size: 1.25rem;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--size-xs);
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, auto);
+  border-radius: var(--border-radius);
+  background-color: var(--color-light);
+  border: 1px solid var(--color-border);
 }
 
 .grid-card {
-  background-color: var(--color-light);
-  padding: var(--size-sm);
-  border: 1px solid var(--color-border);
+  padding: var(--size-sm) var(--size-md);
   border-radius: var(--border-radius);
-  /* box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); */
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-}
-
-.grid-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+  background-color: var(--color-light);
+  min-height: 90px;
+  max-width: 80px;
 }
 
 .label {
-  font-size: 0.8rem;
-  color: #666;
-  margin-bottom: 0.25rem;
+  font-size: var(--font-sm);
 }
 
 .value {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: var(--color-text-dark);
+  font-size: var(--font-lg);
+  font-family: "VAGRoundedNext";
 }
 </style>

@@ -1,18 +1,40 @@
-<script setup lang="tsx">
+<script setup lang="ts">
 import ChildAppLayout from "../../layouts/ChildAppLayout.vue";
-import { getTodayName } from "@/fx/utils";
-import Card from "@/components/Card.vue";
-import CardItem from "@/components/CardItem.vue";
+import { getTodayName } from "../../fx/utils";
+import ChildHeatmap from "../../components/child/dashboard/ChildHeatmap.vue";
 import Grid from "@/components/Grid.vue";
-import DashboardPointsCharts from "@/components/child/DashboardPointsCharts.vue";
-import SkillsProgressBar from "@/components/child/SkillsProgressBar.vue"
+import SkillTemplate from "@/components/child/dashboard/SkillTemplate.vue";
+import BadgesTemplate from "../../components/child/dashboard/BadgesTemplate.vue";
 
 const skillTypes = [
-  { label: "🧠 Critical Thinking", link: "" },
-  { label: "💬 Communication Skills", link: "" },
-  { label: "⏰ Time Management", link: "" },
-  { label: "🎵 Extracurricular Activities", link: "" },
-  { label: "💰 Financial Literacy", link: "" },
+  { label: "🧠 Critical Thinking", link: "", progress: 10 },
+  { label: "💬 Communication Skills", link: "", progress: 30 },
+  { label: "⏰ Time Management", link: "", progress: 56 },
+  { label: "🎵 Extracurricular Activities", link: "", progress: 18 },
+  { label: "💰 Financial Literacy", link: "", progress: 78 },
+];
+
+const badges = [
+  {
+    label: "Quick Thinker",
+    image:
+      "http://static.vecteezy.com/system/resources/previews/055/850/981/non_2x/cute-brain-cartoon-with-lightning-bolt-vector.jpg",
+  },
+  {
+    label: "Quick Thinker (alt)",
+    image:
+      "https://thumbs.dreamstime.com/b/brain-lightning-brainstorm-concept-like-cloud-power-mind-103281710.jpg",
+  },
+  {
+    label: "Math Magician",
+    image:
+      "https://play-lh.googleusercontent.com/_amVHhZZT0Jk3MAHEog0rZeCVMl2w6zQYoDH8Mo7ZjKUIQwRoUxg-FhgALctyKmAjoo",
+  },
+  {
+    label: "Math Magician (alt)",
+    image:
+      "https://is3-ssl.mzstatic.com/image/thumb/Purple122/v4/91/5c/c1/915cc1a2-0c75-4f6a-437b-68553220653e/source/512x512bb.jpg",
+  },
 ];
 
 function getIntroText(name: string): string {
@@ -38,26 +60,6 @@ function getIntroText(name: string): string {
   return introOptions[randomIndex];
 }
 
-const SkillTemplate = () => {
-  return (
-    <div>
-      <Card title="🌟 Skill Categories">
-        {skillTypes.map((s) => (
-          <CardItem>
-            <div style="display: grid; grid-template-columns: 30% 10% 60%; align-items: center;">
-              <a href={s.link} class="skill-card">
-                {s.label}
-              </a>
-              <div></div>
-              <SkillsProgressBar />
-            </div>
-          </CardItem>
-        ))}
-      </Card>
-    </div>
-  );
-};
-
 const stats = [
   {
     label: "Lessons Completed",
@@ -68,12 +70,16 @@ const stats = [
     answer: "6",
   },
   {
+    label: "Skills Completed",
+    count: "2",
+  },
+  {
     label: "Leaderboard Rank",
     answer: "#1",
   },
   {
-    label: "Skills Completed",
-    count: "2",
+    label: "Streak",
+    count: "25",
   },
 ];
 </script>
@@ -88,11 +94,12 @@ const stats = [
         <div class="stats-grid">
           <Grid :stats="stats" />
         </div>
-        <div class="chart box-shadow">
-          <DashboardPointsCharts />
+        <div class="leaderboard box-shadow">
+          <ChildHeatmap />
         </div>
       </div>
-      <SkillTemplate />
+      <SkillTemplate :skillTypes="skillTypes" />
+      <BadgesTemplate :badges="badges" />
     </div>
   </ChildAppLayout>
 </template>
@@ -118,19 +125,18 @@ const stats = [
 .top-section {
   display: flex;
   flex-direction: row;
-  align-items: stretch;
   gap: var(--size-sm);
-  /* background-color: red; */
+  align-items: stretch;
+  /* Ensures children stretch to same height */
 }
 
 .stats-grid {
-  width: 20%;
+  width: 30%;
 }
 
-.chart {
-  /* min-width: 30%; */
-  /* min-height: 100%; */
+.leaderboard {
   /* width: 30%; */
+  background-color: var(--color-light);
 
   flex: 1;
   display: flex;

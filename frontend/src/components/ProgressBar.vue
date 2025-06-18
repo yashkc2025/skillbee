@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-chart :option="chartOptions" autoresize style="height: 40px; width: 100%; margin: 0; padding: 0;" />
+    <v-chart :option="chartOptions" autoresize style="height: 40px; width: 100%; margin: 0; padding: 0" />
   </div>
 </template>
 
@@ -15,83 +15,67 @@ div {
 </style>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import * as echarts from 'echarts/core'
-import { BarChart } from 'echarts/charts'
-import {
-  GridComponent,
-  TooltipComponent,
-  TitleComponent
-} from 'echarts/components'
-import { CanvasRenderer } from 'echarts/renderers'
+import { ref } from "vue";
+import * as echarts from "echarts/core";
+import { BarChart } from "echarts/charts";
+import { GridComponent, TooltipComponent, TitleComponent } from "echarts/components";
+import { CanvasRenderer } from "echarts/renderers";
 
-import VChart from 'vue-echarts'
+import VChart from "vue-echarts";
 
 // Register the required components
-echarts.use([
-  BarChart,
-  GridComponent,
-  TooltipComponent,
-  TitleComponent,
-  CanvasRenderer
-])
+echarts.use([BarChart, GridComponent, TooltipComponent, TitleComponent, CanvasRenderer]);
 
 const props = defineProps({
   progress: {
     type: Number,
-    required: true
+    required: true,
   },
   barColor: {
     type: String,
-    default: '#ef476f'
+    default: "#ef476f",
   },
   radius: {
     type: Number,
-    default: 10
+    default: 10,
   },
   width: {
     type: Number,
-    default: 15
-  },
-  currentProgress: {
-    type: Number,
-    default: 100
+    default: 15,
   },
   labelColor: {
     type: String,
-    default: '#fff'
-  }
-})
-
-
+    default: "#fff",
+  },
+});
 
 const chartOptions = ref({
   xAxis: {
-    type: 'value',
+    type: "value",
     max: 100,
-    show: false
+    show: false,
   },
   yAxis: {
-    type: 'category',
-    data: ['Progress'],
-    show: false
+    type: "category",
+    data: ["Progress"],
+    show: false,
   },
   series: [
     {
-      type: 'bar',
-      data: [props.currentProgress],
+      type: "bar",
+      data: [props.progress],
       barWidth: props.width,
       itemStyle: {
         color: props.barColor,
-        borderRadius: [props.radius, props.radius, props.radius, props.radius]
+        borderRadius: [props.radius, props.radius, props.radius, props.radius],
       },
       label: {
         show: true,
-        position: 'insideRight',
-        formatter: '{c}%',
-        fontWeight: 'bold',
-        color: props.labelColor
-      }
+        position: "insideRight",
+        formatter: "{c}%",
+        fontWeight: "bold",
+        color: props.labelColor,
+      },
     },
   ],
   grid: {
@@ -99,7 +83,7 @@ const chartOptions = ref({
     right: 0,
     top: 0,
     bottom: 0,
-    containLabel: false
+    containLabel: false,
   },
-})
+});
 </script>
