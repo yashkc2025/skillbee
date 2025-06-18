@@ -2,6 +2,7 @@ import json
 from flask import Flask
 from .routes import api
 from flasgger import Swagger
+from .controllers import admin_create
 from . import create_app
 # Swagger(api)
 app=create_app()
@@ -64,6 +65,48 @@ def test_children_register_failure():
     data = response.get_json()
     assert "error" in data
 
+def test_admin_login_success():
+    # test to see if admin login works fine
+    with app.app_context():
+        admin_create()
+
+    tester = app.test_client()
+    response = tester.post('/auth/admin_login', json={
+        "email_id": "admin@gmail.com",
+        "password": "1234"
+    })
+
+    assert response.status_code == 201
+    data = response.get_json()
+    assert "session" in data
+    assert "token" in data["session"]
+    assert "login_time" in data["session"]
+
+
+def test_admin_login_failure_wrong_password():
+    # test to check admin wrong creds
+    with app.app_context():
+        admin_create()
+    tester = app.test_client()
+    response = tester.post('/auth/admin_login', json={
+        "email_id": "admin@gmail.com",
+        "password": "wrongpassword"
+    })
+
+    assert response.status_code == 401
+    data = response.get_json()
+    assert data["error"] == "Invalid credentials"
+
+
+def test_admin_login_missing_fields():
+    # test to check teh admin database error
+    tester = app.test_client()
+    response = tester.post('/auth/admin_login', json={
+        "email_id": ""
+    })
+    assert response.status_code == 500  
+    data = response.get_json()
+    assert data["error"] == "Missing email or password"
 
 
 
