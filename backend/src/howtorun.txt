@@ -15,7 +15,7 @@ for parent registration i have the route: ​http://127.0.0.1:5000/auth/parent_r
 the body i used:
 
 {"name":"ub",
-"email_id":"ub@gmail.com",
+"email":"ub@gmail.com",
 "password":"abc",
 "profile_image":""}
 
@@ -26,7 +26,7 @@ for children registration the route used: http://127.0.0.1:5000/auth/children_re
 the body used:
 {
   "name":"ubb",
-  "email_id": "ub123@gmail.com",
+  "email": "ub123@gmail.com",
   "password": "abcdef",
   "username": "ubbbbbbb",
   "dob": "2009-09-09",

@@ -15,7 +15,7 @@ def test_parent_register_success():
     tester = app.test_client()
     response = tester.post('/auth/parent_register', json={
         "name": "Test Parent",
-        "email_id": "testparent@example.com",
+        "email": "testparent@example.com",
         "password": "1234",
         "profile_image": ""
     })
@@ -28,7 +28,7 @@ def test_parent_register_failure():
     tester = app.test_client()
     response = tester.post('/auth/parent_register', json={
         "name": "Test Parent",
-        "email_id": "", 
+        "email": "", 
         "password": "1234",
         "profile_image": ""
     })
@@ -41,7 +41,7 @@ def test_children_register_success():
     tester = app.test_client()
     response = tester.post('/auth/children_register', json={
     "name":"test child",
-    "email_id": "testchild@gmail.com",
+    "email": "testchild@gmail.com",
     "password": "abcdef",
     "username": "ubbbbbbb",
     "dob": "2014-09-09",
@@ -57,7 +57,7 @@ def test_children_register_failure():
     tester = app.test_client()
     response = tester.post('/auth/children_register', json={
     "name":"test child",
-    "email_id": "",
+    "email": "",
     "password": "",
     "username": "ubbbbbbb",
     "dob": "2009-09-09",

@@ -13,7 +13,7 @@ def parent_regisc(request):
     try:
         data=request.get_json()
         name=data.get('name')
-        email=data.get('email_id')
+        email=data.get('email')
         password=data.get('password')
         pic=data.get('profile_image')
         if pic == '':
@@ -31,7 +31,7 @@ def parent_regisc(request):
             session_id = str(uuid.uuid4())
             session_info = {
                 "parent_id": new_parent.parent_id,
-                "email_id": new_parent.email_id,
+                "email": new_parent.email_id,
                 "login_time": datetime.now().isoformat()
             }
             new_session = Session(session_id=session_id, session_information=session_info)
@@ -61,7 +61,7 @@ def child_regisc(request):
     try:
         data=request.get_json()
         name=data.get('name')
-        email=data.get('email_id')
+        email=data.get('email')
         username=data.get('username')
         password=data.get('password')
         dob_str=data.get('dob')
