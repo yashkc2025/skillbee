@@ -222,7 +222,7 @@ def child_loginc(request):
 
     token = str(uuid.uuid4())
     session_info = {
-        'parent_id': child.child_id,
+        'child_id': child.child_id,
         'email': identifier,
         'login_time': datetime.now().isoformat()
     }
