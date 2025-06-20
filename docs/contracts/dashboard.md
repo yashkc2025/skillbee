@@ -21,7 +21,7 @@
 | email      | `string`             | Email address                          |
 | id         | `string` or `number` | Unique user identifier                 |
 | user\_type | `string`             | Type of user (e.g., "parent", "child") |
-
+ 
 ---
 
 ## **GET /child\_dashboard\_stats**
