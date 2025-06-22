@@ -18,7 +18,7 @@
     "child_app": {
         "dashboard": "/",
         "achievements": "/stats",
-        "lessons": "/lesson",
+        "curriculum": "/curriculum",
         "settings": "/settings"
     }
 }

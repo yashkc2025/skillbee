@@ -17,11 +17,11 @@ const props = defineProps<{ isHeading?: boolean }>();
 
 .card-item:nth-child(1) {
   border-top-left-radius: var(--border-radius);
-  border-top-right-radius: var(--border-radius);
+  border-bottom-left-radius: var(--border-radius);
 }
 
 .card-item:nth-last-child(1) {
-  border-bottom-left-radius: var(--border-radius);
+  border-top-right-radius: var(--border-radius);
   border-bottom-right-radius: var(--border-radius);
 }
 

@@ -13,15 +13,20 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "echarts": "^5.6.0",
     "pinia": "^3.0.1",
+    "tippy.js": "^6.3.7",
     "vue": "^3.5.13",
+    "vue-echarts": "^7.0.3",
     "vue-router": "^4.5.0",
-    "vue-toastification": "2.0.0-rc.5"
+    "vue-toastification": "2.0.0-rc.5",
+    "vue3-calendar-heatmap": "^2.0.5"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.1",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-vue": "^5.2.3",
+    "@vitejs/plugin-vue-jsx": "^4.2.0",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.5.0",
     "@vue/tsconfig": "^0.7.0",
