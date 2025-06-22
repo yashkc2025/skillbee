@@ -1,18 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import SignInSignUp from '../views/SignInSignUp.vue'
 import DemoView from '@/views/DemoView.vue'
-// import ParentLoginView from './auth/ParentLoginView.vue'
+import ChildDashboard from '@/views/child/ChildDashboard.vue'
+import SignInSignUp from '@/views/SignInSignUp.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    {
-      path: '/',
-      name: 'home',
-      component: HomeView,
-    },
-
     {
       path: '/login_register',
       name: 'sign',
@@ -23,7 +16,11 @@ const router = createRouter({
       name: 'demo',
       component: DemoView,
     },
-
+    {
+      path: '/',
+      name: 'child_dashboard',
+      component: ChildDashboard
+    },
     // {
     //   path: '/auth/parent_login',
     //   name: 'Login as Parent',

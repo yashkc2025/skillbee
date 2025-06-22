@@ -14,5 +14,11 @@
             "login": "/auth/admin_login",
             "forgot": "/auth/admin_forgot_password"
         }
+    },
+    "child_app": {
+        "dashboard": "/",
+        "achievements": "/stats",
+        "curriculum": "/curriculum",
+        "settings": "/settings"
     }
 }

@@ -1,4 +1,4 @@
-from . import db
+from .db import db
 from sqlalchemy import CheckConstraint, Index, UniqueConstraint
 from sqlalchemy.dialects.sqlite import JSON
 from datetime import datetime
@@ -7,7 +7,7 @@ class Admin(db.Model):
     admin_id = db.Column(db.Integer, primary_key=True)
     email_id = db.Column(db.Text, nullable=False, index=True)
     password = db.Column(db.Text, nullable=False)
-
+    
 
 class Session(db.Model):
     session_id = db.Column(db.Text, primary_key=True)
