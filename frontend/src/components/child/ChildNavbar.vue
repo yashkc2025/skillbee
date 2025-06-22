@@ -7,8 +7,8 @@ const navOptions = [
     link: sitemap.child_app.dashboard,
   },
   {
-    label: "Curriculum",
-    link: sitemap.child_app.curriculum,
+    label: "Lessons",
+    link: sitemap.child_app.lessons,
   },
   {
     label: "Achievements",
