@@ -7,8 +7,8 @@ const navOptions = [
     link: sitemap.child_app.dashboard,
   },
   {
-    label: "Lessons",
-    link: sitemap.child_app.lessons,
+    label: "Curriculum",
+    link: sitemap.child_app.curriculum,
   },
   {
     label: "Achievements",
@@ -29,7 +29,7 @@ const navOptions = [
     <section class="items-parent">
       <a :href="n.link" class="nav-items" v-for="n in navOptions" :key="n.label">{{
         n.label
-        }}</a>
+      }}</a>
     </section>
     <section class="third-parent">
       <a class="danger" href="">Logout</a>

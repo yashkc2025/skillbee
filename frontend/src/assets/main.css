@@ -3,6 +3,7 @@
 
 #app {
   height: 100%;
+  overflow: scroll;
 }
 
 /* width */
@@ -19,7 +20,7 @@
 
 /* Handle */
 ::-webkit-scrollbar-thumb {
-  background: var(--accent-500);
+  background: var(--color-thunder);
   background-clip: content-box;
   border: 5px solid transparent;
   border-radius: var(--size-sm);
@@ -34,9 +35,17 @@
   min-height: 45px !important;
   padding: var(--size-xs) !important;
 }
-
 .box-shadow {
   box-shadow: 0 8px 32px var(--color-border);
+}
+
+.vch__legend {
+  display: none !important;
+}
+
+.vch__month__label,
+.vch__day__label {
+  font-family: 'VAGRoundedNext';
 }
 
 .hover:hover {
