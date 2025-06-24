@@ -34,6 +34,9 @@
             "badges": "/curriculum/badges"
         },
         "user_management": "/admin/user_management",
-        "settings": "/admin/settings"
+        "settings": "/admin/settings",
+        "new": {
+            "all": "/admin/new"
+        }
     }
 }

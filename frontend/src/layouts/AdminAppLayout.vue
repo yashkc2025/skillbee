@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AdminNavbar from "@/components/admin/AdminNavbar.vue";
 import sitemap from "@/router/sitemap.json";
 
 const navOptions = [
@@ -7,7 +8,7 @@ const navOptions = [
     items: [
       {
         label: "Dashboard",
-        image: "",
+        icon: "bi bi-house",
         link: sitemap.admin.dashboard,
       },
     ],
@@ -17,12 +18,12 @@ const navOptions = [
     items: [
       {
         label: "Performance",
-        image: "",
+        icon: "bi bi-bar-chart",
         link: sitemap.admin.analytics.performance,
       },
       {
         label: "Feedbacks",
-        image: "",
+        icon: "bi bi-journal-text",
         link: sitemap.admin.analytics.feedback,
       },
     ],
@@ -32,68 +33,69 @@ const navOptions = [
     items: [
       {
         label: "Lessons",
-        image: "",
-        link: sitemap.admin.curriculum.lessons
+        icon: "bi bi-journal-bookmark",
+        link: sitemap.admin.curriculum.lessons,
       },
       {
         label: "Quiz",
-        image: "",
-        link: sitemap.admin.curriculum.quiz
+        icon: "bi bi-patch-question",
+        link: sitemap.admin.curriculum.quiz,
       },
       {
         label: "Activities",
-        image: "",
-        link: sitemap.admin.curriculum.activities
+        icon: "bi bi-check2-square",
+        link: sitemap.admin.curriculum.activities,
       },
       {
         label: "Badges",
-        image: "",
-        link: sitemap.admin.curriculum.badges
-      }
-    ]
+        icon: "bi bi-patch-check",
+        link: sitemap.admin.curriculum.badges,
+      },
+    ],
   },
   {
     heading: "",
     items: [
       {
         label: "Manage Users",
-        image: "",
-        link: sitemap.admin.user_management
+        icon: "bi bi-people",
+        link: sitemap.admin.user_management,
       },
       {
         label: "Settings",
-        image: "",
-        link: sitemap.admin.settings
-      }
-    ]
-  }
+        icon: "bi bi-gear",
+        link: sitemap.admin.settings,
+      },
+    ],
+  },
 ];
 </script>
 
 <template>
   <main class="admin-layout">
-    <div class="navbar">w</div>
-    <div class="content"></div>
+    <AdminNavbar />
+    <div class="content">
+      <slot></slot>
+    </div>
   </main>
 </template>
 
 <style scoped>
 .admin-layout {
+  font-family: "DMSans";
   width: 100%;
   height: 100%;
   display: flex;
   background-color: green;
-}
-
-.navbar {
-  width: 20rem;
-  height: 100vh;
-  background-color: pink;
+  overflow: hidden;
 }
 
 .content {
+  padding: var(--size-md);
   flex: 70%;
-  min-height: 100vh;
-  background-color: white;
+  height: 100vh;
+  background-color: var(--color-background);
+  overflow: scroll;
+  overflow-x: hidden;
 }
 </style>

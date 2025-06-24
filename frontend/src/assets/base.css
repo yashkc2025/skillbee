@@ -13,10 +13,12 @@
   --color-border: #e6e6e6;
   --color-background: #fbf8f8;
   --color-hover: #faf5f5;
+  --color-heading-2: #666565;
   /* --color-background: #fef8f8; */
 
-  --accent-admin: #915ff0;
+  --accent-admin: #703be7;
 
+  --font-xs: 12px;
   --font-base: 16px;
   --font-sm: 14px;
   --font-md: 18px;
