@@ -71,7 +71,11 @@
                                     :type="field.name === 'password' ? (showPassword ? 'text' : 'password') : field.type"
                                     :placeholder="field.placeholder" :value="registerData[field.name]"
                                     :required="field.required"
-                                    @input="updateRegisterData(field.name, $event.target.value)" />
+                                    @input="updateRegisterData(field.name, $event.target.value)"
+                                    v-if="field.name !== 'dob'" />
+                                <input v-if="field.name === 'dob'" type="date" :placeholder="field.placeholder"
+                                    :value="registerData[field.name]" :required="field.required" :min="minDate"
+                                    :max="maxDate" @input="updateRegisterData(field.name, $event.target.value)" />
                                 <button v-if="field.name === 'password'" type="button" @click="togglePasswordVisibility"
                                     class="eye-toggle-btn">
                                     <i :class='showPassword ? "bi bi-eye" : "bi bi-eye-slash"'></i>
@@ -173,6 +177,15 @@ const loginFormFields = computed((): FormField[] => {
     });
     return fields;
 });
+const today = new Date();
+const yyyy = today.getFullYear();
+const mm = String(today.getMonth() + 1).padStart(2, '0');
+const dd = String(today.getDate()).padStart(2, '0');
+
+// For 8-14 years old
+const maxDate = `${yyyy - 8}-${mm}-${dd}`;
+const minDate = `${yyyy - 14}-${mm}-${dd}`;
+
 const registerFormFields = computed((): FormField[] => {
     const fields: FormField[] = [];
     fields.push({
@@ -213,6 +226,8 @@ const registerFormFields = computed((): FormField[] => {
                 placeholder: "Date of Birth",
                 icon: "calendar",
                 required: true,
+                min: minDate,
+                max: maxDate
             },
             {
                 name: "school",
@@ -368,7 +383,7 @@ const handleLogin = async () => {
     } else if (selectedUserType.value === "Admin") {
         url = base_url + '/auth/admin_login';
         payload = {
-            email,
+            email_id: email,
             password,
         };
     } else {
@@ -631,13 +646,15 @@ form {
 
 .eye-toggle-btn {
     border: none;
+    border-radius: 0 8px 8px 0;
     background: none;
     position: absolute;
     font-size: medium;
-    top: 1.2rem;
-    right: 1.8rem;
+    right: 0;
     cursor: pointer;
+    padding: 20px 15px 20px 25px;
 }
+
 
 .form-field input {
     width: 100%;
@@ -669,6 +686,11 @@ form {
     font-size: medium;
 }
 
+.btn:hover {
+    background-color: #ef476f;
+    transform: scale(1.01);
+}
+
 .btn-primary {
     background: linear-gradient(135deg, #ef476f, #f78fa7);
     color: white;
@@ -676,7 +698,6 @@ form {
 
 .btn-primary:hover {
     background: linear-gradient(135deg, #d63384, #ef476f);
-    transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(239, 71, 111, 0.3);
 }
 
@@ -715,10 +736,6 @@ form {
     color: #fff;
 }
 
-.btn:hover {
-    background-color: #ef476f;
-    transform: scale(1.01);
-}
 
 .btn-transparent {
     background: transparent;
