@@ -133,34 +133,42 @@ def admin_create():
 
 def admin_loginc():
     # Login function for the admin
+    
+    data = request.get_json()
+    email = data.get('email_id')
+    password = data.get('password')
+    if not email or not password:
+        return jsonify({"error": "Missing email or password"}), 500
+    admin = Admin.query.filter_by(email_id=email).first()
+    if not admin or not check_password_hash(admin.password, password):
+        return jsonify({"error": "Invalid email or password"}), 401
+    
+    token = str(uuid.uuid4())
+    session_info = {
+        "admin_id": admin.admin_id,
+        "email_id": admin.email_id,
+        "login_time": datetime.now().isoformat()
+    }
+    
     try:
-        data = request.get_json()
-        aemail = data.get('email_id')
-        apassword = data.get('password')
-        if not aemail or not apassword:
-            return jsonify({"error": "Missing email or password"}), 500
-        admin = Admin.query.filter_by(email_id=aemail).first()
-        if admin and check_password_hash(admin.password, apassword):
-            session_id = str(uuid.uuid4())
-            sdata = {
-                "admin_id": admin.admin_id,
-                "email_id": admin.email_id,
-                "login_time": datetime.now().isoformat()
+        new_session = Session(session_id=token, session_information=session_info)
+        db.session.add(new_session)
+        db.session.commit()
+        
+        return jsonify({
+            "session": {
+                "token": token,
+                "login_time": session_info["login_time"]
+            },
+            "user": {
+                "id": admin.admin_id
             }
-            new_session = Session(session_id=session_id, session_information=sdata)
-            db.session.add(new_session)
-            db.session.commit()
-
-            return jsonify({"message": "Login successful", 
-                            "session": {
-                                "token": session_id,
-                                "login_time": sdata["login_time"]
-                },}), 201
-        else:
-            return jsonify({"error": "Invalid credentials"}), 401
-    except Exception as e:
-        print(f"Admin login error: {e}")
-        return jsonify({"error": "Something went wrong during login"}), 500    
+        }), 200
+        
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({"error": "Database error occurred", "details": str(e)}), 500
+    
 
 def parent_loginc(request):
     """
