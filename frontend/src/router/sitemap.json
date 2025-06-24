@@ -18,7 +18,22 @@
     "child_app": {
         "dashboard": "/",
         "achievements": "/stats",
-        "curriculum": "/curriculum",
+        "lessons": "/lesson",
         "settings": "/settings"
+    },
+    "admin": {
+        "dashboard": "/",
+        "analytics": {
+            "performance": "/admin/performance",
+            "feedback": "/admin/feedback"
+        },
+        "curriculum": {
+            "lessons": "/curriculum/lessons",
+            "quiz": "/curriculum/quiz",
+            "activities": "/curriculum/activities",
+            "badges": "/curriculum/badges"
+        },
+        "user_management": "/admin/user_management",
+        "settings": "/admin/settings"
     }
 }
