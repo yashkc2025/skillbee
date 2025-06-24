@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DemoView from '@/views/DemoView.vue'
 import ChildDashboard from '@/views/child/ChildDashboard.vue'
+import AdminDashboard from '@/views/admin/AdminDashboard.vue'
+import sitemap from "./sitemap.json"
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -11,15 +13,15 @@ const router = createRouter({
       component: DemoView,
     },
     {
-      path: '/',
+      path: sitemap.child_app.dashboard,
       name: 'child_dashboard',
       component: ChildDashboard
     },
-    // {
-    //   path: '/auth/parent_login',
-    //   name: 'Login as Parent',
-    //   component: ParentLoginView,
-    // },
+    {
+      path: "/admin",
+      name: 'admin_dashboard',
+      component: AdminDashboard
+    }
   ],
 })
 

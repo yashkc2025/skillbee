@@ -3,27 +3,8 @@
 
 #app {
   height: 100%;
-  overflow: scroll;
-}
-
-/* width */
-::-webkit-scrollbar {
-  width: 15px;
-  height: 15px;
-  margin-top: 0;
-}
-
-/* Track */
-::-webkit-scrollbar-track {
-  background: var(--color-bg);
-}
-
-/* Handle */
-::-webkit-scrollbar-thumb {
-  background: var(--color-thunder);
-  background-clip: content-box;
-  border: 5px solid transparent;
-  border-radius: var(--size-sm);
+  width: 100%;
+  /* overflow: scroll; */
 }
 
 ::selection {
