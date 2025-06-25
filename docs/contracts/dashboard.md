@@ -1,29 +1,3 @@
-## **GET /get\_user\_details**
-
-**Description:** Retrieve details of the currently authenticated user.
-
-### Response
-
-```json
-{
-  "name": "string",
-  "email": "string",
-  "id": "string | number",
-  "user_type": "string"
-}
-```
-
-### Field Types
-
-| Field      | Type                 | Description                            |
-| ---------- | -------------------- | -------------------------------------- |
-| name       | `string`             | Full name of the user                  |
-| email      | `string`             | Email address                          |
-| id         | `string` or `number` | Unique user identifier                 |
-| user\_type | `string`             | Type of user (e.g., "parent", "child") |
- 
----
-
 ## **GET /child\_dashboard\_stats**
 
 **Description:** Retrieve dashboard statistics for a child user.
