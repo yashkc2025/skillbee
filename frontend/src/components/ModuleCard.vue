@@ -101,18 +101,6 @@ const progress = computed(() => {
     width: 44%;
 }
 
-.tertiary {
-    /* display: block; */
-    /* width: 95%; */
-    /* margin: 18px auto 0 auto; */
-}
-
-.tertiary.disabled-tertiary {
-    /* background: #ffb2dd; */
-    /* color: #ad1457; */
-    /* cursor: not-allowed; */
-}
-
 .progress-bar-container {
     width: 92%;
     margin: 18px auto 0 auto;
