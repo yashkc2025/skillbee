@@ -11,8 +11,11 @@
                     <ModuleCard @click="openLesson(lesson)" :image="lesson.image" :name="lesson.title"
                         :description="lesson.description" primary-label="📝 Activities" secondary-label="✍️ Quizzes"
                         :tertiary-label="isLessonRead(lesson.lesson_id) ? '✔✔ Marked as read' : '✔ Mark as read'"
-                        :disabledTertiary="isLessonRead(lesson.lesson_id)" @primary="goToActivities(lesson.lesson_id)"
-                        @secondary="goToQuizzes(lesson.lesson_id)" @tertiary="markAsRead(lesson.lesson_id)" />
+                        :disabledTertiary="isLessonRead(lesson.lesson_id)"
+                        @primary="goToActivities(lesson.lesson_id, lesson.title)"
+                        @secondary="goToQuizzes(lesson.lesson_id)"
+                        @tertiary="markAsRead(lesson.lesson_id, lesson.title)"
+                        :progress-status="lesson.progress_status" />
                 </div>
             </div>
             <p v-if="lessons.length === 0" class="empty-result">
@@ -22,7 +25,7 @@
                 None of the lesson's title and description has "{{ searchInput }}"
             </p>
             <p v-if="filteredLessons.length !== 0 && lessons.length !== 0" class="empty-result">
-                Click on a lesson title to view its contents.
+                Click on a lesson card to view its contents.
             </p>
         </div>
 
@@ -46,9 +49,11 @@
                     ✅ Completed on: {{ getCompletedAt(selectedLesson.lesson_id) }}
                 </p>
                 <div v-if="selectedLesson" class="content-buttons">
-                    <AppButton type="primary" @click="goToActivities(selectedLesson.lesson_id)">📝 Activities
+                    <AppButton type="primary" @click="goToActivities(selectedLesson.lesson_id, selectedLesson.title)">📝
+                        Activities
                     </AppButton>
-                    <AppButton type="secondary" @click="goToQuizzes(selectedLesson.lesson_id)">✍️ Quizzes
+                    <AppButton type="secondary" @click="goToQuizzes(selectedLesson.lesson_id, selectedLesson.title)">✍️
+                        Quizzes
                     </AppButton>
                     <AppButton type="tertiary"
                         :class="['tertiary', { 'disabled-tertiary': isLessonRead(selectedLesson.lesson_id) }]"
@@ -79,6 +84,7 @@ interface Lesson {
     description: string;
     content: string;
     url_details: Record<string, string>;
+    progress_status: string;
 }
 
 interface SkillType {
@@ -105,7 +111,8 @@ const lessons = [
         image: '/files/lesson1.jpg',
         description: 'Learn about the basics of Lesson 1',
         content: 'Lesson 1. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
-        url_details: { 0: 'https://www.lipsum.com/', 1: 'https://drawsql.app/teams/student-839/diagrams/life-skills-app-for-school-aged-children' }
+        url_details: { 0: 'https://www.lipsum.com/', 1: 'https://drawsql.app/teams/student-839/diagrams/life-skills-app-for-school-aged-children' },
+        progress_status: 30
     },
     {
         lesson_id: 2,
@@ -113,7 +120,8 @@ const lessons = [
         image: '/files/lesson2.jpeg',
         description: 'Learn about the basics of Lesson 2',
         content: 'Lesson 2. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
-        url_details: { 0: 'https//:dflsjds.com', 1: 'https//:google.com' }
+        url_details: { 0: 'https//:dflsjds.com', 1: 'https//:google.com' },
+        progress_status: 50
     },
     {
         lesson_id: 3,
@@ -121,7 +129,8 @@ const lessons = [
         image: '/files/lesson3.jpeg',
         description: 'Learn about the basics of Lesson 3',
         content: 'Lesson 3. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
-        url_details: { 0: 'https//:dflsjds.com', 1: 'https//:google.com' }
+        url_details: { 0: 'https//:dflsjds.com', 1: 'https//:google.com' },
+        progress_status: 20
     },
     {
         lesson_id: 4,
@@ -129,7 +138,8 @@ const lessons = [
         image: '/files/lesson4.jpeg',
         description: 'Learn about the basics of Ram 4',
         content: 'Ram 4. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
-        url_details: {}
+        url_details: {},
+        progress_status: 0
     },
     {
         lesson_id: 5,
@@ -137,7 +147,8 @@ const lessons = [
         image: '/files/lesson5.jpeg',
         description: 'Learn about the basics of Ram 5',
         content: 'Ram 5. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.vWhat is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
-        url_details: {}
+        url_details: {},
+        progress_status: 100
     }
 ];
 
@@ -173,12 +184,12 @@ function getCompletedAt(lessonId: number): string | null {
     return entry ? entry.completed_at : null;
 }
 
-function goToActivities(lessonId: number) {
-    router.push({ name: 'activities', params: { lessonId } });
+function goToActivities(lessonId: number, title: string) {
+    router.push({ name: 'activities', params: { lessonId, title } });
 }
 
-function goToQuizzes(lessonId: number) {
-    router.push({ name: 'quizzes', params: { lessonId } });
+function goToQuizzes(lessonId: number, title: string) {
+    router.push({ name: 'quizzes', params: { lessonId, title } });
 }
 
 const selectedLesson = ref<null | typeof lessons[0]>(null);
@@ -214,9 +225,9 @@ function isUrl(url_details: Record<string, string> | undefined): boolean {
     max-width: 400px;
     height: 30px;
     padding: 10px;
-    background: #fffbe7;
+    /* background: #fffbe7; */
     border: 1px solid #ccc;
-    border-radius: var(--border-radius);
+    border-radius: calc(var(--border-radius) / 1.5);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     font-family: "VAGRoundedNext";
 }
@@ -226,7 +237,7 @@ function isUrl(url_details: Record<string, string> | undefined): boolean {
 }
 
 .content-buttons .tertiary {
-    width: 200px;
+    width: 220px;
 }
 
 .content-buttons .disabled-tertiary {
@@ -247,7 +258,7 @@ function isUrl(url_details: Record<string, string> | undefined): boolean {
     border-radius: var(--border-radius);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
     background: #fff3e0;
-    font-family: 'Comic Sans MS', 'Fredoka', 'cursive';
+    font-family: 'Delius';
     font-size: var(--font-ml-lg);
     overflow-y: auto;
     transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
@@ -333,8 +344,9 @@ function isUrl(url_details: Record<string, string> | undefined): boolean {
 }
 
 .empty-result {
-    margin-bottom: 20px;
+    margin-top: 20px;
     text-align: center;
+    padding-bottom: 30px;
 }
 
 .blur-bg {

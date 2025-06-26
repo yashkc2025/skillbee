@@ -17,7 +17,7 @@ defineEmits(['click']);
 
 <style scoped>
 .btn {
-    font-family: 'VAGRoundedNext';
+    /* font-family: 'VAGRoundedNext'; */
     font-size: var(--font-md);
     padding: 10px 20px;
     border: none;
