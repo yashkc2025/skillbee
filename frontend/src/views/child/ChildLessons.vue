@@ -14,8 +14,8 @@
                         :disabledTertiary="isLessonRead(lesson.lesson_id)"
                         @primary="goToActivities(lesson.lesson_id, lesson.title)"
                         @secondary="goToQuizzes(lesson.lesson_id)"
-                        @tertiary="markAsRead(lesson.lesson_id, lesson.title)"
-                        :progress-status="lesson.progress_status" />
+                        @tertiary="markAsRead(lesson.lesson_id, lesson.title)" :progress-status="lesson.progress_status"
+                        :show-buttons="true" />
                 </div>
             </div>
             <p v-if="lessons.length === 0" class="empty-result">

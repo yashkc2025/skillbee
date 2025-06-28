@@ -4,7 +4,7 @@
         <h2 class="module-name">{{ name }}</h2>
         <p class="module-description">{{ description }}</p>
         <slot></slot>
-        <div class="module-buttons">
+        <div v-if="showButtons" class="module-buttons">
             <AppButton type="primary" class="primary" @click="$emit('primary')">{{ primaryLabel }}</AppButton>
             <AppButton type="secondary" class="secondary" @click="$emit('secondary')">{{ secondaryLabel }}
             </AppButton>
@@ -33,9 +33,12 @@ const props = defineProps<{
     primaryLabel?: string;
     secondaryLabel?: string;
     progressStatus?: number; // e.g. '3/5 Completed' or '60% Complete'
+    showButtons?: boolean;
 }>();
 
 defineEmits(['primary', 'secondary']);
+
+const showButtons = computed(() => props.showButtons !== false);
 
 const progress = computed(() => {
     if (!props.progressStatus) return 'Not Started';
@@ -63,6 +66,7 @@ const progress = computed(() => {
 
 .module-image {
     width: 100%;
+    height: 200px;
     border-radius: var(--border-radius) var(--border-radius) 0 0;
     object-fit: cover;
     border: 4px solid #fff;
