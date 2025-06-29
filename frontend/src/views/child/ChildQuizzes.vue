@@ -124,4 +124,10 @@ const getDifficultyStyle = (difficulty: string) => {
     line-height: 40px;
     margin-top: 5px;
 }
+
+.empty-result {
+    margin-top: 20px;
+    text-align: center;
+    padding-bottom: 30px;
+}
 </style>
