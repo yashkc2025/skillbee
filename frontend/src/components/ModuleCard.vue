@@ -34,6 +34,8 @@ const props = defineProps<{
     secondaryLabel?: string;
     progressStatus?: number; // e.g. '3/5 Completed' or '60% Complete'
     showButtons?: boolean;
+    notStartedLabel?: string; // e.g. 'Not Started'
+    completedLabel?: string; // e.g. 'Completed'
 }>();
 
 defineEmits(['primary', 'secondary']);
@@ -41,10 +43,11 @@ defineEmits(['primary', 'secondary']);
 const showButtons = computed(() => props.showButtons !== false);
 
 const progress = computed(() => {
-    if (!props.progressStatus) return 'Not Started';
-    else if (props.progressStatus === 0) return 'Not Started';
-    else if (props.progressStatus === 100) return 'Completed';
-    else return `Progress ${props.progressStatus}%`;
+    if (!props.progressStatus) return props.notStartedLabel || '🚦 Not Started';
+    else if (props.progressStatus === 0) return props.notStartedLabel || '🚦 Not Started';
+    else if (props.progressStatus === 100) return props.completedLabel || '✅ Completed';
+    else if (props.progressStatus < 0) return 'Invalid Progress';
+    else return `⏳ ${props.progressStatus}% done!`;
 });
 </script>
 
@@ -106,7 +109,7 @@ const progress = computed(() => {
 }
 
 .progress-bar-container {
-    width: 92%;
+    width: 93%;
     margin: 18px auto 0 auto;
     display: flex;
     flex-direction: column;
@@ -151,9 +154,11 @@ const progress = computed(() => {
     position: absolute;
     left: 50%;
     top: 50%;
+    width: 100%;
+    text-align: center;
     transform: translate(-50%, -50%);
     /* font-family: 'VAGRoundedNext', 'Comic Sans MS', cursive, sans-serif; */
-    font-size: 1.1rem;
+    font-size: var(--font-sm);
     color: #4a148c;
     /* font-weight: bold; */
     /* text-shadow: 1px 1px 0 #fffde7; */

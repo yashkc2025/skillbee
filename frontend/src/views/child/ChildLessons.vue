@@ -2,7 +2,7 @@
     <ChildAppLayout>
         <div class="lessons" :class="{ 'blur-bg': selectedLesson }">
             <div class="top-section">
-                <h2 class="ft-head-1">🎉 Let’s Explore {{ skillType.name }}!</h2>
+                <h2 class="ft-head-1">🎉 Let’s Explore {{ curriculum.name }}!</h2>
                 <input type="text" v-model="searchInput" placeholder="Type to find a lesson… 🕵️‍♂️"
                     class="search-box" />
             </div>
@@ -10,16 +10,14 @@
                 <div v-for="lesson in filteredLessons" :key="lesson.lesson_id">
                     <ModuleCard @click="openLesson(lesson)" :image="lesson.image" :name="lesson.title"
                         :description="lesson.description" primary-label="📝 Activities" secondary-label="✍️ Quizzes"
-                        :tertiary-label="isLessonRead(lesson.lesson_id) ? '✔✔ Marked as read' : '✔ Mark as read'"
-                        :disabledTertiary="isLessonRead(lesson.lesson_id)"
-                        @primary="goToActivities(lesson.lesson_id, lesson.title)"
-                        @secondary="goToQuizzes(lesson.lesson_id)"
-                        @tertiary="markAsRead(lesson.lesson_id, lesson.title)" :progress-status="lesson.progress_status"
-                        :show-buttons="true" />
+                        @primary="goToActivities(curriculum.curriculum_id, curriculum.name, lesson.lesson_id, lesson.title)"
+                        @secondary="goToQuizzes(curriculum.curriculum_id, curriculum.name, lesson.lesson_id, lesson.title)"
+                        :progress-status="lesson.progress_status" :show-buttons="true"
+                        not-started-label="📚 New Lesson!" completed-label="✅ Lesson Complete!" />
                 </div>
             </div>
             <p v-if="lessons.length === 0" class="empty-result">
-                There is no single lesson in "{{ skillType.name }}"
+                There is no single lesson in "{{ curriculum.name }}"
             </p>
             <p v-if="filteredLessons.length === 0 && lessons.length > 0" class="empty-result">
                 None of the lesson's title and description has "{{ searchInput }}"
@@ -49,10 +47,14 @@
                     ✅ Completed on: {{ getCompletedAt(selectedLesson.lesson_id) }}
                 </p>
                 <div v-if="selectedLesson" class="content-buttons">
-                    <AppButton type="primary" @click="goToActivities(selectedLesson.lesson_id, selectedLesson.title)">📝
+                    <AppButton type="primary"
+                        @click="goToActivities(curriculum.curriculum_id, curriculum.name, selectedLesson.lesson_id, selectedLesson.title)">
+                        📝
                         Activities
                     </AppButton>
-                    <AppButton type="secondary" @click="goToQuizzes(selectedLesson.lesson_id, selectedLesson.title)">✍️
+                    <AppButton type="secondary"
+                        @click="goToQuizzes(curriculum.curriculum_id, curriculum.name, selectedLesson.lesson_id, selectedLesson.title)">
+                        ✍️
                         Quizzes
                     </AppButton>
                     <AppButton type="tertiary"
@@ -87,7 +89,7 @@ interface Lesson {
     progress_status: string;
 }
 
-interface SkillType {
+interface curriculum {
     curriculum_id: number;
     name: string;
 }
@@ -102,7 +104,7 @@ interface LessonsHistory {
     completed_at: string;
 }
 
-const skillType = { curriculum_id: 1, name: 'XYZ' };
+const curriculum = { curriculum_id: 1, name: 'XYZ' };
 
 const lessons = [
     {
@@ -184,12 +186,12 @@ function getCompletedAt(lessonId: number): string | null {
     return entry ? entry.completed_at : null;
 }
 
-function goToActivities(lessonId: number, title: string) {
-    router.push({ name: 'activities', params: { lessonId, title } });
+function goToActivities(curriculumId: number, curriculumName: string, lessonId: number, lessonName: string) {
+    router.push({ name: 'child_activities', params: { curriculumId, curriculumName, lessonId, lessonName } });
 }
 
-function goToQuizzes(lessonId: number, title: string) {
-    router.push({ name: 'quizzes', params: { lessonId, title } });
+function goToQuizzes(curriculumId: number, curriculumName: string, lessonId: number, lessonName: string) {
+    router.push({ name: 'child_quizzes', params: { curriculumId, curriculumName, lessonId, lessonName } });
 }
 
 const selectedLesson = ref<null | typeof lessons[0]>(null);

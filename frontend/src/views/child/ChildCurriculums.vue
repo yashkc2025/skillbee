@@ -10,7 +10,8 @@
                 <div v-for="curriculum in filteredCurriculums" :key="curriculum.curriculum_id">
                     <ModuleCard @click="openLessons(curriculum.curriculum_id, curriculum.name)"
                         :image="curriculum.image" :name="curriculum.name" :description="curriculum.description"
-                        :progress-status="curriculum.progress_status" :show-buttons="false">
+                        :progress-status="curriculum.progress_status" :show-buttons="false"
+                        not-started-label="🚦 Ready to Start!" completed-label="🎓 Curriculum Complete!">
                     </ModuleCard>
 
                 </div>
