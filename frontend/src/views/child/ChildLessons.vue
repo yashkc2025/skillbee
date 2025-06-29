@@ -1,11 +1,14 @@
 <template>
     <ChildAppLayout>
         <div class="lessons" :class="{ 'blur-bg': selectedLesson }">
-            <div class="top-section">
+            <!-- <div class="top-section">
                 <h2 class="ft-head-1">🎉 Let’s Explore {{ curriculum.name }}!</h2>
                 <input type="text" v-model="searchInput" placeholder="Type to find a lesson… 🕵️‍♂️"
                     class="search-box" />
-            </div>
+            </div> -->
+            <AnimatedHeader v-model="searchInput"
+                :heading-messages="[`🎉 Let’s discover the lessons in ${curriculum.name}! 🌟`, '✨ Tap the card to start your learning adventure! 🚀']"
+                :placeholder-messages="['Type to find a lesson… 🕵️‍♂️']" :typing-speed="50" :pause-duration="1500" />
             <div class="card-item">
                 <div v-for="lesson in filteredLessons" :key="lesson.lesson_id">
                     <ModuleCard @click="openLesson(lesson)" :image="lesson.image" :name="lesson.title"
@@ -23,7 +26,7 @@
                 None of the lesson's title and description has "{{ searchInput }}"
             </p>
             <p v-if="filteredLessons.length !== 0 && lessons.length !== 0" class="empty-result">
-                Click on a lesson card to view its contents.
+                Tip: Click on a lesson card to view its contents.
             </p>
         </div>
 
@@ -72,6 +75,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import ChildAppLayout from '@/layouts/ChildAppLayout.vue';
+import AnimatedHeader from '@/components/child/AnimatedHeader.vue';
 import ModuleCard from '@/components/ModuleCard.vue';
 import AppButton from '@/components/AppButton.vue';
 import { useRouter } from 'vue-router';

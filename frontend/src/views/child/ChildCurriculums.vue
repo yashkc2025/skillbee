@@ -1,11 +1,15 @@
 <template>
     <ChildAppLayout>
         <div class="curriculums">
-            <div class="top-section">
+            <!-- <div class="top-section">
                 <h2 class="ft-head-1">✨ What do you want to learn? 🎯</h2>
                 <input type="text" v-model="searchInput" placeholder="Type to find curriculum... 🕵️‍♂️"
                     class="search-box">
-            </div>
+            </div> -->
+            <AnimatedHeader v-model="searchInput"
+                :heading-messages="['✨ What do you want to learn? 🎯', '✨ Tap the card to start learning!']"
+                :placeholder-messages="['Type to find curriculum... 🕵️‍♂️']" :typing-speed="50"
+                :pause-duration="1500" />
             <div class="card-item">
                 <div v-for="curriculum in filteredCurriculums" :key="curriculum.curriculum_id">
                     <ModuleCard @click="openLessons(curriculum.curriculum_id, curriculum.name)"
@@ -13,9 +17,14 @@
                         :progress-status="curriculum.progress_status" :show-buttons="false"
                         not-started-label="🚦 Ready to Start!" completed-label="🎓 Curriculum Complete!">
                     </ModuleCard>
-
                 </div>
             </div>
+            <p v-if="filteredCurriculums.length === 0" class="empty-result">
+                None of the curriculum's name and description has "{{ searchInput }}"
+            </p>
+            <p v-if="filteredCurriculums.length !== 0" class="empty-result">
+                Tip: Click on a curriculum card to view its lessons.
+            </p>
         </div>
     </ChildAppLayout>
 </template>
@@ -23,6 +32,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import ChildAppLayout from '@/layouts/ChildAppLayout.vue';
+import AnimatedHeader from '@/components/child/AnimatedHeader.vue';
 import ModuleCard from '@/components/ModuleCard.vue';
 import { searchQuery } from '@/fx/utils';
 import { useRouter } from 'vue-router';

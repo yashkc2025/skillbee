@@ -1,12 +1,15 @@
 <template>
     <ChildAppLayout>
         <div class="activities" :class="{ 'blur-bg': selectedActivity }">
-            <div class="top-section">
+            <!-- <div class="top-section">
                 <h2 class="ft-head-1">🎉 Let’s Have Fun with the {{ lesson.name }} Activity from {{ curriculum.name }}!
                 </h2>
                 <input type="text" v-model="searchInput" placeholder="Type to find a activity… 🕵️‍♂️"
                     class="search-box" />
-            </div>
+            </div> -->
+            <AnimatedHeader v-model="searchInput"
+                :heading-messages="[`🎉 Let’s play the ${lesson.name} activity from ${curriculum.name}! 🌟`, '✨ Tap an activity to see details and upload your work! 🚀']"
+                :placeholder-messages="['Type to find a activity… 🕵️‍♂️']" :typing-speed="50" :pause-duration="1500" />
             <div class="card-item">
                 <div v-for="activity in filteredActivities" :key="activity.activity_id">
                     <ModuleCard @click="openActivity(activity)" :image="activity.image" :name="activity.name"
@@ -32,7 +35,7 @@
                 No activities found matching your search. Please try a different keyword.
             </p>
             <p v-if="filteredActivities.length !== 0 && activities.length !== 0" class="empty-result">
-                <strong>Tip:</strong> Click on an activity to view details and upload your work!
+                Tip: Click on an activity to view details and upload your work!
             </p>
         </div>
 
@@ -71,6 +74,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import ChildAppLayout from '@/layouts/ChildAppLayout.vue';
+import AnimatedHeader from '@/components/child/AnimatedHeader.vue';
 import ModuleCard from '@/components/ModuleCard.vue';
 import AppButton from '@/components/AppButton.vue';
 import { searchQuery } from '@/fx/utils';
