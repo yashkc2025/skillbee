@@ -19,7 +19,7 @@ defineEmits(['click']);
 .btn {
     /* font-family: 'VAGRoundedNext'; */
     font-size: var(--font-md);
-    padding: 10px 20px;
+    padding: 10px 15px;
     border: none;
     border-radius: var(--border-radius);
     cursor: pointer;

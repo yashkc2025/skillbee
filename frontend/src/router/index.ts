@@ -4,6 +4,7 @@ import ChildDashboard from '@/views/child/ChildDashboard.vue'
 import ChildLessons from '@/views/child/ChildLessons.vue'
 import ChildCurriculum from '@/views/child/ChildCurriculums.vue'
 import ChildActivities from '@/views/child/ChildActivities.vue'
+import ChildQuizzes from '@/views/child/ChildQuizzes.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -33,6 +34,12 @@ const router = createRouter({
       path: '/:curriculumName/:curriculumId/:lessonName/:lessonId/activities',
       name: 'child_activities',
       component: ChildActivities,
+      props: true
+    },
+    {
+      path: '/:curriculumName/:curriculumId/:lessonName/:lessonId/quizzes',
+      name: 'child_quizzes',
+      component: ChildQuizzes,
       props: true
     }
     // {

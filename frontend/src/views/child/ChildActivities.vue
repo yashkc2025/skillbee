@@ -121,7 +121,7 @@ const activities = [
 
 const searchInput = ref('');
 const filteredActivities = computed(() =>
-    searchQuery(activities, searchInput.value, ['name', 'description'])
+    searchQuery(activities, searchInput.value, ['name', 'description', 'difficulty'])
 );
 
 const fileInput = ref<HTMLInputElement | null>(null);
