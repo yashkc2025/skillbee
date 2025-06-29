@@ -17,8 +17,14 @@
                         completed-label="🏅 Quiz Attempted!" :show-buttons="true"
                         :primary-label="quiz.progress_status === 100 ? '🔁 Reattempt' : '📝 Attempt'"
                         secondary-label="📜 History">
-                        <p class="time-duration"> You have {{ quiz.time_duration }} to finish the quiz! Let’s go!
-                        </p>
+                        <div class="extra">
+                            <p class="time-duration"> You have {{ quiz.time_duration }} to finish the quiz!
+                            </p>
+                            <p class="card-quiz-difficulty"
+                                :style="{ color: getDifficultyStyle(quiz.difficulty).color }"> Difficulty:
+                                {{ quiz.difficulty || 'Unknown' }}
+                            </p>
+                        </div>
                     </ModuleCard>
                 </div>
             </div>
@@ -93,15 +99,29 @@ const filteredQuizzes = computed(() => {
     return searchQuery(quizzes, searchInput.value, ['name', 'description', 'difficulty']);
 });
 
+const getDifficultyStyle = (difficulty: string) => {
+    switch (difficulty?.toLowerCase()) {
+        case 'easy': return { color: '#4CAF50', emoji: '😊' };
+        case 'medium': return { color: '#ffa14f', emoji: '🤔' };
+        case 'hard': return { color: '#F44336', emoji: '🧠' };
+        default: return { color: '#9E9E9E', emoji: '❓' };
+    }
+};
+
 </script>
 
 <style>
-.time-duration {
+.extra {
     font-size: var(--font-md);
     margin-top: -15px;
     color: #00796b;
     margin-bottom: 10px;
     padding: 0 15px;
     min-height: 40px;
+}
+
+.card-quiz-difficulty {
+    line-height: 40px;
+    margin-top: 5px;
 }
 </style>
