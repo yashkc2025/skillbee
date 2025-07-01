@@ -58,12 +58,15 @@ progress_status = (completed_activities + completed_quizzes) / (total_activities
 
 ```json
 {
-  "lesson_id": "integer",
-  "content": "string (HTML formatted)",
-  "url_details": {
-    "index": "string (URL)"
-  },
-  "completed_at": "datetime (ISO format) | null"
+  "selected_lesson": {
+    "lesson_id": "integer",
+    "title": "string",
+    "content": "string (HTML formatted)",
+    "url_details": {
+      "index": "string (URL)"
+    },
+    "completed_at": "datetime (ISO format) | null"
+  }
 }
 ```
 
