@@ -97,7 +97,7 @@
 ```json
 {
   "activity_history_id": "integer",
-  "completed_at": "datetime (ISO format)"
+  "submitted_at": "datetime (ISO format)"
 }
 ```
 
@@ -119,11 +119,11 @@
 
 ```json
 {
-  "activity_id": "integer",
-  "submissions": [
+  "activities_submission": [
     {
       "activity_history_id": "integer",
-      "completed_at": "datetime (ISO format)",
+      "activity_id": "integer",
+      "submitted_at": "datetime (ISO format)",
       "feedback": {
         "admin": "string",
         "parent": "string"
