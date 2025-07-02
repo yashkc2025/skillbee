@@ -203,7 +203,7 @@ function tableEntries() {
 </script>
 
 <template>
-  <CardV2 label-title="Children" label-image="bi bi-backpack">
+  <CardV2 label-title="Children" label-image="bi bi-emoji-smile">
     <template #top-content>
       <div class="table-header">
         <InputComponent icon="bi bi-search" name="search" placeholder="Search for a student" />

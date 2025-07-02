@@ -28,7 +28,6 @@ function isComponent(val: unknown) {
           <component :is="value" v-if="isComponent(value)" />
           <span v-else>{{ value }}</span>
         </td>
-
       </tr>
     </tbody>
   </table>

@@ -52,6 +52,7 @@ defineProps<{
   background-color: var(--color-border);
   padding: 1px 3px;
   border-radius: 5px;
+  padding-top: 2px;
 }
 
 .content {

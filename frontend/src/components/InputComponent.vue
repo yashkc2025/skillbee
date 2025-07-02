@@ -1,16 +1,19 @@
 <script setup lang="ts">
-defineProps<{
+const props = withDefaults(defineProps<{
   name: string;
   placeholder: string;
-  icon: string
-
-}>();
+  icon: string;
+  inputType?: 'TextArea' | 'Input';
+}>(), {
+  inputType: 'Input',
+});
 </script>
 
 <template>
   <div class="input-wrapper">
     <i :class="icon"></i>
-    <input :placeholder="placeholder" :name="name" />
+    <input v-if="inputType !== 'TextArea'" :placeholder="placeholder" :name="name" />
+    <textarea v-if="inputType === 'TextArea'" :placeholder="placeholder" :name="name" />
   </div>
 </template>
 
@@ -18,7 +21,8 @@ defineProps<{
 .input-wrapper {
   position: relative;
   width: 100%;
-  max-width: 300px;
+  /* max-width: 300px; */
+  /* background-color: red; */
 }
 
 i {
@@ -31,7 +35,8 @@ i {
   pointer-events: none;
 }
 
-input {
+input,
+textarea {
   width: 100%;
   padding: 4px;
   padding-left: 30px;

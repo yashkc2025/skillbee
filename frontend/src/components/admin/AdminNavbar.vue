@@ -32,7 +32,7 @@ const navOptions = [
     items: [
       {
         label: "Lessons",
-        icon: "bi bi-journal-bookmark",
+        icon: "bi bi-book",
         link: sitemap.admin.curriculum.lessons,
       },
       {
@@ -42,12 +42,12 @@ const navOptions = [
       },
       {
         label: "Activities",
-        icon: "bi bi-check2-square",
+        icon: "bi bi-pen",
         link: sitemap.admin.curriculum.activities,
       },
       {
         label: "Badges",
-        icon: "bi bi-star",
+        icon: "bi bi-stars",
         link: sitemap.admin.curriculum.badges,
       },
     ],
@@ -55,11 +55,6 @@ const navOptions = [
   {
     heading: "Miscellanous",
     items: [
-      {
-        label: "Manage Users",
-        icon: "bi bi-people",
-        link: sitemap.admin.user_management,
-      },
       {
         label: "Settings",
         icon: "bi bi-gear",
@@ -74,17 +69,17 @@ const navOptions = [
   <div class="navbar">
     <section class="logo-parent">
       <img src="/logo.png" alt="" />
-      <span>Bloom</span>
+      <span>Admin</span>
     </section>
     <div class="navbar-content">
-      <a :href="sitemap.admin.new.all" class="create">
+      <!-- <a :href="sitemap.admin.new.all" class="create">
         <i class="bi bi-plus-lg"></i>
         <span>Create something</span>
-      </a>
+      </a> -->
       <div class="navbar-section" v-for="section in navOptions" :key="section.heading">
         <p v-if="section.heading !== ''">{{ section.heading }}</p>
         <a :href="item.link" v-for="item in section.items" :key="item.label" class="navbar-item">
-          <i :class="item.icon" class="me-2"></i>
+          <i :class="item.icon" class="nav-icon chip"></i>
           <span>{{ item.label }}</span>
         </a>
       </div>
@@ -184,5 +179,9 @@ span {
   display: flex;
   flex-direction: row;
   gap: var(--size-xs);
+}
+
+.nav-icon {
+  font-size: 13px;
 }
 </style>

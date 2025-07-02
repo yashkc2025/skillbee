@@ -28,10 +28,10 @@
             "feedback": "/admin/feedback"
         },
         "curriculum": {
-            "lessons": "/curriculum/lessons",
-            "quiz": "/curriculum/quiz",
-            "activities": "/curriculum/activities",
-            "badges": "/curriculum/badges"
+            "lessons": "/admin/lessons",
+            "quiz": "/admin/quiz",
+            "activities": "/admin/activities",
+            "badges": "/admin/badges"
         },
         "user_management": {
             "parent": "/admin/parent",

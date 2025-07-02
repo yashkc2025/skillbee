@@ -29,7 +29,7 @@ const parents = [
     id: 3,
     name: "Ravi Reddy",
     email: "ravi.reddy@app.com",
-    blocked: false,
+    blocked: true,
   },
   {
     id: 4,
@@ -46,7 +46,7 @@ const parents = [
 ];
 
 
-const parentLabel = ['ID', 'Name', 'Email', 'Blocked', 'Children']
+const parentLabel = ['ID', 'Name', 'Email', 'Status', 'Children']
 
 const router = useRouter()
 function expandTable() {
@@ -56,7 +56,7 @@ function expandTable() {
 function tableEntries() {
   parents.forEach((p) => {
     p.blocked = <span class="chip pointer">{p.blocked ? "Blocked" : "Active"}</span>
-    p.view_children = <i class="bi bi-backpack  pointer"></i>
+    p.view_children = <i class="bi bi-patch-plus pointer"></i>
   })
   if (props.maxItems) {
     return parents.slice(0, props.maxItems)

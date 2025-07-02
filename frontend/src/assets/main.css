@@ -8,7 +8,7 @@
 }
 
 ::selection {
-  background: var(--accent-200);
+  background: var(--color-border);
 }
 
 .Vue-Toastification__toast {
@@ -47,4 +47,17 @@
 
 .pointer {
   cursor: pointer;
+}
+
+.button-admin {
+  padding: 4px;
+  font-family: 'DMSans';
+  font-weight: 500;
+  /* outline: 1px solid var(--color-border); */
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  background-color: var(--accent-admin);
+  color: var(--color-light);
+  width: 100%;
 }
