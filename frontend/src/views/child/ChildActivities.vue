@@ -17,7 +17,8 @@
                         :primary-label="activity.progress_status === 100 ? '📤 Reupload' : '📤 Upload'"
                         secondary-label="📜 History" :progress-status="activity.progress_status"
                         not-started-label="🔍 Let's Explore!" completed-label="🏆 Activity Mastered!"
-                        @primary="uploadActivity(activity.activity_id)">
+                        @primary="uploadActivity(activity.activity_id)"
+                        @secondary="openActivitySubmissions(activity), moduleHistory = true">
                         <p class="card-activity-difficulty"
                             :style="{ color: getDifficultyStyle(activity.difficulty).color }"> Difficulty:
                             {{ activity.difficulty || 'Unknown' }}
@@ -39,36 +40,76 @@
             </p>
         </div>
 
-        <div :class="['activity-contents', { 'show-content': selectedActivity }]">
+        <div :class="['activity-contents', { 'show-content': selectedActivity }]" v-if="selectedActivity">
             <h2 class="activity-name">🎯 {{ selectedActivity?.name }}</h2>
-            <button class="back-btn" @click="selectedActivity = null">🔙 Back to Activities</button>
-            <p class="activity-description">📝 {{ selectedActivity?.description }}</p>
-            <p>📋 {{ selectedActivity?.instruction }}</p>
-            <p class="activity-difficulty">
-                💪 Difficulty:
-                <span :style="{ color: getDifficultyStyle(selectedActivity?.difficulty).color }">
-                    {{ getDifficultyStyle(selectedActivity?.difficulty).emoji }}
-                    {{ selectedActivity?.difficulty || 'Unknown' }}
-                </span>
-            </p>
+            <button class="back-btn" v-if="moduleHistory"
+                @click="selectedActivity = null; showHistory = false; moduleHistory = false">🔙
+                Back to
+                Activities</button>
+            <button class="back-btn" v-if="selectedActivity && showHistory === false && moduleHistory === false"
+                @click="selectedActivity = null; showHistory = false">🔙
+                Back to
+                Activities</button>
+            <button v-if="selectedActivity && showHistory === true && moduleHistory === false" class="back-btn"
+                @click="showHistory = false">🔙
+                Back to
+                Content</button>
+            <div v-if="showHistory" class="activity-history">
+                <h3>📚 Your Activity History</h3>
 
-            <div class="completed-buttons">
-                <p v-if="selectedActivity && selectedActivity.progress_status === 100" class="completed-activity">
-                    🎉 Activity Completed! You can re-upload your work if needed.
+                <div v-if="getActivityHistory(selectedActivity.activity_id).length > 0">
+                    <div v-for="history in getActivityHistory(selectedActivity.activity_id)"
+                        :key="history.activity_history_id" class="history-card">
+                        <div class="view-submission-btn-wrap">
+                            <div class="history-date">🗓️ {{ new Date(history.submitted_at).toLocaleDateString() }}
+                            </div>
+                            <button class="view-submission-btn" @click="viewSubmission(selectedActivity)">
+                                👀 View Submission
+                            </button>
+                        </div>
+                        <div class="history-feedback">
+                            <div v-if="history.feedback.admin" class="feedback-admin">
+                                <span>👩‍🏫 <b>Admin:</b> {{ history.feedback.admin }}</span>
+                            </div>
+                            <div v-if="history.feedback.parent" class="feedback-parent">
+                                <span>👨‍👩‍👧 <b>Parent:</b> {{ history.feedback.parent }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="no-history">
+                    <span>😅 No submissions yet! Try uploading your work above.</span>
+                </div>
+            </div>
+
+            <div v-if="!showHistory">
+                <p class="activity-description">📝 {{ selectedActivity?.description }}</p>
+                <p>📋 {{ selectedActivity?.instruction }}</p>
+                <p class="activity-difficulty">
+                    💪 Difficulty:
+                    <span :style="{ color: getDifficultyStyle(selectedActivity?.difficulty).color }">
+                        {{ getDifficultyStyle(selectedActivity?.difficulty).emoji }}
+                        {{ selectedActivity?.difficulty || 'Unknown' }}
+                    </span>
                 </p>
-                <div v-if="selectedActivity" class="content-buttons">
-                    <AppButton type="primary" @click="uploadActivity(selectedActivity.activity_id)">
-                        {{ selectedActivity.progress_status === 0 ? '📤 Upload' : '📤 Reupload' }}
-                    </AppButton>
-                    <AppButton type="secondary" @click="openActivity(selectedActivity)">
-                        📜 History
-                    </AppButton>
 
+                <div class="completed-buttons">
+                    <p v-if="selectedActivity && selectedActivity.progress_status === 100" class="completed-activity">
+                        🎉 Activity Completed! You can re-upload your work if needed.
+                    </p>
+                    <div v-if="selectedActivity" class="content-buttons">
+                        <AppButton type="primary" v-if="!showHistory"
+                            @click="uploadActivity(selectedActivity.activity_id)">
+                            {{ selectedActivity.progress_status === 0 ? '📤 Upload' : '📤 Reupload' }}
+                        </AppButton>
+                        <AppButton type="secondary" @click="openActivitySubmissions(selectedActivity)">
+                            📜 History
+                        </AppButton>
+                    </div>
                 </div>
             </div>
         </div>
     </ChildAppLayout>
-
 </template>
 
 <script setup lang="ts">
@@ -123,6 +164,61 @@ const activities = [
     }
 ];
 
+const moduleHistory = ref(false);
+
+const activity_submission = [
+    {
+        activity_history_id: 1,
+        activity_id: 1,
+        activity_name: 'Activity 1',
+        submitted_at: '2023-10-01T10:00:00Z',
+        feedback: {
+            admin: 'Great job! Your drawing is very creative and colorful. Keep up the good work!',
+            parent: 'I love how you used so many colors! It really brings your drawing to life.',
+        }
+    },
+    {
+        activity_history_id: 2,
+        activity_id: 1,
+        activity_name: 'Activity 1',
+        submitted_at: '2023-10-02T11:30:00Z',
+        feedback: {
+            admin: 'Excellent work! You found all the red objects and arranged them perfectly.',
+            parent: 'Wow, you did a great job organizing the objects by size!',
+        }
+    },
+    {
+        activity_history_id: 3,
+        activity_id: 3,
+        activity_name: 'Activity 3',
+        submitted_at: '2023-10-03T09:15:00Z',
+        feedback: {
+            admin: 'Impressive treasure map! Your clues are very clever.',
+            parent: 'I love how you drew the symbols on the map. It looks like a real adventure!',
+        }
+    },
+    {
+        activity_history_id: 4,
+        activity_id: 3,
+        activity_name: 'Activity 3',
+        submitted_at: '2023-10-04T14:45:00Z',
+        feedback: {
+            admin: 'Great retelling of the story! You captured the main points well.',
+            parent: 'Your summary was very clear and easy to understand. Well done!',
+        }
+    },
+    {
+        activity_history_id: 5,
+        activity_id: 3,
+        activity_name: 'Activity 3',
+        submitted_at: '2023-10-05T16:20:00Z',
+        feedback: {
+            admin: 'Fantastic job! Your creativity really shines through in this activity.',
+            parent: 'I love how you expressed your thoughts so clearly. Keep it up!',
+        }
+    }
+]
+
 const searchInput = ref('');
 const filteredActivities = computed(() =>
     searchQuery(activities, searchInput.value, ['name', 'description', 'difficulty'])
@@ -130,6 +226,8 @@ const filteredActivities = computed(() =>
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const selectedActivityId = ref<number | null>(null);
+const selectedActivitySubmissions = ref<null | typeof activity_submission[0]>(null);
+const showHistory = ref(false);
 
 function uploadActivity(activityId: number) {
     selectedActivityId.value = activityId;
@@ -150,9 +248,19 @@ async function handleFileUpload(event: Event) {
 
 const selectedActivity = ref<null | typeof activities[0]>(null);
 
+function openActivitySubmissions(activity: typeof activities[0]) {
+    selectedActivity.value = activity;
+    showHistory.value = true;
+}
+
 function openActivity(activity: typeof activities[0]) {
     selectedActivity.value = activity;
+    showHistory.value = false;
 }
+
+const getActivityHistory = (activityId: number) => {
+    return activity_submission.filter(sub => sub.activity_id === activityId);
+};
 
 const getDifficultyStyle = (difficulty: string) => {
     switch (difficulty?.toLowerCase()) {
@@ -162,6 +270,11 @@ const getDifficultyStyle = (difficulty: string) => {
         default: return { color: '#9E9E9E', emoji: '❓' };
     }
 };
+
+function viewSubmission(history: typeof activity_submission[0]) {
+    // Implement your logic here, e.g. open a modal or route to a detail page
+    alert(`Viewing submission for: ${history.name} (ID: ${history.activity_history_id})`);
+}
 
 </script>
 
@@ -291,5 +404,81 @@ const getDifficultyStyle = (difficulty: string) => {
     filter: blur(5px);
     pointer-events: none;
     user-select: none;
+}
+
+.activity-history {
+    /* background: linear-gradient(90deg, #ffe0b2 0%, #fffde7 100%); */
+    border-radius: 18px;
+    padding: 18px 20px;
+    /* box-shadow: 0 2px 12px rgba(255, 193, 7, 0.13); */
+    /* font-family: 'Comic 'Delius', cursive; */
+    /* font-size: 1.1rem; */
+}
+
+.activity-history h3 {
+    color: #ff9800;
+    margin-bottom: 16px;
+    /* text-align: center; */
+    font-family: 'VAGRoundedNext';
+}
+
+.history-card {
+    background: #fff8e1;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 6px rgba(255, 193, 7, 0.08);
+}
+
+.history-date {
+    color: #ffb300;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.feedback-admin,
+.feedback-parent {
+    margin-bottom: 4px;
+    padding-left: 8px;
+}
+
+.feedback-admin span {
+    color: #4caf50;
+}
+
+.feedback-parent span {
+    color: #1976d2;
+}
+
+.no-history {
+    text-align: center;
+    color: #bdbdbd;
+    /* font-size: 1.1rem; */
+    margin-top: 10px;
+}
+
+.view-submission-btn-wrap {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.view-submission-btn {
+    background-color: #ffe082;
+    color: #bf360c;
+    font-size: var(--font-sm);
+    font-weight: bold;
+    border-radius: calc(var(--border-radius) / 2);
+    border: none;
+    font-family: 'VAGRoundedNext';
+    cursor: pointer;
+    padding: 0 20px;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.13);
+    transition: background 0.2s;
+}
+
+.view-submission-btn:hover {
+    background: linear-gradient(90deg, #ffe082 0%, #ffd54f 100%);
+    color: #d84315;
 }
 </style>
