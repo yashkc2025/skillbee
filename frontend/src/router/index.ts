@@ -4,6 +4,8 @@ import ChildDashboard from '@/views/child/ChildDashboard.vue'
 import AdminDashboard from '@/views/admin/AdminDashboard.vue'
 import sitemap from "./sitemap.json"
 import SignInSignUp from '@/views/SignInSignUp.vue'
+import ParentList from "@/views/admin/ParentList.vue"
+import ChildrenList from "@/views/admin/ChildrenList.vue"
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -27,7 +29,23 @@ const router = createRouter({
       path: "/admin",
       name: 'admin_dashboard',
       component: AdminDashboard
-    }
+    },
+    {
+      path: "/admin/parent",
+      name: "parent_list",
+      component: ParentList
+    },
+    {
+      path: "/admin/children",
+      name: "child_list",
+      component: ChildrenList
+    },
+    {
+      path: "/admin/children/:id",
+      name: "child_profile_admin",
+      component: ChildrenList,
+      props: true
+    },
   ],
 })
 

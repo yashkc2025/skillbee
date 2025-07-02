@@ -22,7 +22,7 @@
         "settings": "/settings"
     },
     "admin": {
-        "dashboard": "/",
+        "dashboard": "/admin/",
         "analytics": {
             "performance": "/admin/performance",
             "feedback": "/admin/feedback"
@@ -33,7 +33,10 @@
             "activities": "/curriculum/activities",
             "badges": "/curriculum/badges"
         },
-        "user_management": "/admin/user_management",
+        "user_management": {
+            "parent": "/admin/parent",
+            "children": "/admin/children"
+        },
         "settings": "/admin/settings",
         "new": {
             "all": "/admin/new"

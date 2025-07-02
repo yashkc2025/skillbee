@@ -6,7 +6,7 @@
   --color-thunder: #073b4c;
   --color-sky: #70d6ff;
 
-  --color-text-dark: var(--color-thunder);
+  --color-text-dark: #111;
   --color-text-light: #fff;
 
   --color-light: var(--color-text-light); /* --color-light: #fef8f8; */
@@ -39,7 +39,7 @@
   --size-3xl: 85px;
   --size-4xl: 105px;
 
-  --border-radius: var(--size-sm);
+  --border-radius: var(--size-xs);
 }
 
 *,

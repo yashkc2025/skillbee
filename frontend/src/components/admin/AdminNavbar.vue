@@ -47,7 +47,7 @@ const navOptions = [
       },
       {
         label: "Badges",
-        icon: "bi bi-patch-check",
+        icon: "bi bi-star",
         link: sitemap.admin.curriculum.badges,
       },
     ],
@@ -76,16 +76,18 @@ const navOptions = [
       <img src="/logo.png" alt="" />
       <span>Bloom</span>
     </section>
-    <a :href="sitemap.admin.new.all" class="create">
-      <i class="bi bi-plus-lg"></i>
-      <span>Create something</span>
-    </a>
-    <div class="navbar-section" v-for="section in navOptions" :key="section.heading">
-      <p v-if="section.heading !== ''">{{ section.heading }}</p>
-      <a :href="item.link" v-for="item in section.items" :key="item.label" class="navbar-item">
-        <i :class="item.icon" class="me-2"></i>
-        <span>{{ item.label }}</span>
+    <div class="navbar-content">
+      <a :href="sitemap.admin.new.all" class="create">
+        <i class="bi bi-plus-lg"></i>
+        <span>Create something</span>
       </a>
+      <div class="navbar-section" v-for="section in navOptions" :key="section.heading">
+        <p v-if="section.heading !== ''">{{ section.heading }}</p>
+        <a :href="item.link" v-for="item in section.items" :key="item.label" class="navbar-item">
+          <i :class="item.icon" class="me-2"></i>
+          <span>{{ item.label }}</span>
+        </a>
+      </div>
     </div>
   </div>
 </template>
@@ -96,11 +98,13 @@ const navOptions = [
   align-items: center;
   /* justify-content: center; */
   gap: var(--size-xs);
+  padding: var(--size-sm) var(--size-md);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .logo-parent>span {
-  font-weight: 700;
-  font-family: "VAGRoundedNext";
+  font-weight: 600;
+  font-family: "Inter";
   font-size: 20px;
 }
 
@@ -129,6 +133,17 @@ const navOptions = [
 }
 
 .navbar {
+  max-width: 15rem;
+  height: 100vh;
+  background-color: var(--color-background);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-md);
+  /* padding: var(--size-md); */
+  /* padding-top: 0px; */
+}
+
+.navbar-content {
   width: 20rem;
   height: 100vh;
   background-color: var(--color-background);
@@ -136,6 +151,7 @@ const navOptions = [
   flex-direction: column;
   gap: var(--size-md);
   padding: var(--size-md);
+  padding-top: 0px;
 }
 
 .navbar-section>p {
@@ -149,6 +165,7 @@ const navOptions = [
 .navbar-section {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: var(--size-xs);
 }
 

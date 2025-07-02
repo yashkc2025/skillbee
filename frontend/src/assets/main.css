@@ -33,3 +33,18 @@
   background-color: var(--color-hover);
   border-color: var(--color-border);
 }
+
+.darken {
+  font-weight: bold;
+}
+
+.chip {
+  background-color: var(--color-border);
+  padding: 1px 3px;
+  border-radius: 5px;
+  font-size: var(--font-xs);
+}
+
+.pointer {
+  cursor: pointer;
+}
