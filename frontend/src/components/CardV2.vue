@@ -6,7 +6,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="card">
+  <div class="card box-shadow">
     <div class="header">
       <div class="label">
         <i :class="labelImage"></i>
