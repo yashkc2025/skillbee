@@ -21,6 +21,7 @@ import NewChildren from '@/views/parent/NewChildren.vue'
 import ParentSettings from '@/views/parent/ParentSettings.vue'
 import ParentChildrenProfile from '@/views/parent/ParentChildrenProfile.vue'
 import ChildrenProfile from '@/views/admin/ChildrenProfile.vue'
+import NewQuiz from '@/views/admin/new/NewQuiz.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -127,6 +128,11 @@ const router = createRouter({
       path: sitemap.admin.new.badge,
       name: 'new_badge',
       component: NewBadge
+    },
+    {
+      path: sitemap.admin.new.quiz,
+      name: 'new_quiz',
+      component: NewQuiz
     },
     {
       path: sitemap.parent.dashboard,
