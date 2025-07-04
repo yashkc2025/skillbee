@@ -6,17 +6,21 @@
   --color-thunder: #073b4c;
   --color-sky: #70d6ff;
 
-  --color-text-dark: var(--color-thunder);
+  --color-text-dark: #111;
   --color-text-light: #fff;
 
   --color-light: var(--color-text-light); /* --color-light: #fef8f8; */
   --color-border: #e6e6e6;
   --color-background: #fbf8f8;
   --color-hover: #faf5f5;
+  --color-heading-2: #666565;
   /* --color-background: #fef8f8; */
 
-  --font-base: 16px;
+  --accent-admin: #703be7;
+
+  --font-xs: 12px;
   --font-sm: 14px;
+  --font-base: 16px;
   --font-md: 18px;
   --font-ml-lg: 21px;
   --font-lg: 24px;
@@ -35,7 +39,7 @@
   --size-3xl: 85px;
   --size-4xl: 105px;
 
-  --border-radius: var(--size-sm);
+  --border-radius: var(--size-xs);
 }
 
 *,

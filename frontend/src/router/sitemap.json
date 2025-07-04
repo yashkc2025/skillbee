@@ -18,7 +18,31 @@
     "child_app": {
         "dashboard": "/",
         "achievements": "/stats",
-        "curriculum": "/curriculum",
+        "lessons": "/lesson",
         "settings": "/settings"
+    },
+    "admin": {
+        "dashboard": "/admin/",
+        "analytics": {
+            "performance": "/admin/performance",
+            "feedback": "/admin/feedback"
+        },
+        "curriculum": {
+            "lessons": "/admin/lessons",
+            "quiz": "/admin/quiz",
+            "activities": "/admin/activities",
+            "badges": "/admin/badges"
+        },
+        "user_management": {
+            "parent": "/admin/parent",
+            "children": "/admin/children"
+        },
+        "settings": "/admin/settings",
+        "new": {
+            "lesson": "/admin/new/lesson",
+            "quiz": "/admin/new/quiz",
+            "activity": "/admin/new/activity",
+            "badge": "/admin/new/badge"
+        }
     }
 }
