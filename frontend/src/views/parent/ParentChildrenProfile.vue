@@ -1,6 +1,5 @@
 <script setup lang="tsx">
 defineProps(['id'])
-import AdminAppLayout from '@/layouts/AdminAppLayout.vue';
 import CardV2 from '@/components/CardV2.vue';
 import { generateLabel } from "@/fx/utils"
 import SkillChart from '@/components/admin/charts/SkillChart.vue';
@@ -9,7 +8,7 @@ import TableComponent from '@/components/TableComponent.vue';
 import { ref } from 'vue';
 import InputComponent from '@/components/InputComponent.vue';
 import ParentAppLayout from '@/layouts/ParentAppLayout.vue';
-import PointsChart from "@/components/admin/charts/PointsChart.vue"
+import PointsChart from '@/components/admin/charts/PointsChart.vue';
 
 const profile = {
   "info": {
@@ -164,7 +163,7 @@ function hideFeedbackForm() {
           </template>
         </CardV2>
         <Badges :badges />
-        <button class="button-admin">Block User</button>
+        <button class="button-admin">Remove Children</button>
       </div>
       <div class="second">
         <CardV2 label-title="Skills" label-image="bi bi-bar-chart">

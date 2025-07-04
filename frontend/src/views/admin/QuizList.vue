@@ -90,8 +90,8 @@ const quizLabels = ["ID", "Title", "Lesson", "Curriculum", "Edit"];
 
 const router = useRouter()
 
-function expandTable() {
-  router.push(sitemap.admin.user_management.children)
+function addEntry() {
+  router.push(sitemap.admin.new.quiz)
 }
 
 function navToLink(name: string, id: number) {
@@ -100,7 +100,7 @@ function navToLink(name: string, id: number) {
 
 function tableEntries() {
   quiz.forEach((p) => {
-    p.edit = <i class="bi bi-pen pointer" onClick={() => navToLink(sitemap.admin.curriculum.quiz, p.id)}> </i>
+    p.edit = <i class="bi bi-pen pointer" onClick={() => addEntry()}> </i>
   })
 
   return quiz
@@ -116,9 +116,7 @@ function tableEntries() {
       <template #top-content>
         <div class="table-header">
           <InputComponent icon="bi bi-search" name="search" placeholder="Search for a quiz" />
-          <i class="bi bi-arrows-angle-expand" @click="expandTable" v-if="showExpand"></i>
-          <i class="bi bi-plus-lg"></i>
-
+          <i class="bi bi-plus-lg" @click="addEntry()"></i>
         </div>
       </template>
       <template #content>

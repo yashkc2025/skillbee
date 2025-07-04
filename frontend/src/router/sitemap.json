@@ -44,5 +44,10 @@
             "activity": "/admin/new/activity",
             "badge": "/admin/new/badge"
         }
+    },
+    "parent": {
+        "dashboard": "/parent/",
+        "new_children": "/parent/new/children",
+        "settings": "/parent/settings"
     }
 }

@@ -7,7 +7,6 @@ import sitemap from "./sitemap.json"
 import SignInSignUp from '@/views/SignInSignUp.vue'
 import ParentList from "@/views/admin/ParentList.vue"
 import ChildrenList from "@/views/admin/ChildrenList.vue"
-import ChildrenProfile from "@/views/admin/ChildrenProfile.vue"
 import LessonList from "@/views/admin/LessonList.vue"
 import QuizList from "@/views/admin/QuizList.vue"
 import ActivitiesList from "@/views/admin/ActivitiesList.vue"
@@ -18,7 +17,11 @@ import NewLesson from '@/views/admin/new/NewLesson.vue'
 import NewActivity from '@/views/admin/new/NewActivity.vue'
 import NewBadge from '@/views/admin/new/NewBadge.vue'
 import ParentDashboard from '@/views/parent/ParentDashboard.vue'
-
+import NewChildren from '@/views/parent/NewChildren.vue'
+import ParentSettings from '@/views/parent/ParentSettings.vue'
+import ParentChildrenProfile from '@/views/parent/ParentChildrenProfile.vue'
+import ChildrenProfile from '@/views/admin/ChildrenProfile.vue'
+import NewQuiz from '@/views/admin/new/NewQuiz.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -76,6 +79,12 @@ const router = createRouter({
       props: true
     },
     {
+      path: "/parent/children/:id",
+      name: "child_profile_parent",
+      component: ParentChildrenProfile,
+      props: true
+    },
+    {
       path: sitemap.admin.curriculum.lessons,
       name: "admin_lessons",
       component: LessonList,
@@ -119,7 +128,27 @@ const router = createRouter({
       path: sitemap.admin.new.badge,
       name: 'new_badge',
       component: NewBadge
-    }
+    },
+    {
+      path: sitemap.admin.new.quiz,
+      name: 'new_quiz',
+      component: NewQuiz
+    },
+    {
+      path: sitemap.parent.dashboard,
+      name: 'parent_dashboard',
+      component: ParentDashboard
+    },
+    {
+      path: sitemap.parent.new_children,
+      name: 'parent_new_children',
+      component: NewChildren
+    },
+    {
+      path: sitemap.parent.settings,
+      name: "parent_settings",
+      component: ParentSettings
+    },
   ],
 })
 
