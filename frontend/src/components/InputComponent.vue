@@ -9,7 +9,7 @@ const props = withDefaults(defineProps<{
   placeholder: string;
   icon: string;
   inputType?: 'TextArea' | 'Input';
-  fieldType?: 'url' | 'tel' | 'text' | 'number' | 'email' | 'password'
+  fieldType?: 'url' | 'tel' | 'text' | 'number' | 'email' | 'password' | 'file'
 }>(), {
   inputType: 'Input',
   fieldType: 'text'

@@ -1,10 +1,4 @@
 <script setup lang="tsx">
-const props = withDefaults(defineProps<{
-  maxItems?: number;
-  showExpand?: boolean;
-}>(), {
-  showExpand: false,
-})
 
 import CardV2 from "@/components/CardV2.vue";
 import InputComponent from "@/components/InputComponent.vue";
@@ -70,8 +64,8 @@ const lessonLabels = ["ID", "Title", "Curriculum", "Activities", "Quiz", "Edit"]
 
 const router = useRouter()
 
-function expandTable() {
-  router.push(sitemap.admin.user_management.children)
+function addLesson() {
+  router.push(sitemap.admin.new.lesson)
 }
 
 function navToLink(name: string, id: number) {
@@ -81,9 +75,9 @@ function navToLink(name: string, id: number) {
 function tableEntries() {
   lessons.forEach((p) => {
     // p.blocked = <span class="chip pointer">{p.blocked ? "Blocked" : "Active"}</span>
-    p.activities = <i class="bi bi-patch-plus pointer" onClick={() => navToLink(sitemap.admin.curriculum.activities, p.id)}></i>
-    p.quiz = <i class="bi bi-patch-plus pointer" onClick={() => navToLink(sitemap.admin.curriculum.quiz, p.id)}> </i>
-    p.edit = <i class="bi bi-pen pointer" onClick={() => navToLink(sitemap.admin.curriculum.quiz, p.id)}> </i>
+    p.activities = <i class="bi bi-patch-plus pointer" onClick={() => router.push(sitemap.admin.curriculum.activities)}></i>
+    p.quiz = <i class="bi bi-patch-plus pointer" onClick={() => router.push(sitemap.admin.curriculum.quiz)}> </i>
+    p.edit = <i class="bi bi-pen pointer" onClick={() => addLesson()}> </i>
 
   })
 
@@ -100,8 +94,7 @@ function tableEntries() {
       <template #top-content>
         <div class="table-header">
           <InputComponent icon="bi bi-search" name="search" placeholder="Search for a lesson" />
-          <i class="bi bi-arrows-angle-expand" @click="expandTable" v-if="showExpand"></i>
-          <i class="bi bi-plus-lg"></i>
+          <i class="bi bi-plus-lg" @click="addLesson"></i>
         </div>
       </template>
       <template #content>

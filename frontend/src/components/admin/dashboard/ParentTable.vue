@@ -53,10 +53,14 @@ function expandTable() {
   router.push(sitemap.admin.user_management.parent)
 }
 
+function viewKids() {
+  router.push(sitemap.admin.user_management.children)
+}
+
 function tableEntries() {
   parents.forEach((p) => {
     p.blocked = <span class="chip pointer">{p.blocked ? "Blocked" : "Active"}</span>
-    p.view_children = <i class="bi bi-patch-plus pointer"></i>
+    p.view_children = <i class="bi bi-patch-plus pointer" onClick={() => viewKids()}></i>
   })
   if (props.maxItems) {
     return parents.slice(0, props.maxItems)

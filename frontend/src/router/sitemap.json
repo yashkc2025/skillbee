@@ -39,7 +39,10 @@
         },
         "settings": "/admin/settings",
         "new": {
-            "all": "/admin/new"
+            "lesson": "/admin/new/lesson",
+            "quiz": "/admin/new/quiz",
+            "activity": "/admin/new/activity",
+            "badge": "/admin/new/badge"
         }
     }
 }

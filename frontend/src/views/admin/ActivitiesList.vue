@@ -90,8 +90,8 @@ const activitiesLabels = ["ID", "Title", "Lesson", "Curriculum", "Edit"];
 
 const router = useRouter()
 
-function expandTable() {
-  router.push(sitemap.admin.user_management.children)
+function addEntry() {
+  router.push(sitemap.admin.new.activity)
 }
 
 function navToLink(name: string, id: number) {
@@ -100,7 +100,7 @@ function navToLink(name: string, id: number) {
 
 function tableEntries() {
   activities.forEach((p) => {
-    p.edit = <i class="bi bi-pen pointer" onClick={() => navToLink(sitemap.admin.curriculum.quiz, p.id)
+    p.edit = <i class="bi bi-pen pointer" onClick={() => addEntry()
     }> </i>
   })
 
@@ -117,8 +117,7 @@ function tableEntries() {
       <template #top-content>
         <div class="table-header">
           <InputComponent icon="bi bi-search" name="search" placeholder="Search for an Activity" />
-          <i class="bi bi-arrows-angle-expand" @click="expandTable" v-if="showExpand"></i>
-          <i class="bi bi-plus-lg"></i>
+          <i class="bi bi-plus-lg" @click="addEntry"></i>
         </div>
       </template>
       <template #content>

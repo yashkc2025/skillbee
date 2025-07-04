@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import CardV2 from '@/components/CardV2.vue';
 import AdminAppLayout from '@/layouts/AdminAppLayout.vue';
+import sitemap from "@/router/sitemap.json"
+import { useRouter } from 'vue-router';
+
+const router = useRouter()
 
 const badges = [
   {
@@ -9,22 +13,15 @@ const badges = [
       "http://static.vecteezy.com/system/resources/previews/055/850/981/non_2x/cute-brain-cartoon-with-lightning-bolt-vector.jpg",
   },
   {
-    label: "Quick Thinker (alt)",
-    image:
-      "https://thumbs.dreamstime.com/b/brain-lightning-brainstorm-concept-like-cloud-power-mind-103281710.jpg",
-  },
-  {
     label: "Math Magician",
     image:
       "https://play-lh.googleusercontent.com/_amVHhZZT0Jk3MAHEog0rZeCVMl2w6zQYoDH8Mo7ZjKUIQwRoUxg-FhgALctyKmAjoo",
   },
-  {
-    label: "Math Magician (alt)",
-    image:
-      "https://is3-ssl.mzstatic.com/image/thumb/Purple122/v4/91/5c/c1/915cc1a2-0c75-4f6a-437b-68553220653e/source/512x512bb.jpg",
-  },
 ];
 
+function addEntry() {
+  router.push(sitemap.admin.new.badge)
+}
 
 </script>
 
@@ -33,13 +30,13 @@ const badges = [
     <CardV2 labelTitle="Badges" labelImage="bi bi-stars">
       <template #top-content>
         <div class="table-header">
-          <i class="bi bi-plus-lg"></i>
+          <i class="bi bi-plus-lg" @click="addEntry"></i>
         </div>
       </template>
       <template #content>
         <div class="badge-group">
           <div v-for="(s, i) in badges" :key="i" class="badge-parent">
-            <i class="bi bi-pen edit "></i>
+            <i class="bi bi-trash edit "></i>
             <img :src="s.image" :alt="s.label" />
             <span class="skill-card">{{ s.label }}</span>
           </div>

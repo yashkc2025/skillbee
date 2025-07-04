@@ -12,6 +12,10 @@ import QuizList from "@/views/admin/QuizList.vue"
 import ActivitiesList from "@/views/admin/ActivitiesList.vue"
 import BadgesList from "@/views/admin/BadgesList.vue"
 import AdminSettings from '@/views/admin/AdminSettings.vue'
+import AdminAnalytics from '@/views/admin/AdminAnalytics.vue'
+import NewLesson from '@/views/admin/new/NewLesson.vue'
+import NewActivity from '@/views/admin/new/NewActivity.vue'
+import NewBadge from '@/views/admin/new/NewBadge.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -32,17 +36,17 @@ const router = createRouter({
       component: ChildDashboard
     },
     {
-      path: "/admin",
+      path: sitemap.admin.dashboard,
       name: 'admin_dashboard',
       component: AdminDashboard
     },
     {
-      path: "/admin/parent",
+      path: sitemap.admin.user_management.parent,
       name: "parent_list",
       component: ParentList
     },
     {
-      path: "/admin/children",
+      path: sitemap.admin.user_management.children,
       name: "child_list",
       component: ChildrenList
     },
@@ -53,29 +57,49 @@ const router = createRouter({
       props: true
     },
     {
-      path: "/admin/lessons",
+      path: sitemap.admin.curriculum.lessons,
       name: "admin_lessons",
       component: LessonList,
     },
     {
-      path: "/admin/quiz",
+      path: sitemap.admin.curriculum.quiz,
       name: "admin_quiz",
       component: QuizList,
     },
     {
-      path: "/admin/activities",
+      path: sitemap.admin.curriculum.activities,
       name: "admin_activities",
       component: ActivitiesList,
     },
     {
-      path: "/admin/badges",
+      path: sitemap.admin.curriculum.badges,
       name: "admin_badges",
       component: BadgesList,
     },
     {
-      path: "/admin/settings",
+      path: sitemap.admin.settings,
       name: "admin_settings",
       component: AdminSettings
+    },
+    {
+      path: sitemap.admin.analytics.performance,
+      name: "admin_performance",
+      component: AdminAnalytics
+    },
+    {
+      path: sitemap.admin.new.lesson,
+      name: 'new_lesson',
+      component: NewLesson
+    },
+    {
+      path: sitemap.admin.new.activity,
+      name: 'new_activity',
+      component: NewActivity
+    },
+    {
+      path: sitemap.admin.new.badge,
+      name: 'new_badge',
+      component: NewBadge
     }
   ],
 })
