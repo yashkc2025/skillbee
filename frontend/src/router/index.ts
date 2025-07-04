@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DemoView from '@/views/DemoView.vue'
+import LandingPage from '@/views/LandingPage.vue'
 import ChildDashboard from '@/views/child/ChildDashboard.vue'
 import AdminDashboard from '@/views/admin/AdminDashboard.vue'
 import sitemap from "./sitemap.json"
@@ -16,10 +17,17 @@ import AdminAnalytics from '@/views/admin/AdminAnalytics.vue'
 import NewLesson from '@/views/admin/new/NewLesson.vue'
 import NewActivity from '@/views/admin/new/NewActivity.vue'
 import NewBadge from '@/views/admin/new/NewBadge.vue'
+import ParentDashboard from '@/views/parent/ParentDashboard.vue'
+
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    {
+      path: '/',
+      name: 'landing-page',
+      component: LandingPage
+    },
     {
       path: '/login_register',
       name: 'sign',
@@ -36,6 +44,17 @@ const router = createRouter({
       component: ChildDashboard
     },
     {
+      path: '/parent_dashboard',
+      name: 'parent_dashboard',
+      component: ParentDashboard
+    },
+    {
+      path: '/admin_dashboard',
+      name: 'admin_dashboard',
+      component: AdminDashboard
+    },
+    {
+
       path: sitemap.admin.dashboard,
       name: 'admin_dashboard',
       component: AdminDashboard
