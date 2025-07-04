@@ -11,6 +11,7 @@ import LessonList from "@/views/admin/LessonList.vue"
 import QuizList from "@/views/admin/QuizList.vue"
 import ActivitiesList from "@/views/admin/ActivitiesList.vue"
 import BadgesList from "@/views/admin/BadgesList.vue"
+import AdminSettings from '@/views/admin/AdminSettings.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -71,6 +72,11 @@ const router = createRouter({
       name: "admin_badges",
       component: BadgesList,
     },
+    {
+      path: "/admin/settings",
+      name: "admin_settings",
+      component: AdminSettings
+    }
   ],
 })
 

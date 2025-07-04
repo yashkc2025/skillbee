@@ -1,19 +1,33 @@
 <script setup lang="ts">
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: string): void
+}>();
+
 const props = withDefaults(defineProps<{
+  modelValue: string;
   name: string;
   placeholder: string;
   icon: string;
   inputType?: 'TextArea' | 'Input';
+  fieldType?: 'url' | 'tel' | 'text' | 'number' | 'email' | 'password'
 }>(), {
   inputType: 'Input',
+  fieldType: 'text'
 });
+
+function onInput(event: Event) {
+  const target = event.target as HTMLInputElement | HTMLTextAreaElement;
+  emit('update:modelValue', target.value);
+}
 </script>
 
 <template>
   <div class="input-wrapper">
     <i :class="icon"></i>
-    <input v-if="inputType !== 'TextArea'" :placeholder="placeholder" :name="name" />
-    <textarea v-if="inputType === 'TextArea'" :placeholder="placeholder" :name="name" />
+    <input v-if="inputType !== 'TextArea'" :placeholder="placeholder" :name="name" :type="fieldType" :value="modelValue"
+      @input="onInput" />
+    <textarea v-if="inputType === 'TextArea'" :placeholder="placeholder" :name="name" @input="onInput"
+      :value="modelValue" />
   </div>
 </template>
 

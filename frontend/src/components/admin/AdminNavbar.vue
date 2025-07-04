@@ -20,11 +20,11 @@ const navOptions = [
         icon: "bi bi-bar-chart",
         link: sitemap.admin.analytics.performance,
       },
-      {
-        label: "Feedbacks",
-        icon: "bi bi-journal-text",
-        link: sitemap.admin.analytics.feedback,
-      },
+      // {
+      //   label: "Feedbacks",
+      //   icon: "bi bi-journal-text",
+      //   link: sitemap.admin.analytics.feedback,
+      // },
     ],
   },
   {
