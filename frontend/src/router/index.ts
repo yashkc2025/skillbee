@@ -2,6 +2,11 @@ import { createRouter, createWebHistory } from 'vue-router'
 import DemoView from '@/views/DemoView.vue'
 import LandingPage from '@/views/LandingPage.vue'
 import ChildDashboard from '@/views/child/ChildDashboard.vue'
+import ChildLessons from '@/views/child/ChildLessons.vue'
+import ChildCurriculum from '@/views/child/ChildCurriculums.vue'
+import ChildActivities from '@/views/child/ChildActivities.vue'
+import ChildQuizzes from '@/views/child/ChildQuizzes.vue'
+import ChildQuizQuestions from '@/views/child/ChildQuizQuestions.vue'
 import AdminDashboard from '@/views/admin/AdminDashboard.vue'
 import sitemap from "./sitemap.json"
 import SignInSignUp from '@/views/SignInSignUp.vue'
@@ -41,6 +46,40 @@ const router = createRouter({
       name: 'child_dashboard',
       component: ChildDashboard
     },
+    {
+      path: '/curriculums',
+      name: 'child_curriculum',
+      component: ChildCurriculum
+    },
+    {
+      path: '/:curriculumName/:curriculumId/lessons',
+      name: 'child_lessons',
+      component: ChildLessons,
+      props: true
+    },
+    {
+      path: '/:curriculumName/:curriculumId/:lessonName/:lessonId/activities',
+      name: 'child_activities',
+      component: ChildActivities,
+      props: true
+    },
+    {
+      path: '/:curriculumName/:curriculumId/:lessonName/:lessonId/quizzes',
+      name: 'child_quizzes',
+      component: ChildQuizzes,
+      props: true
+    },
+    {
+      path: '/:curriculumName/:curriculumId/:lessonName/:lessonId/quizzes/:quizId/attempt',
+      name: 'child_quiz_attempt',
+      component: ChildQuizQuestions,
+      props: true
+    },
+    // {
+    //   path: '/auth/parent_login',
+    //   name: 'Login as Parent',
+    //   component: ParentLoginView,
+    // },
     {
       path: '/parent_dashboard',
       name: 'parent_dashboard',
