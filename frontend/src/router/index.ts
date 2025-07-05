@@ -37,11 +37,6 @@ const router = createRouter({
       component: SignInSignUp,
     },
     {
-      path: '/demo',
-      name: 'demo',
-      component: DemoView,
-    },
-    {
       path: sitemap.child_app.dashboard,
       name: 'child_dashboard',
       component: ChildDashboard
