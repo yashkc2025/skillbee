@@ -252,8 +252,10 @@ function openQuizHistory(quiz: typeof quizzes[0]) {
 }
 
 function attemptQuiz(quiz: typeof quizzes[0]) {
-    // Implement navigation or logic to start/reattempt the quiz
-    alert(`Attempting quiz: ${quiz.name}`);
+    router.push({
+        name: 'child_quiz_attempt',
+        params: { quizId: quiz.quiz_id, quizName: quiz.name, lessonId: lesson.lesson_id, curriculumId: curriculum.curriculum_id }
+    });
 }
 
 function viewSubmission(history: typeof quiz_history[0]) {
