@@ -61,7 +61,7 @@
                     <div v-for="history in getActivityHistory(selectedActivity.activity_id)"
                         :key="history.activity_history_id" class="history-card">
                         <div class="view-submission-btn-wrap">
-                            <div class="history-date">🗓️ {{ new Date(history.submitted_at).toLocaleDateString() }}
+                            <div class="submission-datetime">🗓️ {{ formatDateTime(history.submitted_at) }}
                             </div>
                             <button class="view-submission-btn" @click="viewSubmission(selectedActivity)">
                                 👀 View Submission
@@ -73,6 +73,9 @@
                             </div>
                             <div v-if="history.feedback.parent" class="feedback-parent">
                                 <span>👨‍👩‍👧 <b>Parent:</b> {{ history.feedback.parent }}</span>
+                            </div>
+                            <div v-if="!history.feedback.admin && !history.feedback.parent" class="no-feedback">
+                                <span>📝 No feedback yet.</span>
                             </div>
                         </div>
                     </div>
@@ -211,10 +214,18 @@ const activity_submission = [
         activity_history_id: 5,
         activity_id: 3,
         activity_name: 'Activity 3',
-        submitted_at: '2023-10-05T16:20:00Z',
+        submitted_at: '2023-10-05T22:20:00Z',
         feedback: {
             admin: 'Fantastic job! Your creativity really shines through in this activity.',
             parent: 'I love how you expressed your thoughts so clearly. Keep it up!',
+        }
+    },
+    {
+        activity_history_id: 6,
+        activity_id: 1,
+        activity_name: 'Activity 4',
+        submitted_at: '2023-10-06T12:00:00Z',
+        feedback: {
         }
     }
 ]
@@ -262,6 +273,24 @@ const getActivityHistory = (activityId: number) => {
     return activity_submission.filter(sub => sub.activity_id === activityId);
 };
 
+function formatDateTime(dateString: string): string {
+    const date = new Date(dateString);
+
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = date.toLocaleString('en-US', { month: 'short' });
+    const year = date.getFullYear();
+
+    let hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+
+    return `${day} / ${month} / ${year} ${hours}:${minutes} ${ampm}`;
+}
+
+
+
 const getDifficultyStyle = (difficulty: string) => {
     switch (difficulty?.toLowerCase()) {
         case 'easy': return { color: '#4CAF50', emoji: '😊' };
@@ -272,7 +301,6 @@ const getDifficultyStyle = (difficulty: string) => {
 };
 
 function viewSubmission(history: typeof activity_submission[0]) {
-    // Implement your logic here, e.g. open a modal or route to a detail page
     alert(`Viewing submission for: ${history.name} (ID: ${history.activity_history_id})`);
 }
 
@@ -389,7 +417,7 @@ function viewSubmission(history: typeof activity_submission[0]) {
     color: #2e7d32;
     background-color: #c8e6c9;
     padding: 8px 12px;
-    border-radius: 10px;
+    border-radius: calc(var(--border-radius) / 2);
     text-align: center;
 }
 
@@ -408,7 +436,7 @@ function viewSubmission(history: typeof activity_submission[0]) {
 
 .activity-history {
     /* background: linear-gradient(90deg, #ffe0b2 0%, #fffde7 100%); */
-    border-radius: 18px;
+    /* border-radius: var(--border-radius); */
     padding: 18px 20px;
     /* box-shadow: 0 2px 12px rgba(255, 193, 7, 0.13); */
     /* font-family: 'Comic 'Delius', cursive; */
@@ -430,16 +458,21 @@ function viewSubmission(history: typeof activity_submission[0]) {
     box-shadow: 0 1px 6px rgba(255, 193, 7, 0.08);
 }
 
-.history-date {
+.submission-datetime {
     color: #ffb300;
     font-weight: bold;
     margin-bottom: 6px;
 }
 
 .feedback-admin,
-.feedback-parent {
+.feedback-parent,
+.no-feedback {
     margin-bottom: 4px;
     padding-left: 8px;
+}
+
+.no-feedback span {
+    color: #bdbdbd;
 }
 
 .feedback-admin span {
@@ -453,7 +486,6 @@ function viewSubmission(history: typeof activity_submission[0]) {
 .no-history {
     text-align: center;
     color: #bdbdbd;
-    /* font-size: 1.1rem; */
     margin-top: 10px;
 }
 

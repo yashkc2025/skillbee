@@ -338,7 +338,7 @@ function isUrl(url_details: Record<string, string> | undefined): boolean {
     color: #2e7d32;
     background-color: #c8e6c9;
     padding: 8px 12px;
-    border-radius: 10px;
+    border-radius: calc(var(--border-radius) / 2);
     text-align: center;
 }
 
