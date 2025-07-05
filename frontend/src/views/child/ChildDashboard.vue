@@ -5,6 +5,7 @@ import ChildHeatmap from "../../components/child/dashboard/ChildHeatmap.vue";
 import Grid from "@/components/Grid.vue";
 import SkillTemplate from "@/components/child/dashboard/SkillTemplate.vue";
 import BadgesTemplate from "../../components/child/dashboard/BadgesTemplate.vue";
+import ChildLeaderboard from "@/components/child/ChildLeaderboard.vue";
 
 const skillTypes = [
   { label: "🧠 Critical Thinking", link: "", progress: 10 },
@@ -52,7 +53,7 @@ function getIntroText(name: string): string {
     `📅 ${name}, it's ${dayName} – perfect time to level up!`,
     `🧠 Hi ${name}, let’s turn curiosity into knowledge!`,
     `✨ Let’s make today amazing, ${name}!`,
-    `📈 ${name}, success starts with showing up—let’s go!`,
+    `📈 ${name}, success starts with showing up let’s go!`,
     `🎉 Hey ${name}, learning time is the best time!`,
   ];
 
@@ -75,7 +76,7 @@ const stats = [
   },
   {
     label: "Leaderboard Rank",
-    answer: "#1",
+    answer: "#2",
   },
   {
     label: "Streak",
@@ -98,6 +99,7 @@ const stats = [
           <ChildHeatmap />
         </div>
       </div>
+      <ChildLeaderboard />
       <SkillTemplate :skillTypes="skillTypes" />
       <BadgesTemplate :badges="badges" />
     </div>
