@@ -3,30 +3,12 @@
 
 #app {
   height: 100%;
-}
-
-/* width */
-::-webkit-scrollbar {
-  width: 15px;
-  height: 15px;
-  margin-top: 0;
-}
-
-/* Track */
-::-webkit-scrollbar-track {
-  background: var(--color-bg);
-}
-
-/* Handle */
-::-webkit-scrollbar-thumb {
-  background: var(--accent-500);
-  background-clip: content-box;
-  border: 5px solid transparent;
-  border-radius: var(--size-sm);
+  width: 100%;
+  /* overflow: scroll; */
 }
 
 ::selection {
-  background: var(--accent-200);
+  background: var(--color-border);
 }
 
 .Vue-Toastification__toast {
@@ -34,12 +16,48 @@
   min-height: 45px !important;
   padding: var(--size-xs) !important;
 }
-
 .box-shadow {
   box-shadow: 0 8px 32px var(--color-border);
+}
+
+.vch__legend {
+  display: none !important;
+}
+
+.vch__month__label,
+.vch__day__label {
+  font-family: 'VAGRoundedNext';
 }
 
 .hover:hover {
   background-color: var(--color-hover);
   border-color: var(--color-border);
+}
+
+.darken {
+  font-weight: bold;
+}
+
+.chip {
+  background-color: var(--color-border);
+  padding: 1px 3px;
+  border-radius: 5px;
+  font-size: var(--font-xs);
+}
+
+.pointer {
+  cursor: pointer;
+}
+
+.button-admin {
+  padding: 4px;
+  font-family: 'DMSans';
+  font-weight: 500;
+  /* outline: 1px solid var(--color-border); */
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  background-color: var(--accent-admin);
+  color: var(--color-light);
+  width: 100%;
 }

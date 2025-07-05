@@ -17,4 +17,7 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  server: {
+    allowedHosts: ['nreyafpn89r1sqymb2wkkrldahpkq8fvoawqxjlulxr8m1s_bnbp_djib1-jqfo.yashkc.com']
+  }
 })
