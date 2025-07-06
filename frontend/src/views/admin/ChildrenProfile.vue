@@ -8,7 +8,6 @@ import Badges from "@/components/admin/children/AdminBadgesComponent.vue"
 import TableComponent from '@/components/TableComponent.vue';
 import { ref } from 'vue';
 import InputComponent from '@/components/InputComponent.vue';
-import ParentAppLayout from '@/layouts/ParentAppLayout.vue';
 import PointsChart from "@/components/admin/charts/PointsChart.vue"
 
 const profile = {
@@ -138,7 +137,7 @@ function hideFeedbackForm() {
 </script>
 
 <template>
-  <ParentAppLayout>
+  <AdminAppLayout>
     <!-- Intro -->
     <p class="intro">
       <span class="darken">{{ profile.info.full_name }}</span>
@@ -199,7 +198,7 @@ function hideFeedbackForm() {
         </template>
       </CardV2>
     </section>
-  </ParentAppLayout>
+  </AdminAppLayout>
 </template>
 
 
