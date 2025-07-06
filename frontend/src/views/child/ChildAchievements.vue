@@ -9,8 +9,8 @@
                 <div class="badges-list">
                     <div v-for="badge in badges" :key="badge.id" class="badge-card">
                         <img :src="badge.icon" :alt="badge.name" class="badge-icon" />
-                        <div class="badge-name">{{ badge.name }}</div>
-                        <div class="badge-desc">{{ badge.description }}</div>
+                        <!-- <div class="badge-name">{{ badge.name }}</div>
+                        <div class="badge-desc">{{ badge.description }}</div> -->
                     </div>
                 </div>
             </div>
@@ -50,7 +50,7 @@ const badges = ref([
     {
         id: 1,
         // name: "Quiz Master",
-        icon: "/badges/quiz-master.png",
+        icon: "/badges/quiz_master.png",
         // description: "Completed 5 quizzes!",
     },
     {
@@ -62,14 +62,26 @@ const badges = ref([
     {
         id: 3,
         // name: "Perfect",
-        icon: "/files/perfect.png",
+        icon: "/badges/perfect.png",
         // description: "Achieved 100% score in a quiz!",
     },
     {
         id: 4,
         // name: "30 Day Streak",
-        icon: "/files/30_day_streak.png",
+        icon: "/badges/30_day_streak.png",
         // description: "Maintained a 30-day activity streak!",
+    },
+    {
+        id: 5,
+        // name: "Math Magician",
+        icon: "/badges/all_rounder.png",
+        // description: "Solved 100 math problems!",
+    },
+    {
+        id: 6,
+        // name: "Quick Thinker",
+        icon: "/badges/cash_clash.png",
+        // description: "Answered 50 questions in under 1 minute!",
     },
 ]);
 </script>
@@ -127,8 +139,8 @@ const badges = ref([
 }
 
 .badge-icon {
-    width: 60px;
-    height: 60px;
+    width: 100%;
+    height: 100%;
     margin-bottom: 8px;
 }
 
