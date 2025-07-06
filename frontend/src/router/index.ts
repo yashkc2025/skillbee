@@ -7,6 +7,8 @@ import ChildCurriculum from '@/views/child/ChildCurriculums.vue'
 import ChildActivities from '@/views/child/ChildActivities.vue'
 import ChildQuizzes from '@/views/child/ChildQuizzes.vue'
 import ChildQuizQuestions from '@/views/child/ChildQuizQuestions.vue'
+import ChildAchievements from '@/views/child/ChildAchievements.vue'
+import ChildSettings from '@/views/child/ChildSettings.vue'
 import AdminDashboard from '@/views/admin/AdminDashboard.vue'
 import sitemap from "./sitemap.json"
 import SignInSignUp from '@/views/SignInSignUp.vue'
@@ -31,13 +33,13 @@ import NewQuiz from '@/views/admin/new/NewQuiz.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    // {
+    //   path: '/',
+    //   name: 'landing-page',
+    //   component: LandingPage
+    // },
     {
       path: '/',
-      name: 'landing-page',
-      component: LandingPage
-    },
-    {
-      path: '/login_register',
       name: 'sign',
       component: SignInSignUp,
     },
@@ -47,33 +49,43 @@ const router = createRouter({
       component: ChildDashboard
     },
     {
-      path: '/curriculums',
-      name: 'child_curriculum',
+      path: sitemap.child_app.curriculum.curriculums,
+      name: 'child_curriculums',
       component: ChildCurriculum
     },
     {
-      path: '/:curriculumName/:curriculumId/lessons',
+      path: sitemap.child_app.curriculum.lessons,
       name: 'child_lessons',
       component: ChildLessons,
       props: true
     },
     {
-      path: '/:curriculumName/:curriculumId/:lessonName/:lessonId/activities',
+      path: sitemap.child_app.curriculum.activities,
       name: 'child_activities',
       component: ChildActivities,
       props: true
     },
     {
-      path: '/:curriculumName/:curriculumId/:lessonName/:lessonId/quizzes',
+      path: sitemap.child_app.curriculum.quizzes,
       name: 'child_quizzes',
       component: ChildQuizzes,
       props: true
     },
     {
-      path: '/:curriculumName/:curriculumId/:lessonName/:lessonId/quizzes/:quizId/attempt',
+      path: sitemap.child_app.curriculum.attempt,
       name: 'child_quiz_attempt',
       component: ChildQuizQuestions,
       props: true
+    },
+    {
+      path: sitemap.child_app.achievements,
+      name: 'child_achievements',
+      component: ChildAchievements
+    },
+    {
+      path: sitemap.child_app.settings,
+      name: 'child_settings',
+      component: ChildSettings
     },
     // {
     //   path: '/auth/parent_login',

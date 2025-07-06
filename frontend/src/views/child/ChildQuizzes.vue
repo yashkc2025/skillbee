@@ -278,6 +278,13 @@ function formatDateTime(dateStr: string) {
 </script>
 
 <style scoped>
+.card-item {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+    padding: 0 20px;
+}
+
 .extra {
     font-size: var(--font-md);
     margin-top: -15px;

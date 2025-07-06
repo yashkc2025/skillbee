@@ -24,7 +24,7 @@ const navOptions = [
         }}</a>
     </section>
     <section class="third-parent">
-      <a class="danger" href="">Logout</a>
+      <a class="danger" href="/">Logout</a>
     </section>
   </div>
 </template>
