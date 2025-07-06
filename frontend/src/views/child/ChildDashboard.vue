@@ -8,11 +8,11 @@ import BadgesTemplate from "../../components/child/dashboard/BadgesTemplate.vue"
 import ChildLeaderboard from "@/components/child/ChildLeaderboard.vue";
 
 const skillTypes = [
-  { label: "🧠 Critical Thinking", link: "", progress: 10 },
-  { label: "💬 Communication Skills", link: "", progress: 30 },
-  { label: "⏰ Time Management", link: "", progress: 56 },
-  { label: "🎵 Extracurricular Activities", link: "", progress: 18 },
-  { label: "💰 Financial Literacy", link: "", progress: 78 },
+  { curriculum_id: 1, label: "🧠 Critical Thinking", link: "", progress: 60 },
+  { curriculum_id: 2, label: "💬 Communication Skills", link: "", progress: 40 },
+  { curriculum_id: 3, label: "⏰ Time Management", link: "", progress: 80 },
+  { curriculum_id: 4, label: "🎵 Extracurricular Activities", link: "", progress: 20 },
+  { curriculum_id: 5, label: "💰 Financial Literacy", link: "", progress: 100 },
 ];
 
 const badges = [

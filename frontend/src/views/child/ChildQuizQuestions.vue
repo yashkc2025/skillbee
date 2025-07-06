@@ -49,7 +49,7 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 
-const timer = ref<number | null>(null);
+const timer = ref<ReturnType<typeof setInterval> | null>(null);
 const submitted = ref(false);
 
 const curriculum = { curriculum_id: 1, name: 'General Knowledge' };

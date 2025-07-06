@@ -60,6 +60,11 @@ const navOptions = [
         icon: "bi bi-gear",
         link: sitemap.admin.settings,
       },
+      {
+        label: "Logout",
+        icon: "bi bi-box-arrow-right",
+        link: '/',
+      }
     ],
   },
 ];

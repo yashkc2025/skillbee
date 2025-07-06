@@ -93,7 +93,7 @@ function openLessons(curriculumId: number, curriculumName: string) {
 
 </script>
 
-<style>
+<style scoped>
 .top-section {
     display: flex;
     justify-content: space-between;
