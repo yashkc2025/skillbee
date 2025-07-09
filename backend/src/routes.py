@@ -2,7 +2,7 @@ from flask import Blueprint,request
 from .models import Admin, Session, Parent, Child, Skill, Lesson, LessonHistory, Activity, ActivityHistory, Quiz, QuizHistory, Badge, BadgeHistory
 from .db import db
 from .demoData import createDummyData
-from .controllers import parent_regisc,child_regisc,admin_loginc,parent_loginc, child_loginc
+from .controllers import parent_regisc,child_regisc,admin_loginc,parent_loginc, child_loginc,get_auser,get_child_dashboard_stats,get_user_skill_progress
 
 
 api = Blueprint('api', __name__)
@@ -41,3 +41,19 @@ def child_login():
     Route for child login
     """
     return child_loginc(request)
+
+@api.route('/auth/get_user',methods=['GET'])
+def get_user():
+    return get_auser()
+
+# @api.route('/get_user_details',methods=['GET'])
+# def get_user_details():
+#     return fetch_user_details(request) 
+
+@api.route('/child_dashboard_stats', methods=['GET'])
+def child_dashboard_stats():
+    return get_child_dashboard_stats(request)
+
+@api.route('/skill_categories', methods=['GET'])
+def get_skill_categories():
+    return get_user_skill_progress(request)

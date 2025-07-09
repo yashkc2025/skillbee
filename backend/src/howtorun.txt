@@ -15,7 +15,7 @@ for parent registration i have the route: ​http://127.0.0.1:5000/auth/parent_r
 the body i used:
 
 {"name":"ub",
-"email_id":"ub@gmail.com",
+"email":"ub@gmail.com",
 "password":"abc",
 "profile_image":""}
 
@@ -26,7 +26,7 @@ for children registration the route used: http://127.0.0.1:5000/auth/children_re
 the body used:
 {
   "name":"ubb",
-  "email_id": "ub123@gmail.com",
+  "email": "ub123@gmail.com",
   "password": "abcdef",
   "username": "ubbbbbbb",
   "dob": "2009-09-09",
@@ -38,5 +38,13 @@ How to run the tests?
 You need to have pytest installed for this.Once its installed you can just go to the terminal and type pytest and it will run all the required test.But if you want to run any specific test(function) then type :
 pytest test_auth.py -k test_parent_register_success
 
+
+How to check the /auth/get_user?
+Open rapid api/any other api client select GET method,write the correct url in the box:​http://127.0.0.1:5000/auth/get_user 
+on top go to headers then in header name add Authorisation and beside that take any session id that is in the data base and add Bearer before it and add that then send teh request.
+for example: Authorisation(in header name)  Bearer 4356cae7-05d6-458a-a448-cb76c1379abe (in header value) then see if its giving correct info or not.
+
+Remember admin cannot be fetched in this url it is onluy for parents and children.
+similarly check the /child_dashboard_stats and /skill_categories.
 
 Urjaswi Banerjee
