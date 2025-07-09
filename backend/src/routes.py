@@ -2,7 +2,7 @@ from flask import Blueprint,request
 from .models import Admin, Session, Parent, Child, Skill, Lesson, LessonHistory, Activity, ActivityHistory, Quiz, QuizHistory, Badge, BadgeHistory
 from .db import db
 from .demoData import createDummyData
-from .controllers import parent_regisc,child_regisc,admin_loginc,parent_loginc, child_loginc,get_auser,get_child_dashboard_stats,get_user_skill_progress
+from .controllers import parent_regisc,child_regisc,admin_loginc,parent_loginc, child_loginc,get_auser,get_child_dashboard_stats,get_user_skill_progress,get_user_badges,get_lesson_quizzes,get_quiz_history,get_curriculums_for_child
 
 
 api = Blueprint('api', __name__)
@@ -57,3 +57,19 @@ def child_dashboard_stats():
 @api.route('/skill_categories', methods=['GET'])
 def get_skill_categories():
     return get_user_skill_progress(request)
+
+@api.route('/user_badges', methods=['GET'])
+def user_badges():
+    return get_user_badges()
+
+@api.route("/api/child/<int:child_id>/curriculum/<int:curriculum_id>/lesson/<int:lesson_id>/quizzes", methods=["GET"])
+def get_quizzes(child_id, curriculum_id, lesson_id):
+    return get_lesson_quizzes(child_id, curriculum_id, lesson_id)
+
+@api.route("/api/child/<int:child_id>/quiz/<int:quiz_id>/history", methods=["GET"])
+def get_history(child_id, quiz_id):
+    return get_quiz_history(child_id, quiz_id)
+
+@api.route('/api/child/<int:child_id>/curriculums', methods=['GET'])
+def get_curr(child_id):
+    return get_curriculums_for_child(child_id)

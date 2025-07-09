@@ -394,3 +394,125 @@ def get_user_skill_progress(request):
         })
 
     return jsonify(response), 200
+
+
+def get_user_badges():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({'error': 'Missing or malformed token'}), 403
+    token = auth_header.split(" ")[1]
+    session = Session.query.filter_by(session_id=token).first()
+    if not session or 'child_id' not in session.session_information:
+        return jsonify({'error': 'Unauthorized'}), 401
+    child_id = session.session_information['child_id']
+    badge_histories = BadgeHistory.query.filter_by(child_id=child_id).all()
+    response = []
+    for bh in badge_histories:
+        badge = Badge.query.get(bh.badge_id)
+        if badge:
+            response.append({
+                "name": badge.name,
+                "image": ""  # gotta add this 
+            })
+    return jsonify(response), 200
+
+def get_lesson_quizzes(child_id, curriculum_id, lesson_id):
+    # Get curriculum(Skill)
+    curriculum = Skill.query.get(curriculum_id)
+    if not curriculum:
+        return jsonify({'error': 'Curriculum not found'}), 404
+    #G et lesson 
+    lesson = Lesson.query.filter_by(lesson_id=lesson_id, skill_id=curriculum_id).first()
+    if not lesson:
+        return jsonify({'error': 'Lesson not found'}), 404
+    quizzes = Quiz.query.filter_by(lesson_id=lesson_id).all()
+    attempted_quiz_ids = {
+        qh.quiz_id for qh in QuizHistory.query.filter_by(child_id=child_id).all()
+    }
+    quiz_list = []
+    for quiz in quizzes:
+        quiz_data = {
+            "quiz_id": quiz.quiz_id,
+            "name": quiz.quiz_name,
+            "description": quiz.description,
+            "time_duration": f"{quiz.time_duration // 60} mins" if quiz.time_duration else "N/A",
+            "difficulty": "Medium",  
+            "progress_status": 100 if quiz.quiz_id in attempted_quiz_ids else 0,
+            "image": None  
+        }
+        quiz_list.append(quiz_data)
+    return jsonify({
+        "curriculum": {
+            "curriculum_id": curriculum.skill_id,
+            "name": curriculum.name
+        },
+        "lesson": {
+            "lesson_id": lesson.lesson_id,
+            "title": lesson.title
+        },
+        "quizzes": quiz_list
+    }), 200
+
+
+def get_quiz_history(child_id, quiz_id):
+    # Get teh quiz history
+    histories = QuizHistory.query.filter_by(child_id=child_id, quiz_id=quiz_id).all()
+    if not histories:
+        return jsonify({"quizzes_history": []}), 200
+    child = Child.query.get(child_id)
+    parent_name = child.parent.name if child.parent else None
+    parent_email = child.parent.email_id if child.parent else None
+    history_list = []
+    for h in histories:
+        history_list.append({
+            "quiz_history_id": h.quiz_history_id,
+            "quiz_id": h.quiz_id,
+            "attempted_at": h.created_at.isoformat() if hasattr(h, "created_at") else "N/A",
+            "score": h.score,
+            "feedback": {
+                "admin": "admin@gmail.com",  
+                "parent": f"Parent: {parent_name} ({parent_email})" if parent_name else ""
+            }
+        })
+    return jsonify({"quizzes_history": history_list}), 200
+
+
+def get_curriculums_for_child(child_id):
+    # Get skills
+    child = Child.query.get(child_id)
+    if not child:
+        return jsonify({"error": "Child not found"}), 404
+    age = age_calc(child.dob)
+    skills = Skill.query.filter(Skill.min_age <= age, Skill.max_age >= age).all()
+    result = []
+    for skill in skills:
+        # Lessons, Activities, Quizzes under this skill
+        lessons = Lesson.query.filter_by(skill_id=skill.skill_id).all()
+        lesson_ids = [l.lesson_id for l in lessons]
+        activities = Activity.query.filter(Activity.lesson_id.in_(lesson_ids)).all()
+        activity_ids = [a.activity_id for a in activities]
+        quizzes = Quiz.query.filter(Quiz.lesson_id.in_(lesson_ids)).all()
+        quiz_ids = [q.quiz_id for q in quizzes]
+        total_items = len(lesson_ids) + len(activity_ids) + len(quiz_ids)
+        completed_lessons = LessonHistory.query.filter(
+            LessonHistory.child_id == child_id,
+            LessonHistory.lesson_id.in_(lesson_ids)
+        ).count()
+        submitted_activities = ActivityHistory.query.filter(
+            ActivityHistory.activity_id.in_(activity_ids)
+        ).count()
+        passed_quizzes = QuizHistory.query.filter(
+            QuizHistory.child_id == child_id,
+            QuizHistory.quiz_id.in_(quiz_ids),
+            QuizHistory.score >= 40  # as per iitm
+        ).count()
+        completed_items = completed_lessons + submitted_activities + passed_quizzes
+        progress = round((completed_items / total_items) * 100) if total_items else 0
+        result.append({
+            "curriculum_id": skill.skill_id,
+            "name": skill.name,
+            "description": skill.description,
+            "image": None,
+            "progress_status": progress
+        })
+    return jsonify({"curriculums": result}), 200

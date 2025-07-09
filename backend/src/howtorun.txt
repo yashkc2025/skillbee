@@ -47,4 +47,7 @@ for example: Authorisation(in header name)  Bearer 4356cae7-05d6-458a-a448-cb76c
 Remember admin cannot be fetched in this url it is onluy for parents and children.
 similarly check the /child_dashboard_stats and /skill_categories.
 
+
+Dummy data has been added to seed_data.py and run once to add to database.
+
 Urjaswi Banerjee
