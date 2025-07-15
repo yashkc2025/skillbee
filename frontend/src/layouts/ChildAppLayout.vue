@@ -36,7 +36,7 @@ import ChildNavbar from "@/components/child/ChildNavbar.vue";
 
 .app-layout>div {
   /* background-color: blue; */
-  max-width: 1200px;
+  /* max-width: 1200px; */
   width: 100%;
   margin-top: var(--size-4xl);
   padding: 0 1rem;
