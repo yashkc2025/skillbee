@@ -74,7 +74,7 @@ const navOptions = [
   <div class="navbar">
     <section class="logo-parent">
       <img src="/logo.png" alt="" />
-      <span>Admin</span>
+      <!-- <span>Admin</span> -->
     </section>
     <div class="navbar-content">
       <!-- <a :href="sitemap.admin.new.all" class="create">
@@ -109,7 +109,7 @@ const navOptions = [
 }
 
 .logo-parent>img {
-  width: 20px;
+  width: 120px;
 }
 
 .create {
