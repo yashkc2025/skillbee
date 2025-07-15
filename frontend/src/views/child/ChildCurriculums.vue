@@ -123,4 +123,9 @@ function openLessons(curriculumId: number, curriculumName: string) {
     gap: 20px;
     padding: 0 20px;
 }
+
+.empty-result {
+    text-align: center;
+    margin-top: 20px;
+}
 </style>
