@@ -126,6 +126,6 @@ function openLessons(curriculumId: number, curriculumName: string) {
 
 .empty-result {
     text-align: center;
-    margin-top: 20px;
+    margin: 20px;
 }
 </style>
