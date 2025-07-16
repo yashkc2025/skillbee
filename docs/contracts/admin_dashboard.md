@@ -226,7 +226,7 @@
 
 ### 🔹 Create New Child
 
-**POST** `/admin/children`
+**POST** `/parent/children`
 **Access:** `@only parent`
 
 #### 🧾 Body
