@@ -180,7 +180,11 @@
       awarded_on: string // ISO or date string
     }>
     streak: number
-  }
+  },
+  badges: {
+    label : string,
+    image: string
+  }[]
 }
 ```
 
