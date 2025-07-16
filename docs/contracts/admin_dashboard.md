@@ -181,10 +181,6 @@
     }>
     streak: number
   },
-  badges: {
-    label : string,
-    image: string
-  }[]
 }
 ```
 
