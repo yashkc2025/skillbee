@@ -293,5 +293,12 @@
   description: string
   difficulty: string
   point: number
+  questions: {
+    question : string
+    options : {
+      text : string
+      isCorrect : boolean
+    }[]
+  }
 }
 ```
