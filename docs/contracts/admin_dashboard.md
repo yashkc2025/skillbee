@@ -122,7 +122,7 @@
 {
   id: number
   label: string
-  image: string // URL
+  image: string // Base64
 }
 ```
 
@@ -177,6 +177,7 @@
     badges: Array<{
       badge_id: string
       title: string
+      image : string // Base64
       awarded_on: string // ISO or date string
     }>
     streak: number
@@ -214,7 +215,7 @@
 ```ts
 {
   lesson: string
-  image: string // URL
+  image: string // Base64
   title: string
   description: string
   instructions: string
@@ -254,7 +255,7 @@
 {
   title: string
   content: string
-  image: string // URL
+  image: string // Base64
   description: string
   badge_id: number
   curriculum_id: number
@@ -272,7 +273,7 @@
 ```ts
 {
   title: string
-  image: string // URL
+  image: string // Base64
   points: number
 }
 ```
@@ -288,7 +289,7 @@
 ```ts
 {
   lesson: string
-  image: string // URL
+  image: string // Base64
   title: string
   description: string
   difficulty: string
