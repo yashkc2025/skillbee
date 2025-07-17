@@ -1,32 +1,30 @@
 ## 🔐 Access Levels
 
-* `@only admin` → Admin-only access
-* `@only parent and admin` → Both Parent and Admin
-* `@only parent` → Parent-only access
-
+- `@only admin` → Admin-only access
+- `@only parent and admin` → Both Parent and Admin
+- `@only parent` → Parent-only access
 
 ## 📚 Endpoints
-
 
 ### 🔹 Get Children
 
 **GET** `/children`
 **Access:** `@only parent and admin`
+
 > Only allow parent to access thier children
 
 #### ✅ Response
 
 ```ts
 {
-  id: number
-  name: string
-  email: string
-  age: number
-  school_name: string
-  last_login: string // ISO timestamp or formatted string
-}
+  id: number;
+  name: string;
+  email: string;
+  age: number;
+  school_name: string;
+  last_login: string; // ISO timestamp or formatted string
+}[]
 ```
-
 
 ### 🔹 Get Parents
 
@@ -37,13 +35,12 @@
 
 ```ts
 {
-  id: number
-  name: string
-  email: string
-  blocked: boolean
-}
+  id: number;
+  name: string;
+  email: string;
+  blocked: boolean;
+}[]
 ```
-
 
 ### 🔹 Get Lessons
 
@@ -54,12 +51,11 @@
 
 ```ts
 {
-  id: number
-  title: string
-  curriculum: string
-}
+  id: number;
+  title: string;
+  curriculum: string;
+}[]
 ```
-
 
 ### 🔹 Get Quizzes
 
@@ -78,13 +74,12 @@
 
 ```ts
 {
-  id: number
-  title: string
-  lesson: string
-  curriculum: string
-}
+  id: number;
+  title: string;
+  lesson: string;
+  curriculum: string;
+}[]
 ```
-
 
 ### 🔹 Get Activities
 
@@ -103,13 +98,12 @@
 
 ```ts
 {
-  id: number
-  title: string
-  lesson: string
-  curriculum: string
-}
+  id: number;
+  title: string;
+  lesson: string;
+  curriculum: string;
+}[]
 ```
-
 
 ### 🔹 Get Badges
 
@@ -120,12 +114,11 @@
 
 ```ts
 {
-  id: number
-  label: string
-  image: string // Base64
-}
+  id: number;
+  label: string;
+  image: string; // Base64
+}[]
 ```
-
 
 ### 🔹 Get Children Profile
 
@@ -138,7 +131,7 @@
 
 ```ts
 {
-  id: number
+  id: number;
 }
 ```
 
@@ -162,8 +155,14 @@
   skills_progress: Array<{
     skill_id: string
     skill_name: string
-    progress_percent: number
-  }>,
+    lesson_started_count : number
+    lesson_completed_count : number
+    quiz_attempted_count : number
+  }>
+  point_earned: Array <{
+    point : number
+    date: string // YYYY-MM-DD  
+  }>
   assessments: Array<{
     id: number
     skill_id: string
@@ -185,25 +184,91 @@
 }
 ```
 
+### 🔹 Get Active Users Charts
 
-## 🟢 Mutations (POST)
+**GET** `/admin/active_users_chart`
+**Access:** `@only admin`
 
+> Only for last 15-20 days
 
-### 🔹 Post Feedback
-
-**POST** `/feedback`
-**Access:** `@only parent`
-
-#### 🧾 Body
+#### 🧾 Params
 
 ```ts
 {
-  skill_type: "Quiz" | "Activity"
-  id: number
-  text: string
+  dates : string[]; //  YYYY-MM-DD
+  active_children : number[];
+  active_parents : number[];
+  new_children_signups : number[];
+  new_parent_signups : number[];
+  total_active_users : number[]
 }
 ```
 
+### 🔹 Get Skill Engagements Charts
+
+**GET** `/admin/skill_engagment_chart`
+**Access:** `@only admin`
+
+#### 🧾 Params
+
+```ts
+{
+  age_8_10 : number;
+  age_10_12 : number;
+  age_12_14 : number
+}
+```
+
+### 🔹 Get Badges by Age Group Charts
+
+**GET** `/admin/badge_by_age_group_chart`
+**Access:** `@only admin`
+
+#### 🧾 Params
+
+```ts
+{
+  badge_name : string;
+  age_8_10 : number;
+  age_10_12 : number;
+  age_12_14 : number
+}[]
+```
+
+### 🔹 Get Learning Funnel
+
+**GET** `/admin/learning_funnel_chart`
+**Access:** `@only admin`
+
+#### 🧾 Params
+
+```ts
+{
+  user_started_skill : number;
+  lessons_completed : number;
+  quizzes_attempted : number;
+  badges_earned : number
+}[]
+```
+
+### 🔹 Get Age Group Distribution Chart
+
+**GET** `/admin/age_group_distribution_chart`
+**Access:** `@only admin`
+
+#### 🧾 Params
+
+```ts
+{
+    skill_id: string
+    skill_name: string
+    lesson_started_count : number
+    lesson_completed_count : number
+    quiz_attempted_count : number
+}[]
+```
+
+## Creation (POST)
 
 ### 🔹 Create New Activity
 
@@ -214,35 +279,15 @@
 
 ```ts
 {
-  lesson: string
-  image: string // Base64
-  title: string
-  description: string
-  instructions: string
-  difficulty: string
-  point: number
+  lesson: string;
+  image: string; // Base64
+  title: string;
+  description: string;
+  instructions: string;
+  difficulty: string;
+  point: number;
 }
 ```
-
-
-### 🔹 Create New Child
-
-**POST** `/parent/children`
-**Access:** `@only parent`
-
-#### 🧾 Body
-
-```ts
-{
-  name: string
-  username: string
-  password: string
-  confirmPass: string
-  dob: string // YYYY-MM-DD
-  school: string
-}
-```
-
 
 ### 🔹 Create New Lesson
 
@@ -253,15 +298,14 @@
 
 ```ts
 {
-  title: string
-  content: string
-  image: string // Base64
-  description: string
-  badge_id: number
-  curriculum_id: number
+  title: string;
+  content: string;
+  image: string; // Base64
+  description: string;
+  badge_id: number;
+  curriculum_id: number;
 }
 ```
-
 
 ### 🔹 Create New Badge
 
@@ -272,12 +316,11 @@
 
 ```ts
 {
-  title: string
-  image: string // Base64
-  points: number
+  title: string;
+  image: string; // Base64
+  points: number;
 }
 ```
-
 
 ### 🔹 Create New Quiz
 
@@ -288,18 +331,221 @@
 
 ```ts
 {
-  lesson: string
-  image: string // Base64
-  title: string
-  description: string
-  difficulty: string
-  point: number
+  lesson: string;
+  image: string; // Base64
+  title: string;
+  description: string;
+  difficulty: string;
+  point: number;
   questions: {
-    question : string
-    options : {
-      text : string
-      isCorrect : boolean
-    }[]
+    question: string;
+    options: {
+      text: string;
+      isCorrect: boolean;
+    }
+    [];
   }
+}
+```
+
+## Mutation (PUT)
+
+### 🔹 Update Email
+
+**PUT** `/admin/update_email`
+**Access:** `@only admin`
+
+#### 🧾 Body
+
+```ts
+{
+    email : string
+}
+```
+
+### 🔹 Update Password
+
+**PUT** `/admin/update_password`
+**Access:** `@only admin`
+
+#### 🧾 Body
+
+```ts
+{
+    oldPassword : string;
+    newPassword : string
+    confirmPassword : string
+}
+```
+
+### 🔹 Block Children
+
+**PUT** `/admin/block_children`
+**Access:** `@only admin`
+
+#### 🧾 Body
+
+```ts
+{
+  id : number
+}
+```
+
+### 🔹 Unblock Children
+
+**PUT** `/admin/unblock_children`
+**Access:** `@only admin`
+
+#### 🧾 Body
+
+```ts
+{
+  id : number
+}
+```
+
+### 🔹 Block Parent
+
+**PUT** `/admin/block_parent`
+**Access:** `@only admin`
+
+#### 🧾 Body
+
+```ts
+{
+  id : number
+}
+```
+
+### 🔹 Unblock Children
+
+**PUT** `/admin/unblock_parent`
+**Access:** `@only admin`
+
+#### 🧾 Body
+
+```ts
+{
+  id : number
+}
+```
+
+### 🔹 Update Activity
+
+**PUT** `/admin/activity`
+**Access:** `@only admin`
+
+#### 🧾 Body
+
+```ts
+{
+  id : number;
+  lesson: string | null; // Optional
+  image: string | null; // Base64
+  title: string | null;
+  description: string | null;
+  instructions: string | null;
+  difficulty: string | null;
+  point: number | null;
+}
+```
+
+### 🔹 Update Quiz
+
+**PUT** `/admin/quiz`
+**Access:** `@only admin`
+
+#### 🧾 Body
+
+```ts
+{
+  id : number
+  lesson: string | null;
+  image: string | null; // Base64
+  title: string | null;
+  description: string | null;
+  difficulty: string | null;
+  point: number | null;
+  questions: {
+    question: string;
+    options: {
+      text: string;
+      isCorrect: boolean;
+    }[];
+  }
+}
+
+```
+
+### 🔹 Update Lesson
+
+**POST** `/admin/lesson`
+**Access:** `@only admin`
+
+#### 🧾 Body
+
+```ts
+{
+  id : number;
+  title: string | null;
+  content: string | null;
+  image: string | null; // Base64
+  description: string | null;
+  badge_id: number | null;
+  curriculum_id: number | null;
+}
+```
+
+## Delete (DELETE)
+
+### 🔹 Delete Badge
+
+**DELETE** `/admin/badge`
+**Access:** `@only admin`
+
+#### 🧾 Body
+
+```ts
+{
+    id : string
+}
+```
+
+### 🔹 Delete Activity
+
+**DELETE** `/admin/activity`
+**Access:** `@only admin`
+
+#### 🧾 Body
+
+```ts
+{
+    id : string
+}
+```
+
+### 🔹 Delete Quiz
+
+**DELETE** `/admin/quiz`
+**Access:** `@only admin`
+
+#### 🧾 Body
+
+```ts
+{
+    id : string
+}
+```
+
+### 🔹 Delete Lesson
+
+**DELETE** `/admin/lesson`
+**Access:** `@only admin`
+
+#### 🧾 Body
+
+```ts
+{
+    id : string
 }
 ```
