@@ -1,27 +1,42 @@
 <script setup lang="ts">
 import CardV2 from '@/components/CardV2.vue';
+import { fetchData } from '@/fx/api';
+import { getBackendURL } from '@/fx/utils';
 import AdminAppLayout from '@/layouts/AdminAppLayout.vue';
 import sitemap from "@/router/sitemap.json"
+import { ref } from 'vue';
+import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter()
 
-const badges = [
-  {
-    label: "Quick Thinker",
-    image:
-      "http://static.vecteezy.com/system/resources/previews/055/850/981/non_2x/cute-brain-cartoon-with-lightning-bolt-vector.jpg",
-  },
-  {
-    label: "Math Magician",
-    image:
-      "https://play-lh.googleusercontent.com/_amVHhZZT0Jk3MAHEog0rZeCVMl2w6zQYoDH8Mo7ZjKUIQwRoUxg-FhgALctyKmAjoo",
-  },
-];
+type Badges = {
+  label: string,
+  image: string
+}[]
+const badges = ref<Badges>()
 
 function addEntry() {
   router.push(sitemap.admin.new.badge)
 }
+
+onMounted(async () => {
+  // const data = fetchData(getBackendURL(""))
+  const data = [
+    {
+      label: "Quick Thinker",
+      image:
+        "http://static.vecteezy.com/system/resources/previews/055/850/981/non_2x/cute-brain-cartoon-with-lightning-bolt-vector.jpg",
+    },
+    {
+      label: "Math Magician",
+      image:
+        "https://play-lh.googleusercontent.com/_amVHhZZT0Jk3MAHEog0rZeCVMl2w6zQYoDH8Mo7ZjKUIQwRoUxg-FhgALctyKmAjoo",
+    },
+  ];
+
+  badges.value = data
+})
 
 </script>
 

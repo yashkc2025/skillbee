@@ -1,3 +1,5 @@
+const BACKEND_URL = "http://localhost:8080/"
+
 export function getTodayName(): string {
   const today = new Date();
   return today.toLocaleDateString('en-US', { weekday: 'long' });
@@ -49,4 +51,8 @@ export function flattenObject(obj: AnyObject, parentKey = '', result: AnyObject 
   }
 
   return result;
+}
+
+export function getBackendURL(slug: string): string {
+  return `${BACKEND_URL}${slug}`
 }

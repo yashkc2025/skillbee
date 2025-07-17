@@ -10,24 +10,45 @@ const props = withDefaults(defineProps<{
   icon: string;
   inputType?: 'TextArea' | 'Input';
   fieldType?: 'url' | 'tel' | 'text' | 'number' | 'email' | 'password' | 'file' | 'datetime-local' | 'date'
+  required?: boolean
 }>(), {
   inputType: 'Input',
-  fieldType: 'text'
+  fieldType: 'text',
+  required: false
 });
+
+// function onInput(event: Event) {
+//   const target = event.target as HTMLInputElement | HTMLTextAreaElement;
+//   emit('update:modelValue', target.value);
+// }
 
 function onInput(event: Event) {
   const target = event.target as HTMLInputElement | HTMLTextAreaElement;
-  emit('update:modelValue', target.value);
+
+  // Handle file input manually
+  if (props.fieldType === 'file') {
+    const file = (target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      emit('update:modelValue', reader.result as string); // Emit base64 string
+    };
+    reader.readAsDataURL(file);
+  } else {
+    emit('update:modelValue', target.value);
+  }
 }
+
 </script>
 
 <template>
   <div class="input-wrapper">
     <i :class="icon"></i>
     <input v-if="inputType !== 'TextArea'" :placeholder="placeholder" :name="name" :type="fieldType" :value="modelValue"
-      @input="onInput" />
+      @input="onInput" :required />
     <textarea v-if="inputType === 'TextArea'" :placeholder="placeholder" :name="name" @input="onInput"
-      :value="modelValue" />
+      :value="modelValue" :required />
   </div>
 </template>
 

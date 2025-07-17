@@ -4,18 +4,21 @@ const emit = defineEmits<{
 }>();
 
 const props = withDefaults(defineProps<{
+  required: boolean,
   modelValue: string;
   name: string;
   placeholder: string;
   icon: string;
-  options: { label: string; value: string }[];
-}>(), {});
+  options: { label: string; value: string | number }[];
+}>(), {
+  required: false
+});
 </script>
 
 <template>
   <div class="input-wrapper">
     <i :class="icon"></i>
-    <select :name="name" :value="modelValue"
+    <select :name="name" :value="modelValue" :required
       @change="(e) => emit('update:modelValue', (e.target as HTMLSelectElement).value)">
       <option disabled value="">{{ placeholder }}</option>
       <option v-for="option in options" :key="option.value" :value="option.value">

@@ -31,6 +31,7 @@ function isComponent(val: unknown) {
       </tr>
     </tbody>
   </table>
+  <div class="empty" v-if="rows.length === 0">No such rows found</div>
 </template>
 
 
@@ -84,5 +85,12 @@ function isComponent(val: unknown) {
 .table th:last-child {
   border-top-right-radius: var(--border-radius);
   border-bottom-right-radius: var(--border-radius);
+}
+
+.empty {
+  text-align: center;
+  font-weight: 500;
+  width: 100%;
+  margin: 50px 0;
 }
 </style>

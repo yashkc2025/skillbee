@@ -7,131 +7,186 @@ import SkillChart from '@/components/admin/charts/SkillChart.vue';
 import Badges from "@/components/admin/children/AdminBadgesComponent.vue"
 import TableComponent from '@/components/TableComponent.vue';
 import { ref } from 'vue';
-import InputComponent from '@/components/InputComponent.vue';
 import PointsChart from "@/components/admin/charts/PointsChart.vue"
+import { postData } from '@/fx/api';
+import { onMounted } from 'vue';
 
-const profile = {
-  "info": {
-    "child_id": "1",
-    "full_name": "Yash Kumar",
-    "age": 10,
-    "grade": "5th",
-    "enrollment_date": "20 September 2024",
-    "status": "Active",
-    "parent": {
-      "id": 1,
-      "name": "A Kumar",
-      "email": "a.kumar@gmail.com",
-    },
-  },
-  "skills_progress": [
-    {
-      "skill_id": "drawing-basic",
-      "skill_name": "Drawing Basics",
-      "progress_percent": 85,
-    },
-    {
-      "skill_id": "math-fractions",
-      "skill_name": "Fractions",
-      "progress_percent": 45,
-    }
-  ],
+type ProfileType = {
+  info: {
+    child_id: string;
+    full_name: string;
+    age: number;
+    grade: string;
+    enrollment_date: string;
+    status: 'Active' | 'Inactive' | string;
+    parent: {
+      id: number;
+      name: string;
+      email: string;
+    };
+  };
+  skills_progress: {
+    skill_id: string;
+    skill_name: string;
+    progress_percent: number;
+  }[];
+  assessments: {
+    id: number;
+    skill_id: string;
+    assessment_type: 'Quiz' | 'Activity' | string;
+    title: string;
+    date: string;
+    score: number | string;
+    max_score: number | string;
+  }[];
+  achievements: {
+    badges: {
+      badge_id: string;
+      title: string;
+      awarded_on: string;
+    }[];
+    streak: number;
+  };
+  badges: {
+    label: string,
+    image: string
+  }[]
+};
 
-  "assessments": [
-    {
-      "id": 23,
-      "skill_id": "Critical Thinking",
-      "assessment_type": "Quiz",
-      "title": "Fractions Quiz 1",
-      "date": "2025-06-28",
-      "score": 70,
-      "max_score": 100,
-    },
-    {
-      "id": 25,
-      "skill_id": "Extracurricular",
-      "assessment_type": "Project",
-      "title": "Sketch a Fruit Bowl",
-      "date": "2025-06-15",
-      "max_score": "Pass",
-      "score": "Pass",
-    }
-  ],
+type RowTypes = { [key: string]: string | number }
 
-  "achievements": {
-    "badges": [
+const profile = ref<ProfileType>()
+const infoRows = ref<RowTypes>()
+const parentRows = ref<RowTypes>()
+const feedbackText = ref("")
+
+onMounted(async () => {
+  const data = {
+    "info": {
+      "child_id": "1",
+      "full_name": "Yash Kumar",
+      "age": 10,
+      "grade": "5th",
+      "enrollment_date": "20 September 2024",
+      "status": "Active",
+      "parent": {
+        "id": 1,
+        "name": "A Kumar",
+        "email": "a.kumar@gmail.com",
+      },
+    },
+    "skills_progress": [
       {
-        "badge_id": "art-beginner",
-        "title": "Art Beginner",
-        "awarded_on": "2025-06-10"
+        "skill_id": "drawing-basic",
+        "skill_name": "Drawing Basics",
+        "progress_percent": 85,
       },
       {
-        "badge_id": "weekly-3day-streak",
-        "title": "3-Day Learning Streak",
-        "awarded_on": "2025-06-29"
+        "skill_id": "math-fractions",
+        "skill_name": "Fractions",
+        "progress_percent": 45,
       }
     ],
-    "streak": 7
-  },
-}
 
-const assessmentLabels = ["ID", "Skill ID", "Type", "Title", "Date", "Score", "Max Score", "Feedback"]
+    "assessments": [
+      {
+        "id": 23,
+        "skill_id": "Critical Thinking",
+        "assessment_type": "Quiz",
+        "title": "Fractions Quiz 1",
+        "date": "2025-06-28",
+        "score": 70,
+        "max_score": 100,
+      },
+      {
+        "id": 25,
+        "skill_id": "Extracurricular",
+        "assessment_type": "Project",
+        "title": "Sketch a Fruit Bowl",
+        "date": "2025-06-15",
+        "max_score": "Pass",
+        "score": "Pass",
+      }
+    ],
 
-const infoRows = {
-  "ID": profile.info.child_id,
-  "Full Name": profile.info.full_name,
-  "Age": profile.info.age,
-  "Grade": profile.info.grade,
-  "Status": profile.info.status,
-  "Enrollment Date": profile.info.enrollment_date
-}
+    "achievements": {
+      "badges": [
+        {
+          "badge_id": "art-beginner",
+          "title": "Art Beginner",
+          "awarded_on": "2025-06-10"
+        },
+        {
+          "badge_id": "weekly-3day-streak",
+          "title": "3-Day Learning Streak",
+          "awarded_on": "2025-06-29"
+        }
+      ],
+      "streak": 7
+    },
+    "badges": [
+      {
+        label: "Quick Thinker",
+        image:
+          "http://static.vecteezy.com/system/resources/previews/055/850/981/non_2x/cute-brain-cartoon-with-lightning-bolt-vector.jpg",
+      },
+      {
+        label: "Quick Thinker (alt)",
+        image:
+          "https://thumbs.dreamstime.com/b/brain-lightning-brainstorm-concept-like-cloud-power-mind-103281710.jpg",
+      },
+      {
+        label: "Math Magician",
+        image:
+          "https://play-lh.googleusercontent.com/_amVHhZZT0Jk3MAHEog0rZeCVMl2w6zQYoDH8Mo7ZjKUIQwRoUxg-FhgALctyKmAjoo",
+      },
+      {
+        label: "Math Magician (alt)",
+        image:
+          "https://is3-ssl.mzstatic.com/image/thumb/Purple122/v4/91/5c/c1/915cc1a2-0c75-4f6a-437b-68553220653e/source/512x512bb.jpg",
+      },
+    ]
+  }
 
-const parentRows = {
-  "ID": profile.info.parent.id,
-  "Name": profile.info.parent.name,
-  "Email": profile.info.parent.email
-}
+  profile.value = data
 
-const badges = [
-  {
-    label: "Quick Thinker",
-    image:
-      "http://static.vecteezy.com/system/resources/previews/055/850/981/non_2x/cute-brain-cartoon-with-lightning-bolt-vector.jpg",
-  },
-  {
-    label: "Quick Thinker (alt)",
-    image:
-      "https://thumbs.dreamstime.com/b/brain-lightning-brainstorm-concept-like-cloud-power-mind-103281710.jpg",
-  },
-  {
-    label: "Math Magician",
-    image:
-      "https://play-lh.googleusercontent.com/_amVHhZZT0Jk3MAHEog0rZeCVMl2w6zQYoDH8Mo7ZjKUIQwRoUxg-FhgALctyKmAjoo",
-  },
-  {
-    label: "Math Magician (alt)",
-    image:
-      "https://is3-ssl.mzstatic.com/image/thumb/Purple122/v4/91/5c/c1/915cc1a2-0c75-4f6a-437b-68553220653e/source/512x512bb.jpg",
-  },
-];
+  infoRows.value = {
+    "ID": profile.value.info.child_id,
+    "Full Name": profile.value.info.full_name,
+    "Age": profile.value.info.age,
+    "Grade": profile.value.info.grade,
+    "Status": profile.value.info.status,
+    "Enrollment Date": profile.value.info.enrollment_date
+  }
+
+  parentRows.value = {
+    "ID": profile.value.info.parent.id,
+    "Name": profile.value.info.parent.name,
+    "Email": profile.value.info.parent.email
+  }
+})
+
+const assessmentLabels = ["ID", "Skill ID", "Type", "Title", "Date", "Score", "Max Score"]
 
 function tableEntries() {
-  profile.assessments.forEach((p) => {
-    p.feedback = <i class="bi bi-journal-text pointer" onClick={() => showFeedbackForm(p.id)}> </i>
+  if (!profile.value || !Array.isArray(profile.value.assessments)) {
+    return [];
+  }
+  return profile?.value.assessments.map((p) => ({
+    ...p,
+  }));
+}
+
+async function blockChild() {
+  await postData("", {
+    children_id: profile.value?.info.child_id
   })
-  return profile.assessments
 }
 
-const showForm = ref(false);
-const assessmentId = ref<number | null>(null);
-
-function showFeedbackForm(id: number) {
-  assessmentId.value = id;
-  showForm.value = true;
-}
-
-function hideFeedbackForm() {
-  showForm.value = false
+async function unBlockChild() {
+  await postData("", {
+    children_id: profile.value?.info.child_id
+  })
 }
 
 </script>
@@ -140,7 +195,7 @@ function hideFeedbackForm() {
   <AdminAppLayout>
     <!-- Intro -->
     <p class="intro">
-      <span class="darken">{{ profile.info.full_name }}</span>
+      <span class="darken">{{ profile?.info.full_name }}</span>
     </p>
 
     <!-- Info and Charts -->
@@ -162,8 +217,9 @@ function hideFeedbackForm() {
             </div>
           </template>
         </CardV2>
-        <Badges :badges />
-        <button class="button-admin">Block User</button>
+        <Badges :badges="profile?.badges" v-if="profile?.badges" />
+        <button class="button-admin" v-if="profile?.info.status === 'Active'">Block User</button>
+        <button class="button-admin" v-if="profile?.info.status !== 'Active'">Unblock User</button>
       </div>
       <div class="second">
         <CardV2 label-title="Skills" label-image="bi bi-bar-chart">
@@ -183,21 +239,6 @@ function hideFeedbackForm() {
         <TableComponent :rows="tableEntries()" :header="assessmentLabels" />
       </template>
     </CardV2>
-
-    <!-- Feedback Form -->
-    <section class="feedback-form box-shadow" v-show="showForm">
-      <div class="blur-background"></div>
-      <CardV2 label-image="bi bi-input-cursor-text" label-title="Feedback Form">
-        <template #top-content>
-          <i class="bi bi-x-circle" @click="hideFeedbackForm"></i>
-        </template>
-        <template #content>
-          <InputComponent icon="bi bi-cursor-text" name="feedback" placeholder="Write something!"
-            input-type="TextArea" />
-          <button class="button-admin" @click="hideFeedbackForm">Submit</button>
-        </template>
-      </CardV2>
-    </section>
   </AdminAppLayout>
 </template>
 

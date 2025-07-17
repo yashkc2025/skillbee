@@ -1,12 +1,27 @@
 <script setup lang="ts">
 import CardV2 from '@/components/CardV2.vue';
 import InputComponent from '@/components/InputComponent.vue';
+import { postData } from '@/fx/api';
+import { getBackendURL } from '@/fx/utils';
 import AdminAppLayout from '@/layouts/AdminAppLayout.vue';
 import { ref } from 'vue';
 
 const title = ref("")
-const image = ref("")
 const points = ref()
+const image = ref();
+
+async function newBadge() {
+  if (!image.value) {
+    console.error("Image not uploaded");
+    return;
+  }
+
+  postData(getBackendURL(""), {
+    'title': title.value,
+    'image': image.value,
+    'points': points.value
+  })
+}
 </script>
 
 <template>
@@ -16,12 +31,14 @@ const points = ref()
     </p>
     <CardV2 label-title="Metadata" label-image="bi bi-book">
       <template #content class="form">
-        <div class="form">
-          <InputComponent icon="bi bi-journal" name="title" placeholder="Title" v-model="title" />
-          <InputComponent icon="bi bi-arrow-up" name="points" placeholder="Unlocked at Points" v-model="points" />
-          <InputComponent icon="bi bi-image" name="image" placeholder="Image" v-model="image" field-type="file" />
-          <button type="button" class="button-admin">Create</button>
-        </div>
+        <form class="form" @submit.prevent="newBadge">
+          <InputComponent icon="bi bi-journal" name="title" placeholder="Title" v-model="title" :required="true" />
+          <InputComponent icon="bi bi-arrow-up" name="points" placeholder="Unlocked at Points" v-model="points"
+            :required="true" />
+          <InputComponent icon="bi bi-image" name="image" placeholder="Image" field-type="file" v-model="image"
+            :required="true" />
+          <button type="submit" class="button-admin">Create</button>
+        </form>
       </template>
     </CardV2>
   </AdminAppLayout>

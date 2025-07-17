@@ -1,23 +1,35 @@
 <script setup lang="ts">
-import AdminAppLayout from "@/layouts/AdminAppLayout.vue";
-import ChildrenTable from "@/components/admin/dashboard/ChildrenTable.vue"
-import ParentTable from "@/components/admin/dashboard/ParentTable.vue";
-import ActiveUserChart from "@/components/admin/charts/ActiveUserChart.vue";
-import CardV2 from "@/components/CardV2.vue";
-import SkillChart from "@/components/admin/charts/SkillChart.vue";
 import ParentAppLayout from "@/layouts/ParentAppLayout.vue";
+import { ref } from "vue";
+import { onMounted } from "vue";
 import { useRouter } from "vue-router";
 
-const parent = {
-  'name': 'Mr. Kumar',
-  'child': [
-    {
-      'id': 1,
-      'name': 'Yash Kumar',
-      'profile_image': "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ09_SsUhus7pTrYp8oZpJp434QP-XFp_4F7Q&s"
-    }
-  ]
+type ParentType = {
+  name: string,
+  child: {
+    id: number,
+    name: string,
+    profile_image: string
+  }[]
 }
+
+const parent = ref<ParentType>()
+
+onMounted(async () => {
+  const data = {
+    'name': 'Mr. Kumar',
+    'child': [
+      {
+        'id': 1,
+        'name': 'Yash Kumar',
+        'profile_image': "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ09_SsUhus7pTrYp8oZpJp434QP-XFp_4F7Q&s"
+      }
+    ]
+  }
+
+  parent.value = data
+})
+
 
 const router = useRouter()
 
@@ -32,7 +44,7 @@ function newChild() {
 
 <template>
   <ParentAppLayout>
-    <div class="dashboard">
+    <div class="dashboard" v-if="parent">
       <h2>Select or Add a child get started</h2>
       <div class="child-group">
         <div v-for="i in parent.child" class="child" @click="navToProfile(i.id)">

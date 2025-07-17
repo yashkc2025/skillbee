@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import CardV2 from '@/components/CardV2.vue'
 import InputComponent from '@/components/InputComponent.vue'
 import AdminAppLayout from '@/layouts/AdminAppLayout.vue'
 import SelectComponent from '@/components/SelectComponent.vue'
+import { postData } from '@/fx/api'
+import { getBackendURL } from '@/fx/utils'
 
 // Metadata Fields
 const lesson = ref("")
@@ -13,11 +15,26 @@ const description = ref("")
 const difficulty = ref("")
 const point = ref()
 
-// Dummy lesson list (replace with actual data or API call)
-const lessonDetails = ref([
-  { label: 'Lesson 1', value: 'lesson-1' },
-  { label: 'Lesson 2', value: 'lesson-2' }
-])
+type LessonDetailsType = {
+  value: number,
+  label: string
+}[]
+
+const lessonDetails = ref<LessonDetailsType>([])
+
+onMounted(async () => {
+  // const data = fetchData(getBackendURL(""))
+  const data = [
+    {
+      title: 'Build a ship', id: 1
+    },
+    {
+      title: 'How to swim!', id: 2
+    }
+  ]
+
+  lessonDetails.value = data.map(d => ({ value: d.id, label: d.title }));
+})
 
 // Quiz Form State
 const questions = reactive<Array<{
@@ -52,7 +69,7 @@ function markCorrect(qIndex: number, oIndex: number) {
 }
 
 // Final payload preparation (on submit)
-function createActivity() {
+async function createQuiz() {
   const payload = {
     title: title.value,
     image: image.value,
@@ -64,13 +81,14 @@ function createActivity() {
   }
 
   console.log("Submitting Activity:", payload)
+  postData(getBackendURL(""), payload)
 
 }
 </script>
 
 <template>
   <AdminAppLayout>
-    <div class="outer">
+    <form class="outer" @submit.prevent="createQuiz">
       <p class="intro">
         <span class="darken">New Quiz</span>
       </p>
@@ -103,7 +121,7 @@ function createActivity() {
         <template #content class="form">
           <div class="form">
             <SelectComponent v-model="lesson" name="lesson" icon="bi bi-book" placeholder="Select a Lesson"
-              :options="lessonDetails" />
+              :options="lessonDetails" :required="true" />
           </div>
         </template>
       </CardV2>
@@ -138,9 +156,9 @@ function createActivity() {
 
       <!-- Submit Button -->
       <div style="display: flex; justify-content: flex-end;">
-        <button type="button" class="button-admin" @click="createActivity">Create Activity</button>
+        <button type="button" class="button-admin" @click="createQuiz">Create Quiz</button>
       </div>
-    </div>
+    </form>
   </AdminAppLayout>
 </template>
 

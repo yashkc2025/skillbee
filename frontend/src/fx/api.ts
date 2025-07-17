@@ -2,7 +2,7 @@ import { useToast } from "vue-toastification";
 
 const toast = useToast();
 
-export async function submitForm(address, event) {
+export async function submitForm(address: string, event) {
   event.preventDefault(); // Prevents full page reload
 
   const formData = new FormData(event.target); // Collects all form data
@@ -39,7 +39,7 @@ export async function submitForm(address, event) {
   }
 }
 
-export async function postData(address, data) {
+export async function postData(address: string, data: Object) {
   try {
     const response = await fetch(address, {
       method: "POST",
@@ -70,7 +70,7 @@ export async function postData(address, data) {
   }
 }
 
-export async function fetchData(address, q) {
+export async function fetchData(address: string, q: string[][] = []) {
   const queryString = new URLSearchParams(q).toString();
   const urlWithQuery = queryString ? `${address}?${queryString}` : address;
 
@@ -87,7 +87,7 @@ export async function fetchData(address, q) {
   }
 }
 
-export async function downloadFile(address) {
+export async function downloadFile(address: string) {
   const response = await fetch(address, {
     method: "GET",
     headers: {
