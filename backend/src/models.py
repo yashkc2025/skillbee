@@ -75,7 +75,7 @@ class Lesson(db.Model):
     title = db.Column(db.Text, nullable=False)
     content = db.Column(JSON, nullable=False)
     position = db.Column(db.Integer, nullable=False)
-    
+    image = db.Column(db.LargeBinary, nullable=True)
 
     activities = db.relationship('Activity', backref='lesson', lazy=True)
     quizzes = db.relationship('Quiz', backref='lesson', lazy=True)
@@ -104,7 +104,11 @@ class Activity(db.Model):
     name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text, nullable=False)
     answer_format = db.Column(db.Text, nullable=True)
-
+    instructions = db.Column(db.Text, nullable=True)
+    difficulty = db.Column(db.Text, nullable=True)
+    points = db.Column(db.Integer, nullable=True)
+    image = db.Column(db.LargeBinary, nullable=True)
+    
     child_id = db.Column(db.Integer, db.ForeignKey('child.child_id'), index=True)
     parent_id = db.Column(db.Integer, db.ForeignKey('parent.parent_id'), index=True)
     lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.lesson_id'))
@@ -165,7 +169,7 @@ class Badge(db.Model):
     badge_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text)
-
+    image = db.Column(db.LargeBinary, nullable=True)
     badge_histories = db.relationship('BadgeHistory', backref='badge', lazy=True)
     quizzes = db.relationship('Quiz', backref='badge', lazy=True)
 
