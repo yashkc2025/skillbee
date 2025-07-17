@@ -479,7 +479,7 @@
 
 ### 🔹 Update Lesson
 
-**POST** `/admin/lesson`
+**PUT** `/admin/lesson`
 **Access:** `@only admin`
 
 #### 🧾 Body
