@@ -155,6 +155,9 @@ class QuizHistory(db.Model):
     score = db.Column(db.Integer, nullable=False)
     responses = db.Column(JSON, nullable=False)
     badge_history_id = db.Column(db.Integer, db.ForeignKey('badge_history.reward_history_id'), nullable=True)
+    attempted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    feedback = db.Column(JSON, nullable=True)
+
 
     __table_args__ = (
         db.Index('ix_quizhistory_quiz_child', 'quiz_id', 'child_id'),
@@ -165,7 +168,7 @@ class Badge(db.Model):
     badge_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text)
-
+    points = db.Column(db.Integer, default=0)
     badge_histories = db.relationship('BadgeHistory', backref='badge', lazy=True)
     quizzes = db.relationship('Quiz', backref='badge', lazy=True)
 
