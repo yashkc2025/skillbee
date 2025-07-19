@@ -650,7 +650,6 @@ def create_child(session_info):
             return jsonify({'error':'Username already registered'}), 409
 
     hashed_password=generate_password_hash(password)
-    # Step 5: Create new child
     new_child = Child(
         name=name,
         username=username,
@@ -664,7 +663,6 @@ def create_child(session_info):
     db.session.add(new_child)
     db.session.commit()
 
-    # Step 6: Return confirmation
     return jsonify({
         "id": new_child.child_id,
         "name": new_child.name,
@@ -689,9 +687,9 @@ def get_parents():
     return jsonify(response), 200
 
 @only_admin
-def create_badge():
+def create_badge(session_info):
     data = request.get_json()
-    name = data.get("name")
+    name = data.get("title")
     description = data.get("description", "")
     image_base64 = data.get("image")
 
@@ -699,7 +697,10 @@ def create_badge():
         return jsonify({"error": "Missing required fields"}), 400
 
     try:
-        image_binary = base64.b64decode(image_base64)
+        if image_base64:
+            image_binary = base64.b64decode(image_base64)
+        else:
+            image_binary = None
     except Exception:
         return jsonify({"error": "Invalid base64 image"}), 400
 
@@ -719,78 +720,71 @@ def create_badge():
         "description":badge.description
     }), 201
 
-@only_admin
-def create_activity():
+@only_admin_or_parent
+def create_activity(session_info):
+    lesson_id = request.args.get('lesson_id', type=int)
     data = request.get_json()
-    required_fields = ['lesson', 'image', 'title', 'description', 'instructions', 'difficulty', 'point']
+    required_fields = ['title','description','image','instructions','difficulty', 'answer_format']
+    
     if not all(field in data for field in required_fields):
         return jsonify({"error": "Missing required fields"}), 400
 
-    lesson_title = data["lesson"]
-    title = data["title"]
-    description = data["description"]
-    instructions = data["instructions"]
-    difficulty = data["difficulty"]
-    points = data["point"]
-    image_base64 = data["image"]
-
-    lesson = Lesson.query.filter_by(title=lesson_title).first()
-    if not lesson:
-        return jsonify({"error": f"Lesson with title '{lesson_title}' not found"}), 404
+    title = data['title']
+    description = data['description']
+    image = data['image']
+    instructions=data['instructions']
+    difficulty=data['difficulty']    
+    answer_format = data['answer_format']
 
     try:
-        image_data = base64.b64decode(image_base64)
+        if image:
+            image_base64 = base64.b64decode(image)
+        else:
+            image_base64 = None
     except Exception:
-        return jsonify({"error": "Invalid image format (base64 expected)"}), 400
+        return jsonify({"error": "Invalid base64 image"}), 400
+    allowed_formats = ['text', 'image', 'pdf']
+    if answer_format not in allowed_formats:
+        return jsonify({"error": "Invalid answer_format. Must be one of: text, image, pdf"}), 400
 
     activity = Activity(
-        name=title,
-        description=description,
-        instructions=instructions,
-        difficulty=difficulty,
-        points=points,
-        image=image_data,
-        lesson_id=lesson.lesson_id
+        name = title,
+        description = description,
+        instructions = instructions,
+        difficulty = difficulty,
+        image = image_base64,
+        lesson_id = lesson_id,
+        answer_format = answer_format
     )
-
     db.session.add(activity)
     db.session.commit()
 
     return jsonify({
         "id": activity.activity_id,
         "title": activity.name,
-        "lesson": lesson.title,
-        "description": activity.description,
-        "points": activity.points
+        "answer_format": activity.answer_format,
+        "difficulty" : activity.difficulty
     }), 201
 
 @only_admin  
 def create_lesson(session_info):
+    skill_id = request.args.get('skill_id', type=int)
     try:
         data = request.get_json()
     except Exception:
         return jsonify({'error': 'Invalid JSON'}), 400
 
-    required = ['title', 'content', 'image', 'description', 'badge_id', 'curriculum_id']
+    required = ['title', 'content', 'image']
     if not all(k in data for k in required):
         return jsonify({'error': 'Missing required fields'}), 400
 
     title = data['title']
     content_raw = data['content']
     image_base64 = data['image']
-    description = data['description']
-    badge_id = data['badge_id']
-    skill_id = data['curriculum_id']
 
     skill = Skill.query.get(skill_id)
     if not skill:
         return jsonify({'error': 'Invalid curriculum_id'}), 404
-
-    badge = None
-    if badge_id:
-        badge = Badge.query.get(badge_id)
-        if not badge:
-            return jsonify({'error': 'Invalid badge_id'}), 404
 
     try:
         content = json.loads(content_raw) if isinstance(content_raw, str) else content_raw
@@ -798,7 +792,10 @@ def create_lesson(session_info):
         return jsonify({'error': 'Content must be valid JSON'}), 400
 
     try:
-        image_binary = base64.b64decode(image_base64)
+        if image_base64:
+            image_binary = base64.b64decode(image_base64)
+        else:
+            image_binary = None
     except Exception:
         return jsonify({'error': 'Invalid base64 image'}), 400
 
@@ -806,12 +803,10 @@ def create_lesson(session_info):
     next_position = (max_position or 0) + 1
 
     lesson = Lesson(
+        skill_id=skill_id,
         title=title,
-        description=description,
         content=content,
         image=image_binary,
-        badge_id=badge_id,
-        skill_id=skill_id,
         position=next_position
     )
 
@@ -822,8 +817,92 @@ def create_lesson(session_info):
         "id": lesson.lesson_id,
         "title": lesson.title,
         "curriculum": skill.name,
-        "description": lesson.description,
-        "badge_id": lesson.badge_id,
         "position": lesson.position
     }), 201
     
+
+@only_admin
+def create_quiz(session_info):
+    lesson_id = request.args.get('lesson_id', type=int)
+    
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({'error': 'Invalid JSON format'}), 400
+
+    required_fields = ['title','image','description', 'difficulty', 'time_duration','point', 'questions']
+    if not all(field in data for field in required_fields):
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    picture = data['image']
+    title = data['title']
+    description = data['description']
+    difficulty = data['difficulty']
+    points = data['point']
+    time_duration = data['time_duration']
+    questions = data['questions']
+
+    try:
+        if picture:
+            image_binary = base64.b64decode(picture)
+        else:
+            image_binary = None
+    except Exception:
+        return jsonify({'error': 'Invalid base64 image'}), 400
+
+    if not isinstance(questions, list) or not questions:
+        return jsonify({'error': 'questions must be a non-empty list'}), 400
+
+    questions_json = []
+    answers_json = []
+
+    for idx, question in enumerate(questions):
+        q_text = question.get('question')
+        opts = question.get('options', [])
+
+        if not q_text or not isinstance(opts, list) or not opts:
+            return jsonify({'error': f"Invalid format in question #{idx + 1}"}), 400
+
+        # Preserve question
+        questions_json.append({
+            "question": q_text,
+            "options": opts
+        })
+
+        correct_answers = [opt['text'] for opt in opts if opt.get('isCorrect') is True]
+
+        if not correct_answers:
+            return jsonify({"error": f"No correct answer specified for question '{q_text}'"}), 400
+
+        answers_json.append({
+            "question": q_text,
+            "correct_answers": correct_answers
+        })
+
+    max_position = db.session.query(db.func.max(Quiz.position)).filter_by(lesson_id=lesson_id).scalar()
+    next_position = (max_position or 0) + 1
+
+    quiz = Quiz(
+        quiz_name=title,
+        description=description,
+        questions=questions_json,
+        answers = answers_json,
+        difficulty=difficulty,
+        points=points,
+        image=image_binary,
+        lesson_id=lesson_id,
+        position=next_position,
+        is_visible=True,
+        created_at=datetime.utcnow(),
+        time_duration=time_duration
+    )
+
+    db.session.add(quiz)
+    db.session.commit()
+
+    return jsonify({
+        "id": quiz.quiz_id,
+        "title": quiz.quiz_name,
+        "difficulty": quiz.difficulty,
+        "points": quiz.points
+    }), 201

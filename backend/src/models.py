@@ -106,7 +106,6 @@ class Activity(db.Model):
     answer_format = db.Column(db.Text, nullable=True)
     instructions = db.Column(db.Text, nullable=True)
     difficulty = db.Column(db.Text, nullable=True)
-    points = db.Column(db.Integer, nullable=True)
     image = db.Column(db.LargeBinary, nullable=True)
     
     child_id = db.Column(db.Integer, db.ForeignKey('child.child_id'), index=True)
@@ -134,6 +133,9 @@ class Quiz(db.Model):
     quiz_id = db.Column(db.Integer, primary_key=True)
     quiz_name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text, nullable=False)
+    difficulty = db.Column(db.String,nullable=False)
+    points = db.Column(db.Integer, nullable=False)
+    image = db.Column(db.LargeBinary, nullable=True)
     questions = db.Column(JSON, nullable=False)
     answers = db.Column(JSON, nullable=False)
     time_duration = db.Column(db.Integer) # Duration of the test should be stored in seconds
@@ -178,7 +180,7 @@ class BadgeHistory(db.Model):
     reward_history_id = db.Column(db.Integer, primary_key=True)
     child_id = db.Column(db.Integer, db.ForeignKey('child.child_id'), index=True)
     badge_id = db.Column(db.Integer, db.ForeignKey('badge.badge_id'))
-
+    awarded_on = db.Column(db.DateTime,default=datetime.utcnow )
     __table_args__ = (
         UniqueConstraint('child_id', 'badge_id', name='unique_child_badge'),
         db.Index('ix_badgehistory_child_badge', 'child_id', 'badge_id'),
