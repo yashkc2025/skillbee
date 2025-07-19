@@ -906,3 +906,115 @@ def create_quiz(session_info):
         "difficulty": quiz.difficulty,
         "points": quiz.points
     }), 201
+    
+    
+@only_admin_or_parent
+def get_child_profile(session_info):
+    child_id = request.args.get('id', type=int)
+    if not child_id:
+        return jsonify({'error': 'Child ID is required as query param ?id=<number>'}), 400
+
+    child = Child.query.get(child_id)
+    if not child:
+        return jsonify({'error': 'Child not found'}), 404
+
+    if 'parent_id' in session_info and child.parent_id != session_info['parent_id']:
+        return jsonify({'error': 'Access denied to this child profile'}), 403
+
+    today = datetime.today()
+    age = today.year - child.dob.year - ((today.month, today.day) < (child.dob.month, child.dob.day))
+    parent = Parent.query.get(child.parent_id)
+
+    skills_progress = []
+    all_skills = Skill.query.all()
+    for skill in all_skills:
+        lessons = Lesson.query.filter_by(skill_id=skill.skill_id).all()
+        lesson_ids = [l.lesson_id for l in lessons]
+        lesson_started_count = len(lesson_ids)
+
+        lesson_completed_count = LessonHistory.query.filter(
+            LessonHistory.child_id == child_id,
+            LessonHistory.lesson_id.in_(lesson_ids)
+        ).count()
+        quiz_attempted_count = QuizHistory.query.join(Quiz).filter(
+            Quiz.lesson_id.in_(lesson_ids),
+            QuizHistory.child_id == child_id
+        ).count()
+
+        skills_progress.append({
+            "skill_id": str(skill.skill_id),
+            "skill_name": skill.name,
+            "lesson_started_count": lesson_started_count,
+            "lesson_completed_count": lesson_completed_count,
+            "quiz_attempted_count": quiz_attempted_count
+        })
+
+    point_earned = []
+
+    quiz_points = QuizHistory.query.filter_by(child_id=child_id).all()
+    for qp in quiz_points:
+        point_earned.append({
+            "point": qp.score,
+            "date": qp.quiz.created_at.strftime("%Y-%m-%d") if qp.quiz and qp.quiz.created_at else "N/A"
+        })
+
+    quizzes = QuizHistory.query.filter_by(child_id=child_id).all()
+    assessments = []
+    for qh in quizzes:
+        quiz = Quiz.query.get(qh.quiz_id)
+        assessments.append({
+            "id": qh.quiz_history_id,
+            "skill_id": str(quiz.lesson.skill_id),
+            "assessment_type": "Quiz",
+            "title": quiz.quiz_name,
+            "date": quiz.created_at.strftime("%Y-%m-%d") if quiz.created_at else "N/A",
+            "score": qh.score,
+            "max_score": 100  # or make dynamic if needed
+        })
+
+    activity_histories = ActivityHistory.query.join(Activity).filter(Activity.child_id == child_id).all()
+    for ah in activity_histories:
+        activity = ah.activity
+        assessments.append({
+            "id": ah.activity_history_id,
+            "skill_id": str(activity.lesson.skill_id) if activity.lesson else "N/A",
+            "assessment_type": "Activity",
+            "title": activity.name,
+            "date": "N/A",  # You can add created_at to Activity if you want
+            "score": "Pass",  # assumption — no scoring system for activity
+            "max_score": "Pass"
+        })
+
+    badge_history = BadgeHistory.query.filter_by(child_id=child_id).all()
+    badges = []
+    for bh in badge_history:
+        badge = Badge.query.get(bh.badge_id)
+        if badge:
+            badges.append({
+                "badge_id": str(badge.badge_id),
+                "title": badge.name,
+                "image": "",  # Convert to base64 or use a badge URL if available
+                "awarded_on": bh.awarded_on  # Placeholder (add award date if available)
+            })
+
+    return jsonify({
+        "info": {
+            "child_id": str(child.child_id),
+            "full_name": child.name,
+            "age": age,
+            "enrollment_date": child.enrollment_date,
+            "status": "Blocked" if child.is_blocked else "Active",
+            "parent": {
+                "id": parent.parent_id,
+                "name": parent.name,
+                "email": parent.email_id
+            }
+        },
+        "skills_progress": skills_progress,
+        "point_earned": point_earned,
+        "assessments": sorted(assessments, key=lambda a: a.get("date"), reverse=True),
+        "achievements": {
+            "badges": badges,
+            "streak": child.streak
+        }
+    }), 200

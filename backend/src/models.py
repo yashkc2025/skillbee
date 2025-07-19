@@ -37,6 +37,7 @@ class Child(db.Model):
     points = db.Column(db.Integer, default=0)
     streak = db.Column(db.Integer, default=0)
     last_login = db.Column(db.DateTime, default=datetime(1970, 1, 1))
+    enrollment_date = db.Column(db.DateTime, default=datetime.utcnow)
     profile_image = db.Column(db.LargeBinary, nullable=True)
     is_blocked = db.Column(db.Boolean, default=False)
 
