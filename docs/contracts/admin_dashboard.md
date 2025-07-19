@@ -1,7 +1,7 @@
 ## 🔐 Access Levels
 
 - `@only admin` → Admin-only access
-- `@only parent and admin` → Both Parent and Admin
+- `@only admin or parent` → Both Parent and Admin
 - `@only parent` → Parent-only access
 
 ## 📚 Endpoints
@@ -143,7 +143,6 @@
     child_id: string
     full_name: string
     age: number
-    grade: string
     enrollment_date: string // e.g., "2024-09-20"
     status: string
     parent: {
@@ -275,17 +274,25 @@
 **POST** `/admin/activity`
 **Access:** `@only admin`
 
+#### 🧾 Query Params
+
+```ts
+{
+  lesson_id?: number
+}
+```
+
 #### 🧾 Body
 
 ```ts
 {
-  lesson: string;
   image: string; // Base64
   title: string;
   description: string;
   instructions: string;
   difficulty: string;
   point: number;
+  answer_format: text, image or pdf;
 }
 ```
 
@@ -294,6 +301,15 @@
 **POST** `/admin/lesson`
 **Access:** `@only admin`
 
+
+#### 🧾 Query Params
+
+```ts
+{
+  skill_id?: number
+}
+```
+
 #### 🧾 Body
 
 ```ts
@@ -301,9 +317,6 @@
   title: string;
   content: string;
   image: string; // Base64
-  description: string;
-  badge_id: number;
-  curriculum_id: number;
 }
 ```
 
@@ -317,8 +330,8 @@
 ```ts
 {
   title: string;
+  description: string;
   image: string; // Base64
-  points: number;
 }
 ```
 
@@ -327,16 +340,25 @@
 **POST** `/admin/quiz`
 **Access:** `@only admin`
 
+
+#### 🧾 Query Params
+
+```ts
+{
+  skill_id?: number
+}
+```
+
 #### 🧾 Body
 
 ```ts
 {
-  lesson: string;
   image: string; // Base64
   title: string;
   description: string;
   difficulty: string;
   point: number;
+  time_duration: number; // in seconds
   questions: {
     question: string;
     options: {
