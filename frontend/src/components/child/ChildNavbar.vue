@@ -8,7 +8,7 @@ const navOptions = [
   },
   {
     label: "Curriculum",
-    link: sitemap.child_app.curriculum,
+    link: sitemap.child_app.curriculum.curriculums,
   },
   {
     label: "Achievements",
@@ -29,10 +29,8 @@ const navOptions = [
     <section class="items-parent">
       <a :href="n.link" class="nav-items" v-for="n in navOptions" :key="n.label">{{
         n.label
-      }}</a>
-    </section>
-    <section class="third-parent">
-      <a class="danger" href="">Logout</a>
+        }}</a>
+      <a class="danger" href="/">Logout</a>
     </section>
   </div>
 </template>
@@ -41,12 +39,15 @@ const navOptions = [
 .navbar {
   padding: var(--size-2xs) var(--size-md);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
+  border-radius: 30px;
   display: flex;
   flex-direction: row;
   background-color: var(--color-text-light);
   gap: var(--size-xl);
-  max-width: fit-content;
+  /* max-width: fit-content; */
+  min-width: 1000px;
+  justify-content: space-between;
+
 }
 
 .items-parent,
@@ -80,7 +81,7 @@ a:hover {
 }
 
 img {
-  width: 35px;
+  width: 90px;
   padding: var(--size-2xs) var(--size-xs);
 }
 

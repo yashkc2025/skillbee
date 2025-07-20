@@ -1,53 +1,61 @@
 {
-    "auth": {
-        "parent": {
-            "login": "/auth/parent_login",
-            "register": "/auth/parent_register",
-            "forgot": "/auth/parent_forgot_password"
-        },
-        "child": {
-            "login": "/auth/child_login",
-            "register": "/auth/child_register",
-            "forgot": "/auth/child_forgot_password"
-        },
-        "admin": {
-            "login": "/auth/admin_login",
-            "forgot": "/auth/admin_forgot_password"
-        }
+  "auth": {
+    "parent": {
+      "login": "/auth/parent_login",
+      "register": "/auth/parent_register",
+      "forgot": "/auth/parent_forgot_password"
     },
-    "child_app": {
-        "dashboard": "/",
-        "achievements": "/stats",
-        "lessons": "/lesson",
-        "settings": "/settings"
+    "child": {
+      "login": "/auth/child_login",
+      "register": "/auth/child_register",
+      "forgot": "/auth/child_forgot_password"
     },
     "admin": {
-        "dashboard": "/admin/",
-        "analytics": {
-            "performance": "/admin/performance",
-            "feedback": "/admin/feedback"
-        },
-        "curriculum": {
-            "lessons": "/admin/lessons",
-            "quiz": "/admin/quiz",
-            "activities": "/admin/activities",
-            "badges": "/admin/badges"
-        },
-        "user_management": {
-            "parent": "/admin/parent",
-            "children": "/admin/children"
-        },
-        "settings": "/admin/settings",
-        "new": {
-            "lesson": "/admin/new/lesson",
-            "quiz": "/admin/new/quiz",
-            "activity": "/admin/new/activity",
-            "badge": "/admin/new/badge"
-        }
-    },
-    "parent": {
-        "dashboard": "/parent/",
-        "new_children": "/parent/new/children",
-        "settings": "/parent/settings"
+      "login": "/auth/admin_login",
+      "forgot": "/auth/admin_forgot_password"
     }
+  },
+  "child_app": {
+    "dashboard": "/child/",
+    "curriculum": {
+      "curriculums": "/child/curriculums",
+      "curriculum": "/child/curriculum/:curriculumId",
+      "lessons": "/child/curriculum/:curriculumId/lessons",
+      "quizzes": "/child/curriculum/:curriculumId/lesson/:lessonId/quizzes",
+      "attempt": "/child/curriculum/:curriculumId/lesson/:lessonId/quiz/:quizId/attempt",
+      "activities": "/child/curriculum/:curriculumId/lesson/:lessonId/activities"
+    },
+    "achievements": "/stats",
+    "lessons": "/lesson",
+    "settings": "/settings"
+  },
+  "admin": {
+    "dashboard": "/admin/",
+    "analytics": {
+      "performance": "/admin/performance",
+      "feedback": "/admin/feedback"
+    },
+    "curriculum": {
+      "lessons": "/admin/lessons",
+      "quiz": "/admin/quiz",
+      "activities": "/admin/activities",
+      "badges": "/admin/badges"
+    },
+    "user_management": {
+      "parent": "/admin/parent",
+      "children": "/admin/children"
+    },
+    "settings": "/admin/settings",
+    "new": {
+      "lesson": "/admin/new/lesson",
+      "quiz": "/admin/new/quiz",
+      "activity": "/admin/new/activity",
+      "badge": "/admin/new/badge"
+    }
+  },
+  "parent": {
+    "dashboard": "/parent/",
+    "new_children": "/parent/new/children",
+    "settings": "/parent/settings"
+  }
 }

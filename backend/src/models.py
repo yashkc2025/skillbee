@@ -174,7 +174,7 @@ class Badge(db.Model):
     name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text)
     image = db.Column(db.LargeBinary, nullable=True) 
-
+    points = db.Column(db.Integer, default=0)
     badge_histories = db.relationship('BadgeHistory', backref='badge', lazy=True)
     quizzes = db.relationship('Quiz', backref='badge', lazy=True)
 
