@@ -161,16 +161,14 @@ def child_login():
     return child_loginc(request)
 
 @api.route('/auth/get_user',methods=['GET'])
+@token_required()
 def get_user():
     return get_auser()
 
-# @api.route('/get_user_details',methods=['GET'])
-# def get_user_details():
-#     return fetch_user_details(request) 
-
 @api.route('/child_dashboard_stats', methods=['GET'])
+@token_required(allowed_roles=["child"])
 def child_dashboard_stats():
-    return get_child_dashboard_stats(request)
+    return get_child_dashboard_stats()
 
 @api.route('/children', methods=['GET'])
 def get_child():
