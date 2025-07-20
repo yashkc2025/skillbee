@@ -80,10 +80,7 @@ class Lesson(db.Model):
     content = db.Column(JSON, nullable=False)
     position = db.Column(db.Integer, nullable=False)
     image = db.Column(db.LargeBinary, nullable=True)
-<<<<<<< HEAD
-=======
     
->>>>>>> main
 
     activities = db.relationship('Activity', backref='lesson', lazy=True)
     quizzes = db.relationship('Quiz', backref='lesson', lazy=True)
@@ -113,15 +110,10 @@ class Activity(db.Model):
     name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text, nullable=False)
     answer_format = db.Column(db.Text, nullable=True)
-<<<<<<< HEAD
     instructions = db.Column(db.Text, nullable=True)
     difficulty = db.Column(db.Text, nullable=True)
     image = db.Column(db.LargeBinary, nullable=True)
     
-=======
-    image = db.Column(db.LargeBinary, nullable=True)  
-
->>>>>>> main
     child_id = db.Column(db.Integer, db.ForeignKey('child.child_id'), index=True)
     parent_id = db.Column(db.Integer, db.ForeignKey('parent.parent_id'), index=True)
     lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.lesson_id'))
@@ -187,12 +179,8 @@ class Badge(db.Model):
     badge_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text)
-<<<<<<< HEAD
-    image = db.Column(db.LargeBinary, nullable=True)
-=======
     image = db.Column(db.LargeBinary, nullable=True) 
     points = db.Column(db.Integer, default=0)
->>>>>>> main
     badge_histories = db.relationship('BadgeHistory', backref='badge', lazy=True)
     quizzes = db.relationship('Quiz', backref='badge', lazy=True)
 
@@ -201,12 +189,9 @@ class BadgeHistory(db.Model):
     reward_history_id = db.Column(db.Integer, primary_key=True)
     child_id = db.Column(db.Integer, db.ForeignKey('child.child_id'), index=True)
     badge_id = db.Column(db.Integer, db.ForeignKey('badge.badge_id'))
-<<<<<<< HEAD
     awarded_on = db.Column(db.DateTime,default=datetime.utcnow )
-=======
     created_at = db.Column(db.DateTime, default=datetime.now(), nullable=False)
 
->>>>>>> main
     __table_args__ = (
         UniqueConstraint('child_id', 'badge_id', name='unique_child_badge'),
         db.Index('ix_badgehistory_child_badge', 'child_id', 'badge_id'),
