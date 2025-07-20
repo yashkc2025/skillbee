@@ -46,30 +46,26 @@ def child_login():
 def get_user():
     return get_auser()
 
-# @api.route('/get_user_details',methods=['GET'])
-# def get_user_details():
-#     return fetch_user_details(request) 
-
 @api.route('/child_dashboard_stats', methods=['GET'])
 def child_dashboard_stats():
-    return get_child_dashboard_stats(request)
+    return get_child_dashboard_stats()
 
 @api.route('/skill_categories', methods=['GET'])
 def get_skill_categories():
-    return get_user_skill_progress(request)
+    return get_user_skill_progress()
 
 @api.route('/user_badges', methods=['GET'])
 def user_badges():
     return get_user_badges()
 
 @api.route("/api/child/<int:child_id>/curriculum/<int:curriculum_id>/lesson/<int:lesson_id>/quizzes", methods=["GET"])
-def get_quizzes(child_id, curriculum_id, lesson_id):
-    return get_lesson_quizzes(child_id, curriculum_id, lesson_id)
+def get_quizzes(curriculum_id, lesson_id):
+    return get_lesson_quizzes(curriculum_id=curriculum_id, lesson_id=lesson_id)
 
 @api.route("/api/child/<int:child_id>/quiz/<int:quiz_id>/history", methods=["GET"])
-def get_history(child_id, quiz_id):
-    return get_quiz_history(child_id, quiz_id)
+def get_history(quiz_id):
+    return get_quiz_history(quiz_id=quiz_id)
 
 @api.route('/api/child/<int:child_id>/curriculums', methods=['GET'])
-def get_curr(child_id):
-    return get_curriculums_for_child(child_id)
+def get_curr():
+    return get_curriculums_for_child()

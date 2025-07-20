@@ -3,10 +3,12 @@ from .db import db
 from .models import Admin, Session, Parent, Child, Skill, Lesson, LessonHistory, Activity, ActivityHistory, Quiz, QuizHistory, Badge, BadgeHistory
 from .demoData import createDummyData
 from werkzeug.security import generate_password_hash,check_password_hash
-from datetime import datetime, date
+from datetime import datetime, date,timedelta
 import uuid
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 import time
+from functools import wraps
+
 
 def parent_regisc(request):
     # Function for parent registration that will later be sent as a request to the routes
@@ -257,98 +259,101 @@ def child_loginc(request):
 
 # dashboard
 
-def get_auser():
+def token_required(allowed_roles=None):
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            token = None
+            if 'Authorization' in request.headers:
+                token = request.headers['Authorization'].split(' ')[-1] 
+            
+            if not token:
+                return jsonify({'error': 'Token is missing'}), 401
+
+            try:
+                session = Session.query.filter_by(session_id=token).first()
+                if not session:
+                    return jsonify({'error': 'Invalid token'}), 401
+
+                session_info = session.session_information
+                
+                login_time = datetime.fromisoformat(session_info['login_time'])
+                if datetime.now() > login_time + timedelta(hours=3):
+                    db.session.delete(session)
+                    db.session.commit()
+                    return jsonify({'error': 'Token has expired'}), 401
+
+                current_user = None
+                role = None
+
+                if 'admin_id' in session_info:
+                    current_user = Admin.query.get(session_info['admin_id'])
+                    role = 'admin'
+                elif 'parent_id' in session_info:
+                    current_user = Parent.query.get(session_info['parent_id'])
+                    role = 'parent'
+                elif 'child_id' in session_info:
+                    current_user = Child.query.get(session_info['child_id'])
+                    role = 'child'
+
+                if not current_user:
+                    return jsonify({'error': 'User not found'}), 401
+
+                if allowed_roles and role not in allowed_roles:
+                    return jsonify({'error': 'Insufficient permissions'}), 403
+
+                kwargs['current_user'] = current_user
+                kwargs['role'] = role
+
+                return f(*args, **kwargs)
+
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                return jsonify({'error': 'Database error occurred', 'details': str(e)}), 500
+
+        return decorated
+    return decorator
+
+@token_required()
+def get_auser(current_user, role):
     # this is according to auth.md and fetches the details of users from the session id as authorisation bearer BUT it returns full profile info
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith("Bearer "):
-        return jsonify({'error': 'Missing or malformed token'}), 403
-    token = auth_header.split(" ")[1]
-    session = Session.query.filter_by(session_id=token).first()
-    if not session:
-        return jsonify({'error': 'Invalid credentials'}), 401
-    info = session.session_information
-    if "child_id" in info:
-        child = Child.query.get(info["child_id"])
-        if not child:
-            return jsonify({'error': 'User not found'}), 404
+    if role == "child":
         return jsonify({
             "user": {
-                "id": child.child_id,
+                "id": current_user.child_id,
                 "role": "child",
-                "username": child.username,
-                "email": child.email_id,
-                "dob": child.dob.isoformat() if child.dob else None,
-                "school": child.school,
+                "username": current_user.username,
+                "email": current_user.email_id,
+                "dob": current_user.dob.isoformat() if current_user.dob else None,
+                "school": current_user.school,
                 "profile_image": None  
             }
         }), 200
-    elif "parent_id" in info:
-        parent = Parent.query.get(info["parent_id"])
-        if not parent:
-            return jsonify({'error': 'User not found'}), 404
+    elif role == "parent":
         return jsonify({
             "user": {
-                "id": parent.parent_id,
+                "id": current_user.parent_id,
                 "role": "parent",
-                "name": parent.name,
-                "email": parent.email_id,
+                "name": current_user.name,
+                "email": current_user.email_id,
                 "profile_image": None  
             }
         }), 200
-    elif "admin_id" in info:
-        admin = Admin.query.get(info["admin_id"])
-        if not admin:
-            return jsonify({'error': 'User not found'}), 404
+    elif role == "admin":
         return jsonify({
             "user": {
-                "id": admin.admin_id,
+                "id": current_user.admin_id,
                 "role": "admin",
-                "email": admin.email_id
+                "email": current_user.email_id
             }
         }), 200
     return jsonify({'error': 'Invalid session data'}), 401
 
 
-# def fetch_user_details(request):
-#     # this is accr to dashboard.md and fetches the minor details of students returns half info
-#     auth_header = request.headers.get('Authorization')
-#     if not auth_header or not auth_header.startswith("Bearer "):
-#         return jsonify({'error': 'Missing or malformed token'}), 403
-#     token = auth_header.split(" ")[1]
-#     session = Session.query.filter_by(session_id=token).first()
-#     if not session:
-#         return jsonify({'error': 'Invalid credentials'}), 401
-#     session_info = session.session_information
-#     user_id = session_info.get('parent_id') or session_info.get('child_id') 
-#     if 'parent_id' in session_info:
-#         user_type = 'parent'
-#         user = Parent.query.get(user_id)
-#         name = user.name
-#         email = user.email_id
-#     elif 'child_id' in session_info:
-#         user_type = 'child'
-#         user = Child.query.get(user_id)
-#         name = user.name
-#         email = user.email_id or ''  
-#     else:
-#         return jsonify({'error': 'User not recognized'}), 401
-#     return jsonify({
-#         "name": name,
-#         "email": email,
-#         "id": user_id,
-#         "user_type": user_type
-#     }), 200
-
-
-def get_child_dashboard_stats(request):
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith("Bearer "):
-        return jsonify({'error': 'Missing or malformed token'}), 403
-    token = auth_header.split(" ")[1]
-    session = Session.query.filter_by(session_id=token).first()
-    if not session or 'child_id' not in session.session_information:
-        return jsonify({'error': 'Invalid or unauthorized session'}), 401
-    child_id = session.session_information['child_id']
+@token_required(allowed_roles=["child"])
+def get_child_dashboard_stats(current_user, role):
+    # gets the stats for the child
+    child_id = current_user.child_id
     lessons_completed = LessonHistory.query.filter_by(child_id=child_id).count()
     all_lessons = Lesson.query.all()
     skill_progress = {}
@@ -367,7 +372,7 @@ def get_child_dashboard_stats(request):
     badges_earned = BadgeHistory.query.filter_by(child_id=child_id).count()
     child = Child.query.get(child_id)
     streak = child.streak if child else 0
-    leaderboard_rank = 1  # gotta to implement logic will discuss in meeting
+    leaderboard_rank = 1  
     heatmap = [
         {"date": datetime.now().strftime('%Y-%m-%d'), "status": 1}
     ]
@@ -380,15 +385,11 @@ def get_child_dashboard_stats(request):
         "heatmap": heatmap
     }), 200
 
-def get_user_skill_progress(request):
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith("Bearer "):
-        return jsonify({'error': 'Missing or malformed token'}), 403
-    token = auth_header.split(" ")[1]
-    session = Session.query.filter_by(session_id=token).first()
-    if not session or 'child_id' not in session.session_information:
-        return jsonify({'error': 'Invalid or unauthorized session'}), 401
-    child_id = session.session_information['child_id']
+
+@token_required(allowed_roles=["child"])
+def get_user_skill_progress(current_user, role):
+    # gets the child lesson progress
+    child_id = current_user.child_id
     skills = Skill.query.all()
     response = []
     for skill in skills:
@@ -400,38 +401,26 @@ def get_user_skill_progress(request):
         percent = int((completed / total_lessons) * 100) if total_lessons else 0
         response.append({
             "name": skill.name,
-            "link": f"/skills/{skill.skill_id}",  # gotta discuss with frontend about this url
+            "link": f"/skills/{skill.skill_id}",  
             "percentage_completed": percent
         })
 
     return jsonify(response), 200
 
 
-def get_user_badges():
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith("Bearer "):
-        return jsonify({'error': 'Missing or malformed token'}), 403
-    token = auth_header.split(" ")[1]
-    session = Session.query.filter_by(session_id=token).first()
-    if not session or 'child_id' not in session.session_information:
-        return jsonify({'error': 'Unauthorized'}), 401
-    child_id = session.session_information['child_id']
-    # badge_histories = BadgeHistory.query.filter_by(child_id=child_id).all()
-    # response = []
-    # for bh in badge_histories:
-    #     badge = Badge.query.get(bh.badge_id)
-    #     if badge:
-    #         response.append({
-    #             "name": badge.name,
-    #             "image": ""  # gotta add this 
-    #         })
+@token_required(allowed_roles=["child"])
+def get_user_badges(current_user, role):
+    #  gets the child badges
+    child_id = current_user.child_id
     data = db.session.query(Badge.name).join(BadgeHistory).filter(BadgeHistory.child_id == child_id).all()
     response = [{"name": name, "image": ""} for (name,) in data]
     return jsonify(response), 200
 
 
-def get_lesson_quizzes(child_id, curriculum_id, lesson_id):
+@token_required(allowed_roles=["child"])
+def get_lesson_quizzes(current_user, role, curriculum_id, lesson_id):
     # Get curriculum(Skill)
+    child_id = current_user.child_id
     curriculum = Skill.query.get(curriculum_id)
     if not curriculum:
         return jsonify({'error': 'Curriculum not found'}), 404
@@ -468,8 +457,10 @@ def get_lesson_quizzes(child_id, curriculum_id, lesson_id):
     }), 200
 
 
-def get_quiz_history(child_id, quiz_id):
+@token_required(allowed_roles=["child"])
+def get_quiz_history(current_user, role, quiz_id):
     # Get teh quiz history
+    child_id = current_user.child_id
     histories = QuizHistory.query.filter_by(child_id=child_id, quiz_id=quiz_id).all()
     if not histories:
         return jsonify({"quizzes_history": []}), 200
@@ -491,10 +482,9 @@ def get_quiz_history(child_id, quiz_id):
     return jsonify({"quizzes_history": history_list}), 200
 
 
-def get_curriculums_for_child(child_id):
-    child = Child.query.get(child_id)
-    if not child:
-        return jsonify({"error": "Child not found"}), 404
+def get_curriculums_for_child(current_user, role):
+    child_id = current_user.child_id
+    child = current_user
     age = age_calc(child.dob)
     skills = Skill.query.filter(Skill.min_age <= age, Skill.max_age >= age).all()
     skill_ids = [s.skill_id for s in skills]
