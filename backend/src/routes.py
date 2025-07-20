@@ -2,7 +2,7 @@ from flask import Blueprint,request
 from .models import Admin, Session, Parent, Child, Skill, Lesson, LessonHistory, Activity, ActivityHistory, Quiz, QuizHistory, Badge, BadgeHistory
 from .db import db
 from .demoData import createDummyData
-from .controllers import create_quiz,create_activity, create_badge, create_lesson, parent_regisc,child_regisc,admin_loginc,parent_loginc, child_loginc,get_auser,get_child_dashboard_stats,get_user_skill_progress,get_user_badges,get_lesson_quizzes,get_quiz_history,get_curriculums_for_child,get_children,get_parents,get_lessons,get_quizzes,get_activities,get_badges,create_child
+from .controllers import block_child, block_parent, create_quiz,create_activity, create_badge, create_lesson, delete_activity, delete_badge, delete_lesson, delete_quiz, parent_regisc,child_regisc,admin_loginc,parent_loginc, child_loginc,get_auser,get_child_dashboard_stats,get_user_skill_progress,get_user_badges,get_lesson_quizzes,get_quiz_history,get_curriculums_for_child,get_children,get_parents,get_lessons,get_quizzes,get_activities,get_badges,create_child, unblock_child, unblock_parent, update_activity, update_admin_email, update_admin_password, update_lesson, update_quiz
 
 
 api = Blueprint('api', __name__)
@@ -117,3 +117,56 @@ def admin_lesson():
 @api.route('/admin/quiz', methods=['POST'])
 def admin_quiz():
     return create_quiz()
+
+@api.route('/admin/update_email',methods=['PUT'])
+def admin_email():
+    return update_admin_email()
+
+@api.route('/admin/update_password', methods=['PUT'])
+def admin_password():
+    return update_admin_password()
+
+@api.route('/admin/block_children',methods=['PUT'])
+def block_children():
+    return block_child()
+
+@api.route('/admin/unblock_children',methods=['PUT'])
+def unblock_children():
+    return unblock_child()
+
+@api.route('/admin/block_parent', methods=['PUT'])
+def block_parents():
+    return block_parent()
+
+@api.route('/admin/unblock_parent',methods=['PUT'])
+def unblock_parents():
+    return unblock_parent()
+
+@api.route('/admin/activity', methods=['PUT'])
+def update_activities():
+    return update_activity()
+
+@api.route('/admin/quiz',methods=['PUT'])
+def update_quizzes():
+    return update_quiz()
+
+@api.route('/admin/lesson', methods=['PUT'])
+def update_lessons():
+    return update_lesson()
+
+@api.route('/admin/badge',methods=['DELETE'])
+def delete_badges():
+    return delete_badge()
+
+@api.route('/admin/activity',methods=['DELETE'])
+def delete_activities():
+    return delete_activity()
+
+@api.route('/admin/lesson', methdods=['DELETE'])
+def delete_lessons():
+    return delete_lesson()
+
+@api.route('/admin/quiz', methods=['DELETE'])
+def delete_quizzes():
+    return delete_quiz()
+

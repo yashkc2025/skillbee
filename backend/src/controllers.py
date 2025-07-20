@@ -863,7 +863,6 @@ def create_quiz(session_info):
         if not q_text or not isinstance(opts, list) or not opts:
             return jsonify({'error': f"Invalid format in question #{idx + 1}"}), 400
 
-        # Preserve question
         questions_json.append({
             "question": q_text,
             "options": opts
@@ -994,7 +993,7 @@ def get_child_profile(session_info):
                 "badge_id": str(badge.badge_id),
                 "title": badge.name,
                 "image": "",  # Convert to base64 or use a badge URL if available
-                "awarded_on": bh.awarded_on  # Placeholder (add award date if available)
+                "awarded_on": bh.awarded_on
             })
 
     return jsonify({
@@ -1017,4 +1016,423 @@ def get_child_profile(session_info):
             "badges": badges,
             "streak": child.streak
         }
+    }), 200
+
+@only_admin
+def update_admin_email(session_info):
+    data = request.get_json()
+    new_email = data.get("email")
+
+    if not new_email or "@" not in new_email:
+        return jsonify({"error": "A valid email is required."}), 400
+
+    existing = Admin.query.filter(Admin.email_id == new_email).first()
+    if existing:
+        return jsonify({"error": "An account with this email already exists."}), 409
+
+    admin = Admin.query.get(session_info['admin_id'])
+    if not admin:
+        return jsonify({"error": "Admin not found."}), 404
+
+    admin.email_id = new_email
+    db.session.commit()
+
+    return jsonify({"message": "Email updated successfully."}), 200
+
+@only_admin
+def update_admin_password(session_info):
+    data = request.get_json()
+    
+    old_password = data.get("oldPassword")
+    new_password = data.get("newPassword")
+    confirm_password = data.get("confirmPassword")
+
+    if not old_password or not new_password or not confirm_password:
+        return jsonify({"error": "All password fields are required."}), 400
+
+    if new_password != confirm_password:
+        return jsonify({"error": "New password & confirmation do not match."}), 400
+
+    admin_id = session_info["admin_id"]
+    admin = Admin.query.get(admin_id)
+
+    if not admin:
+        return jsonify({"error": "Admin not found."}), 404
+
+    if not check_password_hash(admin.password, old_password):
+        return jsonify({"error": "Old password is incorrect."}), 401
+
+    admin.password = generate_password_hash(new_password)
+    db.session.commit()
+
+    return jsonify({"message": "Password updated successfully."}), 200
+
+@only_admin
+def block_child(session_info):
+    data = request.get_json()
+    child_id = data.get("id")
+
+    if not child_id:
+        return jsonify({"error": "Missing 'id' in request body"}), 400
+
+    child = Child.query.get(child_id)
+    if not child:
+        return jsonify({"error": "Child not found"}), 404
+
+    if child.is_blocked:
+        return jsonify({"message": "Child is already blocked."}), 200
+
+    child.is_blocked = True
+    db.session.commit()
+
+    return jsonify({"message": f"Child with ID {child_id} has been blocked."}), 200
+
+@only_admin
+def unblock_child(session_info):
+    data = request.get_json()
+    child_id = data.get("id")
+
+    if not child_id:
+        return jsonify({"error": "Missing 'id' in request body"}), 400
+
+    child = Child.query.get(child_id)
+    if not child:
+        return jsonify({"error": "Child not found"}), 404
+
+    if not child.is_blocked:
+        return jsonify({"message": "Child is already unblocked."}), 200
+
+    child.is_blocked = False
+    db.session.commit()
+
+    return jsonify({"message": f"Child with ID {child_id} has been unblocked."}), 200
+
+@only_admin
+def block_parent(session_info):
+    data = request.get_json()
+    parent_id = data.get("id")
+
+    if not parent_id:
+        return jsonify({"error": "Missing 'id' in request body"}), 400
+
+    parent = Parent.query.get(parent_id)
+    if not parent:
+        return jsonify({"error": "Parent not found"}), 404
+
+    if parent.is_blocked:
+        return jsonify({"message": "Parent is already blocked."}), 200
+
+    parent.is_blocked = True
+    db.session.commit()
+
+    return jsonify({"message": f"Parent with ID {parent_id} has been blocked."}), 200
+
+@only_admin
+def unblock_parent(session_info):
+    data = request.get_json()
+    parent_id = data.get("id")
+
+    if not parent_id:
+        return jsonify({"error": "Missing 'id' in request body"}), 400
+
+    parent = Parent.query.get(parent_id)
+    if not parent:
+        return jsonify({"error": "Parent not found"}), 404
+
+    if not parent.is_blocked:
+        return jsonify({"message": "Parent is already unblocked."}), 200
+
+    parent.is_blocked = False
+    db.session.commit()
+
+    return jsonify({"message": f"Parent with ID {parent_id} has been unblocked."}), 200
+
+@only_admin
+def update_activity(session_info):
+    data = request.get_json()
+
+    activity_id = data.get('id')
+    if not activity_id:
+        return jsonify({"error": "Missing required field: id"}), 400
+
+    activity = Activity.query.get(activity_id)
+    if not activity:
+        return jsonify({"error": "Activity not found"}), 404
+
+    image = data.get("image")
+    title = data.get("title")
+    description = data.get("description")
+    instructions = data.get("instructions")
+    difficulty = data.get("difficulty")
+    point = data.get("point")
+    answer_format = data.get("answer_format")
+
+    if image is not None:
+        try:
+            activity.image = base64.b64decode(image) if image else None
+        except Exception:
+            return jsonify({"error": "Invalid base64 image format"}), 400
+
+    if title is not None:
+        activity.name = title
+    if description is not None:
+        activity.description = description
+    if instructions is not None:
+        activity.instructions = instructions
+    if difficulty is not None:
+        activity.difficulty = difficulty
+    if point is not None:
+        activity.points = point
+    if answer_format is not None:
+        allowed_formats = ['text', 'image', 'pdf']
+        if answer_format not in allowed_formats:
+            return jsonify({
+                "error": f"Invalid answer_format. Must be one of: {', '.join(allowed_formats)}"
+            }), 400
+        activity.answer_format = answer_format
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Activity updated successfully.",
+        "id": activity.activity_id,
+        "title": activity.name,
+        "difficulty": activity.difficulty,
+        "points": activity.points,
+        "answer_format": activity.answer_format
+    }), 200
+    
+@only_admin
+def update_quiz(session_info):
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({"error": "Invalid JSON format"}), 400
+
+    quiz_id = data.get("id")
+    if not quiz_id:
+        return jsonify({"error": "Missing quiz 'id'"}), 400
+
+    quiz = Quiz.query.get(quiz_id)
+    if not quiz:
+        return jsonify({"error": "Quiz not found"}), 404
+
+    title = data.get("title")
+    description = data.get("description")
+    difficulty = data.get("difficulty")
+    points = data.get("point")
+    time_duration = data.get("time_duration")
+    image_base64 = data.get("image")
+    questions = data.get("questions")
+
+    if image_base64 is not None:
+        try:
+            quiz.image = base64.b64decode(image_base64) if image_base64 else None
+        except Exception:
+            return jsonify({"error": "Invalid base64 image"}), 400
+
+    if title is not None:
+        quiz.quiz_name = title
+    if description is not None:
+        quiz.description = description
+    if difficulty is not None:
+        quiz.difficulty = difficulty
+    if points is not None:
+        quiz.points = points
+    if time_duration is not None:
+        quiz.time_duration = time_duration
+
+    if questions is not None:
+        if not isinstance(questions, list) or not questions:
+            return jsonify({'error': 'questions must be a non-empty list'}), 400
+
+        questions_json = []
+        answers_json = []
+
+        for idx, question in enumerate(questions):
+            q_text = question.get("question")
+            opts = question.get("options", [])
+
+            if not q_text or not isinstance(opts, list) or not opts:
+                return jsonify({'error': f"Invalid question format at index {idx}"}), 400
+
+            questions_json.append({
+                "question": q_text,
+                "options": opts
+            })
+
+            correct_answers = [opt["text"] for opt in opts if opt.get("isCorrect") is True]
+
+            if not correct_answers:
+                return jsonify({'error': f"No correct answer specified for question: {q_text}"}), 400
+
+            answers_json.append({
+                "question": q_text,
+                "correct_answers": correct_answers
+            })
+
+        quiz.questions = questions_json
+        quiz.answers = answers_json
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Quiz updated successfully",
+        "id": quiz.quiz_id,
+        "title": quiz.quiz_name,
+        "difficulty": quiz.difficulty,
+        "points": quiz.points,
+        "time_duration": quiz.time_duration
+    }), 200
+
+@only_admin
+def update_lesson(session_info):
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({'error': 'Invalid JSON format'}), 400
+
+    lesson_id = data.get('id')
+    if not lesson_id:
+        return jsonify({'error': 'Missing required field: id'}), 400
+
+    lesson = Lesson.query.get(lesson_id)
+    if not lesson:
+        return jsonify({'error': f'Lesson with ID {lesson_id} not found'}), 404
+
+    title = data.get('title')
+    content_raw = data.get('content')
+    image_base64 = data.get('image')
+
+    if title is not None:
+        lesson.title = title
+
+    if content_raw is not None:
+        try:
+            content_json = json.loads(content_raw) if isinstance(content_raw, str) else content_raw
+            lesson.content = content_json
+        except Exception:
+            return jsonify({'error': 'Invalid content format. Must be valid JSON.'}), 400
+
+    if image_base64 is not None:
+        try:
+            lesson.image = base64.b64decode(image_base64) if image_base64 else None
+        except Exception:
+            return jsonify({'error': 'Invalid base64 image format'}), 400
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Lesson updated successfully.",
+        "id": lesson.lesson_id,
+        "title": lesson.title,
+    }), 200
+
+@only_admin
+def delete_badge(session_info):
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({'error': 'Invalid JSON format'}), 400
+
+    badge_id = data.get("id")
+
+    if not badge_id:
+        return jsonify({"error": "Missing 'id' field in request body"}), 400
+
+    try:
+        badge_id = int(badge_id)
+    except ValueError:
+        return jsonify({"error": "Invalid badge ID format."}), 400
+
+    badge = Badge.query.get(badge_id)
+    if not badge:
+        return jsonify({"error": "Badge not found"}), 404
+
+    db.session.delete(badge)
+    db.session.commit()
+
+    return jsonify({
+        "message": f"Badge with ID {badge_id} has been deleted."
+    }), 
+
+@only_admin    
+def delete_activity(session_info):
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({'error': 'Invalid JSON format'}), 400
+
+    activity_id = data.get('id')
+    if not activity_id:
+        return jsonify({"error": "Missing 'id' in request body"}), 400
+
+    try:
+        activity_id = int(activity_id)
+    except ValueError:
+        return jsonify({"error": "Activity ID must be a valid number."}), 400
+
+    activity = Activity.query.get(activity_id)
+    if not activity:
+        return jsonify({"error": f"Activity with ID {activity_id} not found."}), 404
+
+    db.session.delete(activity)
+    db.session.commit()
+
+    return jsonify({
+        "message": f"Activity with ID {activity_id} has been deleted successfully."
+    }), 200
+ 
+@only_admin   
+def delete_quiz(session_info):
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({"error": "Invalid JSON format"}), 400
+
+    quiz_id = data.get('id')
+    if not quiz_id:
+        return jsonify({"error": "Missing 'id' in request body"}), 400
+
+    try:
+        quiz_id = int(quiz_id)
+    except ValueError:
+        return jsonify({"error": "Quiz ID must be a valid number."}), 400
+
+    quiz = Quiz.query.get(quiz_id)
+    if not quiz:
+        return jsonify({"error": f"Quiz with ID {quiz_id} not found."}), 404
+
+    db.session.delete(quiz)
+    db.session.commit()
+
+    return jsonify({
+        "message": f"Quiz with ID {quiz_id} has been deleted successfully."
+    }), 200
+
+@only_admin
+def delete_lesson(session_info):
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({"error": "Invalid JSON format"}), 400
+
+    lesson_id = data.get("id")
+    if not lesson_id:
+        return jsonify({"error": "Missing 'id' in request body"}), 400
+
+    try:
+        lesson_id = int(lesson_id)
+    except ValueError:
+        return jsonify({"error": "Invalid lesson ID. Must be a number."}), 400
+
+    lesson = Lesson.query.get(lesson_id)
+    if not lesson:
+        return jsonify({"error": f"Lesson with ID {lesson_id} not found."}), 404
+
+    db.session.delete(lesson)
+    db.session.commit()
+
+    return jsonify({
+        "message": f"Lesson with ID {lesson_id} has been deleted successfully."
     }), 200
