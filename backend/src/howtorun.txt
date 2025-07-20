@@ -42,7 +42,11 @@ pytest test_auth.py -k test_parent_register_success
 How to check the /auth/get_user?
 Open rapid api/any other api client select GET method,write the correct url in the box:​http://127.0.0.1:5000/auth/get_user 
 on top go to headers then in header name add Authorisation and beside that take any session id that is in the data base and add Bearer before it and add that then send teh request.
+<<<<<<< HEAD
 for example: Authorisation(in header name)  Bearer 4356cae7-05d6-458a-a448-cb76c1379abe (in header value) then see if its giving correct info or not.
+=======
+for example: Authorisation(in header name)  Bearer 2b72599a-6aa7-4cdc-9120-0ad4fab2aef3 (in header value) then see if its giving correct info or not.
+>>>>>>> main
 
 Remember admin cannot be fetched in this url it is onluy for parents and children.
 similarly check the /child_dashboard_stats and /skill_categories.
