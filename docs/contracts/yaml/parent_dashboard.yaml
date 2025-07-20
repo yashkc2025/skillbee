@@ -1,0 +1,190 @@
+openapi: 3.0.3
+info:
+  title: Parent Dashboard API
+  version: 1.0.0
+  description: API for parents to manage feedback, create new child accounts, and update their personal details and password.
+
+paths:
+  /feedback:
+    post:
+      summary: Post Feedback
+      description: Allows a parent to post feedback related to a quiz or activity.
+      security:
+        - access: ["@only parent"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                skill_type:
+                  type: string
+                  enum: [Quiz, Activity]
+                  description: The type of skill the feedback is for (Quiz or Activity).
+                id:
+                  type: number
+                  description: The ID of the quiz or activity.
+                text:
+                  type: string
+                  description: The feedback text.
+              required:
+                - skill_type
+                - id
+                - text
+      responses:
+        "200":
+          description: Feedback successfully posted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Feedback submitted successfully."
+        "400":
+          description: Invalid request payload.
+        "403":
+          description: Unauthorized access.
+
+  /parent/children:
+    post:
+      summary: Create New Child
+      description: Allows a parent to create a new child account.
+      security:
+        - access: ["@only parent"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name of the child.
+                username:
+                  type: string
+                  description: Username for the child's account.
+                password:
+                  type: string
+                  description: Password for the child's account.
+                confirmPass:
+                  type: string
+                  description: Confirmation of the child's password.
+                dob:
+                  type: string
+                  format: date
+                  description: Date of birth of the child (YYYY-MM-DD).
+                school:
+                  type: string
+                  description: Name of the child's school.
+              required:
+                - name
+                - username
+                - password
+                - confirmPass
+                - dob
+                - school
+      responses:
+        "201":
+          description: Child account successfully created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Child account created successfully."
+                  child_id:
+                    type: number
+                    description: The ID of the newly created child.
+        "400":
+          description: Invalid input or passwords do not match.
+        "403":
+          description: Unauthorized access.
+
+  /parent/update_personal_details:
+    put:
+      summary: Update Personal Details
+      description: Allows a parent to update their personal name and email.
+      security:
+        - access: ["@only parent"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: The parent's updated name.
+                email:
+                  type: string
+                  format: email
+                  description: The parent's updated email address.
+              required:
+                - name
+                - email
+      responses:
+        "200":
+          description: Personal details successfully updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Personal details updated successfully."
+        "400":
+          description: Invalid input.
+        "403":
+          description: Unauthorized access.
+
+  /parent/update_password:
+    put:
+      summary: Update Password
+      description: Allows a parent to change their account password.
+      security:
+        - access: ["@only parent"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                oldPassword:
+                  type: string
+                  description: The parent's current password.
+                newPassword:
+                  type: string
+                  description: The parent's new password.
+                confirmPassword:
+                  type: string
+                  description: Confirmation of the new password.
+              required:
+                - oldPassword
+                - newPassword
+                - confirmPassword
+      responses:
+        "200":
+          description: Password successfully updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password updated successfully."
+        "400":
+          description: Invalid input or new passwords do not match the confirmation.
+        "401":
+          description: Old password incorrect.
+        "403":
+          description: Unauthorized access.

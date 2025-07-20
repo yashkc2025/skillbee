@@ -1,0 +1,932 @@
+openapi: 3.0.3
+info:
+  title: Admin Dashboard API
+  version: 1.0.0
+  description: API for managing children, parents, learning content, and administrative functions.
+
+paths:
+  /children:
+    get:
+      summary: Get Children
+      description: Only allow parent to access their children
+      security:
+        - access: ["@only parent and admin"]
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: number
+                    name:
+                      type: string
+                    email:
+                      type: string
+                    age:
+                      type: number
+                    school_name:
+                      type: string
+                    last_login:
+                      type: string
+                      description: ISO timestamp or formatted string
+  /parents:
+    get:
+      summary: Get Parents
+      security:
+        - access: ["@only admin"]
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: number
+                    name:
+                      type: string
+                    email:
+                      type: string
+                    blocked:
+                      type: boolean
+  /lessons:
+    get:
+      summary: Get Lessons
+      security:
+        - access: ["@only parent and admin"]
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: number
+                    title:
+                      type: string
+                    curriculum:
+                      type: string
+  /quizzes:
+    get:
+      summary: Get Quizzes
+      security:
+        - access: ["@only parent and admin"]
+      parameters:
+        - in: query
+          name: lesson_id
+          schema:
+            type: number
+          required: false
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: number
+                    title:
+                      type: string
+                    lesson:
+                      type: string
+                    curriculum:
+                      type: string
+  /activities:
+    get:
+      summary: Get Activities
+      security:
+        - access: ["@only parent and admin"]
+      parameters:
+        - in: query
+          name: lesson_id
+          schema:
+            type: number
+          required: false
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: number
+                    title:
+                      type: string
+                    lesson:
+                      type: string
+                    curriculum:
+                      type: string
+  /badges:
+    get:
+      summary: Get Badges
+      security:
+        - access: ["@only parent and admin"]
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: number
+                    label:
+                      type: string
+                    image:
+                      type: string
+                      description: Base64
+  /children/profile:
+    get:
+      summary: Get Children Profile
+      description: If parent, only allowed for their own children.
+      security:
+        - access: ["@only parent and admin"]
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: number
+          required: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  info:
+                    type: object
+                    properties:
+                      child_id:
+                        type: string
+                      full_name:
+                        type: string
+                      age:
+                        type: number
+                      enrollment_date:
+                        type: string
+                        format: date
+                        example: "2024-09-20"
+                      status:
+                        type: string
+                      parent:
+                        type: object
+                        properties:
+                          id:
+                            type: number
+                          name:
+                            type: string
+                          email:
+                            type: string
+                  skills_progress:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        skill_id:
+                          type: string
+                        skill_name:
+                          type: string
+                        lesson_started_count:
+                          type: number
+                        lesson_completed_count:
+                          type: number
+                        quiz_attempted_count:
+                          type: number
+                  point_earned:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        point:
+                          type: number
+                        date:
+                          type: string
+                          format: date
+                          example: "YYYY-MM-DD"
+                  assessments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: number
+                        skill_id:
+                          type: string
+                        assessment_type:
+                          type: string
+                          enum: ["Quiz", "Activity"]
+                        title:
+                          type: string
+                        date:
+                          type: string
+                          description: ISO or YYYY-MM-DD
+                        score:
+                          oneOf:
+                            - type: number
+                            - type: string
+                          description: can be number or "Pass"
+                        max_score:
+                          oneOf:
+                            - type: number
+                            - type: string
+                  achievements:
+                    type: object
+                    properties:
+                      badges:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            badge_id:
+                              type: string
+                            title:
+                              type: string
+                            image:
+                              type: string
+                              description: Base64
+                            awarded_on:
+                              type: string
+                              description: ISO or date string
+                      streak:
+                        type: number
+  /admin/active_users_chart:
+    get:
+      summary: Get Active Users Charts
+      description: Only for last 15-20 days
+      security:
+        - access: ["@only admin"]
+      parameters:
+        - in: query
+          name: dates
+          schema:
+            type: array
+            items:
+              type: string
+              format: date
+              example: "YYYY-MM-DD"
+          required: true
+        - in: query
+          name: active_children
+          schema:
+            type: array
+            items:
+              type: number
+          required: true
+        - in: query
+          name: active_parents
+          schema:
+            type: array
+            items:
+              type: number
+          required: true
+        - in: query
+          name: new_children_signups
+          schema:
+            type: array
+            items:
+              type: number
+          required: true
+        - in: query
+          name: new_parent_signups
+          schema:
+            type: array
+            items:
+              type: number
+          required: true
+        - in: query
+          name: total_active_users
+          schema:
+            type: array
+            items:
+              type: number
+          required: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object # Based on the original "params" structure, it's a single object
+                properties:
+                  dates:
+                    { type: array, items: { type: string, format: "date" } }
+                  active_children: { type: array, items: { type: number } }
+                  active_parents: { type: array, items: { type: number } }
+                  new_children_signups: { type: array, items: { type: number } }
+                  new_parent_signups: { type: array, items: { type: number } }
+                  total_active_users: { type: array, items: { type: number } }
+  /admin/skill_engagment_chart:
+    get:
+      summary: Get Skill Engagements Charts
+      security:
+        - access: ["@only admin"]
+      parameters:
+        - in: query
+          name: age_8_10
+          schema:
+            type: number
+          required: true
+        - in: query
+          name: age_10_12
+          schema:
+            type: number
+          required: true
+        - in: query
+          name: age_12_14
+          schema:
+            type: number
+          required: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  age_8_10: { type: number }
+                  age_10_12: { type: number }
+                  age_12_14: { type: number }
+  /admin/badge_by_age_group_chart:
+    get:
+      summary: Get Badges by Age Group Charts
+      security:
+        - access: ["@only admin"]
+      parameters:
+        - in: query
+          name: badge_name
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: age_8_10
+          schema:
+            type: number
+          required: true
+        - in: query
+          name: age_10_12
+          schema:
+            type: number
+          required: true
+        - in: query
+          name: age_12_14
+          schema:
+            type: number
+          required: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    badge_name: { type: string }
+                    age_8_10: { type: number }
+                    age_10_12: { type: number }
+                    age_12_14: { type: number }
+  /admin/learning_funnel_chart:
+    get:
+      summary: Get Learning Funnel
+      security:
+        - access: ["@only admin"]
+      parameters:
+        - in: query
+          name: user_started_skill
+          schema:
+            type: number
+          required: true
+        - in: query
+          name: lessons_completed
+          schema:
+            type: number
+          required: true
+        - in: query
+          name: quizzes_attempted
+          schema:
+            type: number
+          required: true
+        - in: query
+          name: badges_earned
+          schema:
+            type: number
+          required: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    user_started_skill: { type: number }
+                    lessons_completed: { type: number }
+                    quizzes_attempted: { type: number }
+                    badges_earned: { type: number }
+  /admin/age_group_distribution_chart:
+    get:
+      summary: Get Age Group Distribution Chart
+      security:
+        - access: ["@only admin"]
+      parameters:
+        - in: query
+          name: skill_id
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: skill_name
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: lesson_started_count
+          schema:
+            type: number
+          required: true
+        - in: query
+          name: lesson_completed_count
+          schema:
+            type: number
+          required: true
+        - in: query
+          name: quiz_attempted_count
+          schema:
+            type: number
+          required: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    skill_id: { type: string }
+                    skill_name: { type: string }
+                    lesson_started_count: { type: number }
+                    lesson_completed_count: { type: number }
+                    quiz_attempted_count: { type: number }
+  /admin/activity:
+    post:
+      summary: Create New Activity
+      security:
+        - access: ["@only admin"]
+      parameters:
+        - in: query
+          name: lesson_id
+          schema:
+            type: number
+          required: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  description: Base64
+                title:
+                  type: string
+                description:
+                  type: string
+                instructions:
+                  type: string
+                difficulty:
+                  type: string
+                point:
+                  type: number
+                answer_format:
+                  type: string
+                  enum: ["text", "image", "pdf"]
+      responses:
+        "200":
+          description: Activity created successfully
+    put:
+      summary: Update Activity
+      security:
+        - access: ["@only admin"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: number
+                lesson:
+                  type: [string, "null"]
+                  nullable: true
+                image:
+                  type: [string, "null"]
+                  description: Base64
+                  nullable: true
+                title:
+                  type: [string, "null"]
+                  nullable: true
+                description:
+                  type: [string, "null"]
+                  nullable: true
+                instructions:
+                  type: [string, "null"]
+                  nullable: true
+                difficulty:
+                  type: [string, "null"]
+                  nullable: true
+                point:
+                  type: [number, "null"]
+                  nullable: true
+      responses:
+        "200":
+          description: Activity updated successfully
+    delete:
+      summary: Delete Activity
+      security:
+        - access: ["@only admin"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Activity deleted successfully
+  /admin/lesson:
+    post:
+      summary: Create New Lesson
+      security:
+        - access: ["@only admin"]
+      parameters:
+        - in: query
+          name: skill_id
+          schema:
+            type: number
+          required: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+                image:
+                  type: string
+                  description: Base64
+      responses:
+        "200":
+          description: Lesson created successfully
+    put:
+      summary: Update Lesson
+      security:
+        - access: ["@only admin"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: number
+                title:
+                  type: [string, "null"]
+                  nullable: true
+                content:
+                  type: [string, "null"]
+                  nullable: true
+                image:
+                  type: [string, "null"]
+                  description: Base64
+                  nullable: true
+                description:
+                  type: [string, "null"]
+                  nullable: true
+                badge_id:
+                  type: [number, "null"]
+                  nullable: true
+                curriculum_id:
+                  type: [number, "null"]
+                  nullable: true
+      responses:
+        "200":
+          description: Lesson updated successfully
+    delete:
+      summary: Delete Lesson
+      security:
+        - access: ["@only admin"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Lesson deleted successfully
+  /admin/badge:
+    post:
+      summary: Create New Badge
+      security:
+        - access: ["@only admin"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                image:
+                  type: string
+                  description: Base64
+      responses:
+        "200":
+          description: Badge created successfully
+    delete:
+      summary: Delete Badge
+      security:
+        - access: ["@only admin"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Badge deleted successfully
+  /admin/quiz:
+    post:
+      summary: Create New Quiz
+      security:
+        - access: ["@only admin"]
+      parameters:
+        - in: query
+          name: skill_id
+          schema:
+            type: number
+          required: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  description: Base64
+                title:
+                  type: string
+                description:
+                  type: string
+                difficulty:
+                  type: string
+                point:
+                  type: number
+                time_duration:
+                  type: number
+                  description: in seconds
+                questions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      question:
+                        type: string
+                      options:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            text:
+                              type: string
+                            isCorrect:
+                              type: boolean
+      responses:
+        "200":
+          description: Quiz created successfully
+    put:
+      summary: Update Quiz
+      security:
+        - access: ["@only admin"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: number
+                lesson:
+                  type: [string, "null"]
+                  nullable: true
+                image:
+                  type: [string, "null"]
+                  description: Base64
+                  nullable: true
+                title:
+                  type: [string, "null"]
+                  nullable: true
+                description:
+                  type: [string, "null"]
+                  nullable: true
+                difficulty:
+                  type: [string, "null"]
+                  nullable: true
+                point:
+                  type: [number, "null"]
+                  nullable: true
+                questions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      question:
+                        type: string
+                      options:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            text:
+                              type: string
+                            isCorrect:
+                              type: boolean
+      responses:
+        "200":
+          description: Quiz updated successfully
+    delete:
+      summary: Delete Quiz
+      security:
+        - access: ["@only admin"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Quiz deleted successfully
+  /admin/update_email:
+    put:
+      summary: Update Email
+      security:
+        - access: ["@only admin"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+      responses:
+        "200":
+          description: Email updated successfully
+  /admin/update_password:
+    put:
+      summary: Update Password
+      security:
+        - access: ["@only admin"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                oldPassword:
+                  type: string
+                newPassword:
+                  type: string
+                confirmPassword:
+                  type: string
+      responses:
+        "200":
+          description: Password updated successfully
+  /admin/block_children:
+    put:
+      summary: Block Children
+      security:
+        - access: ["@only admin"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: number
+      responses:
+        "200":
+          description: Child blocked successfully
+  /admin/unblock_children:
+    put:
+      summary: Unblock Children
+      security:
+        - access: ["@only admin"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: number
+      responses:
+        "200":
+          description: Child unblocked successfully
+  /admin/block_parent:
+    put:
+      summary: Block Parent
+      security:
+        - access: ["@only admin"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: number
+      responses:
+        "200":
+          description: Parent blocked successfully
+  /admin/unblock_parent:
+    put:
+      summary: Unblock Parent
+      security:
+        - access: ["@only admin"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: number
+      responses:
+        "200":
+          description: Parent unblocked successfully
