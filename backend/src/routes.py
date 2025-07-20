@@ -7,13 +7,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timedelta
 from flask_apscheduler import APScheduler
 from .controllers import (
-    # Auth related functions
     parent_regisc,
     child_regisc,
     admin_loginc,
     parent_loginc,
     child_loginc,
-    # Child related functions
     get_skill_lessons,
     get_lesson_details,
     mark_lesson_completed,
@@ -29,7 +27,12 @@ from .controllers import (
     get_child_profile,
     update_child_profile,
     change_child_password,
-    child_profile_image
+    child_profile_image,
+    get_auser,
+    get_child_dashboard_stats,
+    get_user_skill_progress,
+    get_user_badges,
+    get_curriculums_for_child
 )
 
 scheduler = APScheduler()
@@ -243,113 +246,27 @@ def change_child_password_route(current_user, role):
 def child_profile_image_route(current_user, role):
     return child_profile_image(current_user.child_id)
 
-
-@api.route('/api/child/curriculum/<int:curriculum_id>/lessons', methods=['GET'])
-@token_required(allowed_roles=['child'])
-def get_skill_lessons_route(curriculum_id, current_user, role):
-    return get_skill_lessons(current_user.child_id, curriculum_id)
-
-@api.route('/api/child/lesson/<int:lesson_id>', methods=['GET'])
-@token_required(allowed_roles=['child'])    
-def get_lesson_details_route(lesson_id, current_user, role):
-    return get_lesson_details(current_user.child_id, lesson_id)
-
-@api.route('/api/child/lesson/<int:lesson_id>/mark-read', methods=['POST'])
-@token_required(allowed_roles=['child'])    
-def mark_lesson_complete_route(lesson_id, current_user, role):
-    completed_at = request.json.get('completed_at') if request.json else None
-    return mark_lesson_completed(current_user.child_id, lesson_id, completed_at)
-
-@api.route('/api/child/lesson/<int:lesson_id>/activities', methods=['GET'])
-@token_required(allowed_roles=['child'])
-def get_lesson_activities_route(lesson_id, current_user, role):
-    return get_lesson_activities(current_user.child_id, lesson_id)
-
-@api.route('/api/child/activity/<int:activity_id>', methods=['GET'])
-@token_required(allowed_roles=['child'])
-def get_activity_details_route(activity_id, current_user, role):
-    return get_activity_details(current_user.child_id, activity_id)
-
-@api.route('/api/child/activity/<int:activity_id>/submit', methods=['POST'])
-@token_required(allowed_roles=['child'])    
-def submit_activity_route(activity_id, current_user, role):
-    return submit_activity(current_user.child_id, activity_id)
-
-@api.route('/api/child/activity/<int:activity_id>/history', methods=['GET'])
-@token_required(allowed_roles=['child'])
-def get_activity_history_route(activity_id, current_user, role):
-    return get_activity_history(current_user.child_id, activity_id)
-
-@api.route('/api/child/activity/history/<int:activity_history_id>', methods=['GET'])
-@token_required(allowed_roles=['child'])
-def get_activity_submission_route(activity_history_id, current_user, role):
-    return get_activity_submission(current_user.child_id, activity_history_id)
-
-@api.route('/api/child/lesson/<int:lesson_id>/quizzes', methods=['GET'])
-@token_required(allowed_roles=['child'])
-def get_quizzes_route(lesson_id, current_user, role):
-    return get_lesson_quizzes(current_user.child_id, lesson_id)
-
-@api.route('/api/child/curriculum/<int:curriculum_id>/lesson/<int:lesson_id>/quiz/<int:quiz_id>', methods=['GET'])
-@token_required(allowed_roles=['child'])
-def get_quiz_questions_route(curriculum_id, lesson_id, quiz_id, current_user, role):
-    return get_quiz_questions(curriculum_id, lesson_id, quiz_id)
-
-@api.route('/api/child/quizzes/<int:quiz_id>/submit', methods=['POST'])
-@token_required(allowed_roles=['child'])
-def submit_quiz_route(quiz_id, current_user, role):
-    return submit_quiz(current_user.child_id, quiz_id)
-
-@api.route('/api/child/quiz/<int:quiz_id>/history', methods=['GET'])
-@token_required(allowed_roles=['child'])    
-def get_quiz_history_route(quiz_id, current_user, role):
-    return get_quiz_history(current_user.child_id, quiz_id)
-
-@api.route('/api/child/setting', methods=['GET'])
-@token_required(allowed_roles=['child'])
-def get_child_profile_route(current_user, role):
-    return get_child_profile(current_user.child_id)
-
-@api.route('/api/child/update_profile', methods=['PUT'])
-@token_required(allowed_roles=['child'])
-def update_child_profile_route(current_user, role):
-    return update_child_profile(current_user.child_id)
-
-@api.route('/api/child/change_password', methods=['PUT'])
-@token_required(allowed_roles=['child'])
-def change_child_password_route(current_user, role):
-    return change_child_password(current_user.child_id)
-
-@api.route('/api/child/profile_image', methods=['GET','POST'])
-@token_required(allowed_roles=['child'])
-def child_profile_image_route(current_user, role):
-    return child_profile_image(current_user.child_id)
-
-
 @api.route('/auth/get_user',methods=['GET'])
+@token_required()
 def get_user():
     return get_auser()
 
 @api.route('/child_dashboard_stats', methods=['GET'])
+@token_required(allowed_roles=["child"])
 def child_dashboard_stats():
     return get_child_dashboard_stats()
 
 @api.route('/skill_categories', methods=['GET'])
+@token_required(allowed_roles=["child"])
 def get_skill_categories():
     return get_user_skill_progress()
 
 @api.route('/user_badges', methods=['GET'])
+@token_required(allowed_roles=["child"])
 def user_badges():
     return get_user_badges()
 
-@api.route("/api/child/<int:child_id>/curriculum/<int:curriculum_id>/lesson/<int:lesson_id>/quizzes", methods=["GET"])
-def get_quizzes(curriculum_id, lesson_id):
-    return get_lesson_quizzes(curriculum_id=curriculum_id, lesson_id=lesson_id)
-
-@api.route("/api/child/<int:child_id>/quiz/<int:quiz_id>/history", methods=["GET"])
-def get_history(quiz_id):
-    return get_quiz_history(quiz_id=quiz_id)
-
 @api.route('/api/child/<int:child_id>/curriculums', methods=['GET'])
+@token_required(allowed_roles=["child"])
 def get_curr():
     return get_curriculums_for_child()
