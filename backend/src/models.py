@@ -2,6 +2,7 @@ from .db import db
 from sqlalchemy import CheckConstraint, Index, UniqueConstraint
 from sqlalchemy.dialects.sqlite import JSON
 from datetime import datetime
+import time
 
 class Admin(db.Model):
     admin_id = db.Column(db.Integer, primary_key=True)
@@ -58,6 +59,7 @@ class Skill(db.Model):
     description = db.Column(db.Text, nullable=True)
     min_age = db.Column(db.Integer, nullable=False)
     max_age = db.Column(db.Integer, nullable=False)
+    image = db.Column(db.LargeBinary, nullable=True)  # Image stored as BLOB
 
     lessons = db.relationship('Lesson', backref='skill', lazy=True)
 
@@ -73,8 +75,10 @@ class Lesson(db.Model):
     lesson_id = db.Column(db.Integer, primary_key=True)
     skill_id = db.Column(db.Integer, db.ForeignKey('skill.skill_id'), nullable=False, index=True)
     title = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=True)    
     content = db.Column(JSON, nullable=False)
     position = db.Column(db.Integer, nullable=False)
+    image = db.Column(db.LargeBinary, nullable=True)
     
 
     activities = db.relationship('Activity', backref='lesson', lazy=True)
@@ -91,6 +95,7 @@ class LessonHistory(db.Model):
     lesson_history_id = db.Column(db.Integer, primary_key=True)
     child_id = db.Column(db.Integer, db.ForeignKey('child.child_id'), nullable=False, index=True)
     lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.lesson_id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.now(), nullable=False)
 
     __table_args__ = (
         UniqueConstraint('child_id', 'lesson_id', name='unique_child_lesson'),
@@ -104,6 +109,7 @@ class Activity(db.Model):
     name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text, nullable=False)
     answer_format = db.Column(db.Text, nullable=True)
+    image = db.Column(db.LargeBinary, nullable=True)  
 
     child_id = db.Column(db.Integer, db.ForeignKey('child.child_id'), index=True)
     parent_id = db.Column(db.Integer, db.ForeignKey('parent.parent_id'), index=True)
@@ -124,6 +130,7 @@ class ActivityHistory(db.Model):
     activity_id = db.Column(db.Integer, db.ForeignKey('activity.activity_id'), nullable=False, index=True)
     answer = db.Column(db.LargeBinary)
     feedback = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.now(), nullable=False)
 
 
 class Quiz(db.Model):
@@ -132,20 +139,19 @@ class Quiz(db.Model):
     description = db.Column(db.Text, nullable=False)
     questions = db.Column(JSON, nullable=False)
     answers = db.Column(JSON, nullable=False)
-    time_duration = db.Column(db.Integer) # Duration of the test should be stored in seconds
+    time_duration = db.Column(db.Integer) 
     is_visible = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.lesson_id'), nullable=False, index=True)
     position = db.Column(db.Integer, nullable=False)
     badge_id = db.Column(db.Integer, db.ForeignKey('badge.badge_id'), nullable=True)
+    image = db.Column(db.LargeBinary, nullable=True) 
 
     quiz_histories = db.relationship('QuizHistory', backref='quiz', lazy=True)
 
     __table_args__ = (
         UniqueConstraint('lesson_id', 'position', name='unique_quiz_position'),
     )
-
-    
 
 
 class QuizHistory(db.Model):
@@ -155,9 +161,8 @@ class QuizHistory(db.Model):
     score = db.Column(db.Integer, nullable=False)
     responses = db.Column(JSON, nullable=False)
     badge_history_id = db.Column(db.Integer, db.ForeignKey('badge_history.reward_history_id'), nullable=True)
-    attempted_at = db.Column(db.DateTime, default=datetime.utcnow)
-    feedback = db.Column(JSON, nullable=True)
-
+    feedback = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.now(), nullable=False)
 
     __table_args__ = (
         db.Index('ix_quizhistory_quiz_child', 'quiz_id', 'child_id'),
@@ -168,6 +173,7 @@ class Badge(db.Model):
     badge_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text)
+    image = db.Column(db.LargeBinary, nullable=True) 
     points = db.Column(db.Integer, default=0)
     badge_histories = db.relationship('BadgeHistory', backref='badge', lazy=True)
     quizzes = db.relationship('Quiz', backref='badge', lazy=True)
@@ -177,6 +183,7 @@ class BadgeHistory(db.Model):
     reward_history_id = db.Column(db.Integer, primary_key=True)
     child_id = db.Column(db.Integer, db.ForeignKey('child.child_id'), index=True)
     badge_id = db.Column(db.Integer, db.ForeignKey('badge.badge_id'))
+    created_at = db.Column(db.DateTime, default=datetime.now(), nullable=False)
 
     __table_args__ = (
         UniqueConstraint('child_id', 'badge_id', name='unique_child_badge'),

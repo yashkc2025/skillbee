@@ -2,15 +2,13 @@
 
 ## 1. Get Lesson Quizzes
 
-`GET /api/child/{child_id}/curriculum/{curriculum_id}/lesson/{lesson_id}/quizzes`  
+`GET /api/child/curriculum/{curriculum_id}/lesson/{lesson_id}/quizzes`  
 **Description**: Returns curriculum, lesson, and quizzes
 
 ### Request Parameters
 
 | Parameter       | Type    | Description   | Location |
 | --------------- | ------- | ------------- | -------- |
-| `child_id`      | integer | Child ID      | Path     |
-| `curriculum_id` | integer | Curriculum ID | Path     |
 | `lesson_id`     | integer | Lesson ID     | Path     |
 
 ### Response (200 OK)
@@ -48,14 +46,13 @@
 
 ## 2. Get Quiz History
 
-`GET /api/child/{child_id}/quiz/{quiz_id}/history`  
+`GET /api/child/quiz/{quiz_id}/history`  
 **Description**: Returns quiz attempt history
 
 ### Request Parameters
 
 | Parameter  | Type    | Description | Location |
 | ---------- | ------- | ----------- | -------- |
-| `child_id` | integer | Child ID    | Path     |
 | `quiz_id`  | integer | Quiz ID     | Path     |
 
 ### Response (200 OK)
@@ -68,10 +65,7 @@
       "quiz_id": "integer",
       "attempted_at": "datetime (ISO format)",
       "score": "number",
-      "feedback": {
-        "admin": "string",
-        "parent": "string"
-      }
+      "feedback": "string"
     }
   ]
 }
