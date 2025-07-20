@@ -38,6 +38,7 @@ class Child(db.Model):
     points = db.Column(db.Integer, default=0)
     streak = db.Column(db.Integer, default=0)
     last_login = db.Column(db.DateTime, default=datetime(1970, 1, 1))
+    enrollment_date = db.Column(db.DateTime, default=datetime.utcnow)
     profile_image = db.Column(db.LargeBinary, nullable=True)
     is_blocked = db.Column(db.Boolean, default=False)
 
@@ -110,7 +111,9 @@ class Activity(db.Model):
     description = db.Column(db.Text, nullable=False)
     answer_format = db.Column(db.Text, nullable=True)
     image = db.Column(db.LargeBinary, nullable=True)  
-
+    instructions = db.Column(db.Text, nullable=True)
+    difficulty = db.Column(db.Text, nullable=True)
+    
     child_id = db.Column(db.Integer, db.ForeignKey('child.child_id'), index=True)
     parent_id = db.Column(db.Integer, db.ForeignKey('parent.parent_id'), index=True)
     lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.lesson_id'))
@@ -137,6 +140,9 @@ class Quiz(db.Model):
     quiz_id = db.Column(db.Integer, primary_key=True)
     quiz_name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text, nullable=False)
+    difficulty = db.Column(db.String,nullable=False)
+    points = db.Column(db.Integer, nullable=False)
+    image = db.Column(db.LargeBinary, nullable=True)
     questions = db.Column(JSON, nullable=False)
     answers = db.Column(JSON, nullable=False)
     time_duration = db.Column(db.Integer) 
