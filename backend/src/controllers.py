@@ -1322,45 +1322,52 @@ def get_badges(session_info):
 
 
 @only_parent 
+@only_parent
 def create_child(session_info):
     data = request.get_json()
-    required_fields = ["name", "username", "password", "dob", "school"]
+
+    required_fields = ["name", "username", "password", "confirmPass", "dob", "school"]
     if not all(field in data for field in required_fields):
         return jsonify({"error": "Missing required fields"}), 400
 
-    name = data["name"]
-    username = data["username"]
+    name = data["name"].strip()
+    username = data["username"].strip()
     password = data["password"]
+    confirm_password = data["confirmPass"]
     dob_str = data["dob"]
-    school = data["school"]
-    pic=data.get('profile_image')
-    if pic == '':
+    school = data["school"].strip()
+    pic = data.get("profile_image")
+    if pic == "":
         pic = None
+
+    if password != confirm_password:
+        return jsonify({"error": "Password and confirm password do not match"}), 400
+
+    if len(password) < 4:
+        return jsonify({"error": "Password must be at least 4 characters long"}), 400
 
     try:
         dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
     except ValueError:
         return jsonify({"error": "Invalid DOB format. Expected YYYY-MM-DD."}), 400
-    
-    if Child.query.filter_by(username=username).first():
-        return jsonify({"error": "Username already exists"}), 409
+
     age = age_calc(dob)
     if age < 8 or age > 14:
         return jsonify({'error': 'Only children aged 8 to 14 can register'}), 400
-    else:
-        children=Child.query.filter_by(username=username).first()
-        if children:
-            return jsonify({'error':'Username already registered'}), 409
 
-    hashed_password=generate_password_hash(password)
+    if Child.query.filter_by(username=username).first():
+        return jsonify({"error": "Username already exists"}), 409
+
+    hashed_password = generate_password_hash(password)
+
     new_child = Child(
         name=name,
         username=username,
-        password=hashed_password,  
+        password=hashed_password,
         dob=dob,
         school=school,
         parent_id=session_info['parent_id'],
-        profile_image=pic  
+        profile_image=pic
     )
 
     db.session.add(new_child)
@@ -1371,8 +1378,9 @@ def create_child(session_info):
         "name": new_child.name,
         "username": new_child.username,
         "dob": new_child.dob.isoformat(),
-        "school": new_child.school,
+        "school": new_child.school
     }), 201
+
  
 @only_admin   
 def get_parents():
@@ -1619,7 +1627,7 @@ def create_quiz(session_info):
     
     
 @only_admin_or_parent
-def get_child_profile(session_info):
+def admin_child_profile(session_info):
     child_id = request.args.get('id', type=int)
     if not child_id:
         return jsonify({'error': 'Child ID is required as query param ?id='}), 400
@@ -2411,3 +2419,112 @@ def get_age_group_distribution_chart(session_info):
         result.append(skill_obj)
 
     return jsonify(result), 200
+
+@only_parent
+def update_personal_details(session_info):
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    name = data.get("name", "").strip()
+    email = data.get("email", "").strip()
+
+    # Check if both fields are present
+    if not name or not email:
+        return jsonify({'error': 'Both name and email are required.'}), 400
+
+    parent_id = session_info.get('parent_id')
+    parent = Parent.query.get(parent_id)
+    if not parent:
+        return jsonify({'error': 'Parent not found.'}), 404
+
+    # Check for email uniqueness if it's changed
+    if parent.email_id != email:
+        existing = Parent.query.filter(Parent.email_id == email, Parent.parent_id != parent_id).first()
+        if existing:
+            return jsonify({'error': 'Email already registered to another account.'}), 409
+
+    # Update fields
+    parent.name = name
+    parent.email_id = email
+    db.session.commit()
+
+    return jsonify({
+        "id": parent.parent_id,
+        "name": parent.name,
+        "email": parent.email_id,
+        "message": "Personal details updated successfully."
+    }), 200
+
+@only_parent
+def update_parent_password(session_info):
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    old_password = data.get("oldPassword")
+    new_password = data.get("newPassword")
+    confirm_password = data.get("confirmPassword")
+
+    # Validate required fields
+    if not all([old_password, new_password, confirm_password]):
+        return jsonify({"error": "All fields (oldPassword, newPassword, confirmPassword) are required."}), 400
+
+    if new_password != confirm_password:
+        return jsonify({"error": "New password and confirm password do not match."}), 400
+
+    if len(new_password) < 4:
+        return jsonify({"error": "New password must be at least 4 characters long."}), 400
+
+    parent = Parent.query.get(session_info["parent_id"])
+    if not parent:
+        return jsonify({"error": "Parent not found"}), 404
+
+    if not check_password_hash(parent.password, old_password):
+        return jsonify({"error": "Old password is incorrect."}), 401
+
+    if check_password_hash(parent.password, new_password):
+        return jsonify({"error": "New password must be different from the current password."}), 409
+
+    parent.password = generate_password_hash(new_password)
+    db.session.commit()
+
+    return jsonify({"message": "Password updated successfully."}), 200
+
+@only_parent
+def post_feedback(session_info):
+    data = request.get_json()
+    
+    skill_type = data.get("skill_type")
+    item_id = data.get("id")
+    feedback_text = data.get("text", "").strip()
+
+    if skill_type not in ("Quiz", "Activity"):
+        return jsonify({"error": "Invalid skill_type. Must be 'Quiz' or 'Activity'."}), 400
+
+    if not item_id or not isinstance(item_id, int):
+        return jsonify({"error": "Valid numeric 'id' is required."}), 400
+
+    if not feedback_text:
+        return jsonify({"error": "Feedback text cannot be empty."}), 400
+
+    try:
+        if skill_type == "Quiz":
+            quiz_history = QuizHistory.query.get(item_id)
+            if not quiz_history:
+                return jsonify({"error": "Quiz attempt not found."}), 404
+            quiz_history.feedback = feedback_text
+
+        elif skill_type == "Activity":
+            activity_history = ActivityHistory.query.get(item_id)
+            if not activity_history:
+                return jsonify({"error": "Activity attempt not found."}), 404
+            activity_history.feedback = feedback_text
+
+        db.session.commit()
+
+        return jsonify({"message": "Feedback submitted successfully."}), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({"error": "Database error occurred", "details": str(e)}), 500

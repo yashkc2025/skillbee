@@ -7,12 +7,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timedelta
 from flask_apscheduler import APScheduler
 from .controllers import (
-    admin_create, parent_regisc, child_regisc,
+    admin_child_profile, admin_create, get_active_users_chart, get_age_group_distribution_chart, get_badge_by_age_group_chart, get_learning_funnel_chart, get_skill_engagment_chart, parent_regisc, child_regisc,
     admin_loginc, parent_loginc, child_loginc,
     get_auser, get_child_dashboard_stats, get_user_skill_progress,
     get_user_badges, get_curriculums_for_child, get_skill_lessons,
     get_lesson_details, mark_lesson_completed, get_lesson_activities,
-    get_lesson_quizzes, get_activity_details, submit_activity,
+    get_lesson_quizzes, get_activity_details, post_feedback, submit_activity,
     get_activity_history, get_activity_submission, get_quiz_questions,
     submit_quiz, get_quiz_history, get_child_profile,
     update_child_profile, change_child_password, child_profile_image,
@@ -20,7 +20,7 @@ from .controllers import (
     get_quizzes, get_activities, get_badges,
     create_child, create_quiz, create_activity,
     create_badge, create_lesson, update_activity,
-    update_admin_email, update_admin_password, update_lesson,
+    update_admin_email, update_admin_password, update_lesson, update_parent_password, update_personal_details,
     update_quiz, block_child, unblock_child,
     block_parent, unblock_parent, delete_activity,
     delete_badge, delete_lesson, delete_quiz,
@@ -266,6 +266,42 @@ def delete_lessons():
 def delete_quizzes():
     return delete_quiz()
 
+@api.route('/children/profile', methods=['GET'])
+def children_profile():
+    return admin_child_profile()
+
+@api.route('/admin/age_distribution_chart', methods=['GET'])
+def get_age_distribution_chart():
+    return get_age_group_distribution_chart()
+
+@api.route('/admin/learning_funnel_chart',methods=['GET'])
+def get_funnel_chart():
+    return get_learning_funnel_chart()
+
+@api.route('/admin/badge_by_age_group_chart',methods=['GET'])
+def get_badge_by_age_group():
+    return get_badge_by_age_group_chart()
+
+@api.route('/admin/skill_engagment_chart',methods=['GET'])
+def get_skill_engagement():
+    return get_skill_engagment_chart()
+
+@api.route('/admin/active_users_chart', methods=['GET'])
+def get_active_users():
+    return get_active_users_chart()
+
+@api.route('/feedback', methods=['POST'])
+def feedback():
+    return post_feedback()
+
+@api.route('parent/update_personal_details', methods=['PUT'])
+def update_parent_details():
+    return update_personal_details()
+
+@api.route('/parent/update_password',methods=['PUT'])
+def parent_password():
+    return update_parent_password()
+
 @api.route('/api/child/curriculum/<int:curriculum_id>/lessons', methods=['GET'])
 @token_required(allowed_roles=['child'])
 def get_skill_lessons_route(curriculum_id, current_user, role):
@@ -361,3 +397,4 @@ def user_badges():
 @token_required(allowed_roles=["child"])
 def get_curr():
     return get_curriculums_for_child()
+
