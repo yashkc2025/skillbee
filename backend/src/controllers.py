@@ -1,4 +1,6 @@
-from flask import request, jsonify
+from io import BytesIO
+import json
+from flask import request, jsonify, send_file
 from .db import db
 from .models import Admin, Session, Parent, Child, Skill, Lesson, LessonHistory, Activity, ActivityHistory, Quiz, QuizHistory, Badge, BadgeHistory
 from .demoData import createDummyData
@@ -7,6 +9,8 @@ from datetime import datetime, date,timedelta
 import uuid
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 import time
+import base64
+from .decorators import only_admin, only_admin_or_parent, only_parent
 
 def parent_regisc(request):
     # Function for parent registration that will later be sent as a request to the routes
@@ -1295,22 +1299,27 @@ def get_activities(session_info):
 
     return jsonify(response)
 
-BADGE_IMAGE_BASE_URL = "/home/ektabansal/soft-engg-project-may-2025-se-May-9/frontend/public/badges"
-
 @only_admin_or_parent
 def get_badges(session_info):
     badges = Badge.query.all()
     response = []
+
     for badge in badges:
-        image_url = f"{BADGE_IMAGE_BASE_URL}{badge.badge_id}.png"
+        # Convert binary image to base64 string (if available)
+        if badge.image:
+            image_base64 = base64.b64encode(badge.image).decode("utf-8")
+        else:
+            image_base64 = ""
 
         response.append({
             "id": badge.badge_id,
             "label": badge.name,
-            "image": image_url
+            "image": image_base64,
+            "points": badge.points
         })
 
-    return jsonify(response)
+    return jsonify(response), 200
+
 
 @only_parent 
 def create_child(session_info):
@@ -1386,8 +1395,9 @@ def create_badge(session_info):
     name = data.get("title")
     description = data.get("description", "")
     image_base64 = data.get("image")
+    points = data.get('points')
 
-    if not name or not image_base64:
+    if not name or not image_base64 or not points or not description:
         return jsonify({"error": "Missing required fields"}), 400
 
     try:
@@ -1401,7 +1411,8 @@ def create_badge(session_info):
     badge = Badge(
         name=name,
         description=description,
-        image=image_binary
+        image=image_binary,
+        points=points
     )
 
     db.session.add(badge)
@@ -1411,7 +1422,8 @@ def create_badge(session_info):
         "id": badge.badge_id,
         "label": badge.name,
         "image": badge.image,
-        "description":badge.description
+        "description":badge.description,
+        "points":badge.points
     }), 201
 
 @only_admin_or_parent
@@ -1475,6 +1487,10 @@ def create_lesson(session_info):
     title = data['title']
     content_raw = data['content']
     image_base64 = data['image']
+    if description:
+        description = data['description']
+    else:
+        description = None
 
     skill = Skill.query.get(skill_id)
     if not skill:
@@ -1500,6 +1516,7 @@ def create_lesson(session_info):
         skill_id=skill_id,
         title=title,
         content=content,
+        description=description,
         image=image_binary,
         position=next_position
     )
@@ -1605,26 +1622,33 @@ def create_quiz(session_info):
 def get_child_profile(session_info):
     child_id = request.args.get('id', type=int)
     if not child_id:
-        return jsonify({'error': 'Child ID is required as query param ?id=<number>'}), 400
+        return jsonify({'error': 'Child ID is required as query param ?id='}), 400
 
     child = Child.query.get(child_id)
     if not child:
         return jsonify({'error': 'Child not found'}), 404
 
+    # Ensure parent can only access their own child
     if 'parent_id' in session_info and child.parent_id != session_info['parent_id']:
         return jsonify({'error': 'Access denied to this child profile'}), 403
 
-    today = datetime.today()
-    age = today.year - child.dob.year - ((today.month, today.day) < (child.dob.month, child.dob.day))
+    # Get parent info
+    child_age = age_calc(child.dob)
     parent = Parent.query.get(child.parent_id)
+    parent_info = {
+        "id": parent.parent_id,
+        "name": parent.name,
+        "email": parent.email_id
+    } if parent else None
 
-    skills_progress = []
+    # Skill progress
     all_skills = Skill.query.all()
+    skills_progress = []
     for skill in all_skills:
         lessons = Lesson.query.filter_by(skill_id=skill.skill_id).all()
         lesson_ids = [l.lesson_id for l in lessons]
-        lesson_started_count = len(lesson_ids)
 
+        lesson_started_count = len(lesson_ids)
         lesson_completed_count = LessonHistory.query.filter(
             LessonHistory.child_id == child_id,
             LessonHistory.lesson_id.in_(lesson_ids)
@@ -1642,30 +1666,35 @@ def get_child_profile(session_info):
             "quiz_attempted_count": quiz_attempted_count
         })
 
+    # Points earned: by quiz date
     point_earned = []
-
-    quiz_points = QuizHistory.query.filter_by(child_id=child_id).all()
-    for qp in quiz_points:
+    quiz_histories = QuizHistory.query.join(Quiz).filter(
+        QuizHistory.child_id == child_id
+    ).all()
+    for qh in quiz_histories:
         point_earned.append({
-            "point": qp.score,
-            "date": qp.quiz.created_at.strftime("%Y-%m-%d") if qp.quiz and qp.quiz.created_at else "N/A"
+            "point": qh.score,
+            "date": qh.quiz.created_at.strftime("%Y-%m-%d") if qh.quiz and qh.quiz.created_at else "N/A"
         })
 
-    quizzes = QuizHistory.query.filter_by(child_id=child_id).all()
+    # Assessments (quizzes + activities)
     assessments = []
-    for qh in quizzes:
+    for qh in quiz_histories:
         quiz = Quiz.query.get(qh.quiz_id)
-        assessments.append({
-            "id": qh.quiz_history_id,
-            "skill_id": str(quiz.lesson.skill_id),
-            "assessment_type": "Quiz",
-            "title": quiz.quiz_name,
-            "date": quiz.created_at.strftime("%Y-%m-%d") if quiz.created_at else "N/A",
-            "score": qh.score,
-            "max_score": 100  # or make dynamic if needed
-        })
+        if quiz:
+            assessments.append({
+                "id": qh.quiz_history_id,
+                "skill_id": str(quiz.lesson.skill_id),
+                "assessment_type": "Quiz",
+                "title": quiz.quiz_name,
+                "date": quiz.created_at.strftime("%Y-%m-%d") if quiz.created_at else "N/A",
+                "score": qh.score,
+                "max_score": 100
+            })
 
-    activity_histories = ActivityHistory.query.join(Activity).filter(Activity.child_id == child_id).all()
+    activity_histories = ActivityHistory.query.join(Activity).filter(
+        Activity.child_id == child_id
+    ).all()
     for ah in activity_histories:
         activity = ah.activity
         assessments.append({
@@ -1673,44 +1702,45 @@ def get_child_profile(session_info):
             "skill_id": str(activity.lesson.skill_id) if activity.lesson else "N/A",
             "assessment_type": "Activity",
             "title": activity.name,
-            "date": "N/A",  # You can add created_at to Activity if you want
-            "score": "Pass",  # assumption — no scoring system for activity
+            "date": ah.created_at.strftime("%Y-%m-%d") if ah.created_at else "N/A",
+            "score": "Pass",
             "max_score": "Pass"
         })
 
-    badge_history = BadgeHistory.query.filter_by(child_id=child_id).all()
+    # Badges
     badges = []
-    for bh in badge_history:
-        badge = Badge.query.get(bh.badge_id)
-        if badge:
-            badges.append({
-                "badge_id": str(badge.badge_id),
-                "title": badge.name,
-                "image": "",  # Convert to base64 or use a badge URL if available
-                "awarded_on": bh.awarded_on
-            })
+    badge_histories = BadgeHistory.query.join(Badge).filter(
+        BadgeHistory.child_id == child_id
+    ).all()
+    for bh in badge_histories:
+        badge_img_base64 = ""
+        if bh.badge and bh.badge.image:
+            badge_img_base64 = base64.b64encode(bh.badge.image).decode("utf-8")
+        badges.append({
+            "badge_id": str(bh.badge_id),
+            "title": bh.badge.name,
+            "image": badge_img_base64,
+            "awarded_on": bh.awarded_on.strftime("%Y-%m-%d") if bh.awarded_on else "N/A"
+        })
 
     return jsonify({
         "info": {
             "child_id": str(child.child_id),
             "full_name": child.name,
-            "age": age,
-            "enrollment_date": child.enrollment_date,
+            "age": child_age,
+            "enrollment_date": child.enrollment_date.strftime("%Y-%m-%d") if child.enrollment_date else None,
             "status": "Blocked" if child.is_blocked else "Active",
-            "parent": {
-                "id": parent.parent_id,
-                "name": parent.name,
-                "email": parent.email_id
-            }
+            "parent": parent_info
         },
         "skills_progress": skills_progress,
         "point_earned": point_earned,
-        "assessments": sorted(assessments, key=lambda a: a.get("date"), reverse=True),
+        "assessments": sorted(assessments, key=lambda x: x['date'], reverse=True),
         "achievements": {
             "badges": badges,
-            "streak": child.streak
+            "streak": child.streak or 0
         }
     }), 200
+
 
 @only_admin
 def update_admin_email(session_info):
@@ -1997,9 +2027,17 @@ def update_lesson(session_info):
     title = data.get('title')
     content_raw = data.get('content')
     image_base64 = data.get('image')
+    description = data.get('description')
+    curriculum_id = data.get('curriculum_id')
 
     if title is not None:
         lesson.title = title
+        
+    if description is not None:
+        lesson.description = description
+    
+    if curriculum_id is not None:
+        lesson.skill_id = curriculum_id
 
     if content_raw is not None:
         try:
@@ -2132,4 +2170,244 @@ def delete_lesson(session_info):
     }), 200
 
 
+@only_admin
+def get_active_users_chart(session_info):
+    try:
+        end_date = datetime.today().date()
+        start_date = end_date - timedelta(days=20)
+        date_range = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
 
+        result = {
+            "dates": [],
+            "active_children": [],
+            "active_parents": [],
+            "new_children_signups": [],
+            "new_parent_signups": [],
+            "total_active_users": []
+        }
+
+        for day in date_range:
+            day_start = datetime.combine(day, datetime.min.time())
+            day_end = datetime.combine(day, datetime.max.time())
+
+            # Active children (last_login on this date)
+            active_children_count = Child.query.filter(
+                Child.last_login >= day_start,
+                Child.last_login <= day_end
+            ).count()
+
+            # Active parents (no last_login field in model, fallback to assumption: enrollment_date if using session tracking)
+            active_parents_count = Parent.query.filter(
+                Parent.children.any(
+                    Child.last_login >= day_start,
+                    Child.last_login <= day_end
+                )
+            ).count()
+
+            # New child signups (enrollment_date on this date)
+            new_children = Child.query.filter(
+                Child.enrollment_date >= day_start,
+                Child.enrollment_date <= day_end
+            ).count()
+
+            # New parent signups (using created_at assumed via id + date, fallback logic if no date field)
+            new_parents = Parent.query.filter(
+                db.func.date(Parent.children.any(Child.enrollment_date)) == day
+            ).count()
+
+            result["dates"].append(day.strftime("%Y-%m-%d"))
+            result["active_children"].append(active_children_count)
+            result["active_parents"].append(active_parents_count)
+            result["new_children_signups"].append(new_children)
+            result["new_parent_signups"].append(new_parents)
+            result["total_active_users"].append(active_children_count + active_parents_count)
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({"error": "Failed to generate active users chart", "details": str(e)}), 500
+
+@only_admin
+def get_skill_engagment_chart(session_info):
+    # Prepare result: skill name by age group
+    results = {
+        "age_8_10": {},
+        "age_10_12": {},
+        "age_12_14": {}
+    }
+
+    all_skills = Skill.query.all()
+
+    # For each skill, aggregate lessons and quizzes
+    for skill in all_skills:
+        skill_name = skill.name
+        lesson_ids = [lesson.lesson_id for lesson in skill.lessons]
+        quiz_ids = []
+        for lesson in skill.lessons:
+            quiz_ids += [quiz.quiz_id for quiz in lesson.quizzes]
+
+        # Prepare counts per age group
+        counts = {"age_8_10": 0, "age_10_12": 0, "age_12_14": 0}
+
+        # Loop all children with DOB
+        children = Child.query.filter(Child.dob != None).all()
+        for child in children:
+            today = date.today()
+            age = age_calc(child.dob)
+            group = None
+            if 8 <= age <= 10:
+                group = "age_8_10"
+            elif 10 < age <= 12:
+                group = "age_10_12"
+            elif 12 < age <= 14:
+                group = "age_12_14"
+            if not group:
+                continue
+
+            lesson_count = LessonHistory.query.filter(
+                LessonHistory.child_id == child.child_id,
+                LessonHistory.lesson_id.in_(lesson_ids)
+            ).count()
+            quiz_count = QuizHistory.query.filter(
+                QuizHistory.child_id == child.child_id,
+                QuizHistory.quiz_id.in_(quiz_ids)
+            ).count()
+            counts[group] += lesson_count + quiz_count
+
+        # Store per age group
+        results["age_8_10"][skill_name] = counts["age_8_10"]
+        results["age_10_12"][skill_name] = counts["age_10_12"]
+        results["age_12_14"][skill_name] = counts["age_12_14"]
+
+    # Format to contract spec
+    return jsonify({
+        "age_8_10": results["age_8_10"],
+        "age_10_12": results["age_10_12"],
+        "age_12_14": results["age_12_14"]
+    }), 200
+
+@only_admin
+def get_badge_by_age_group_chart(session_info):
+    # Get all badges
+    badge_objs = Badge.query.all()
+    results = []
+    today = date.today()
+
+    for badge in badge_objs:
+        # Fetch all BadgeHistory for this badge, joined with Child for age computation
+        badge_histories = BadgeHistory.query.filter_by(badge_id=badge.badge_id).all()
+
+        age_counts = {"age_8_10": 0, "age_10_12": 0, "age_12_14": 0}
+
+        for hist in badge_histories:
+            child = Child.query.get(hist.child_id)
+            if not child or not child.dob:
+                continue
+            age = age_calc(child.dob)
+            if 8 <= age <= 10:
+                age_counts["age_8_10"] += 1
+            elif 10 < age <= 12:
+                age_counts["age_10_12"] += 1
+            elif 12 < age <= 14:
+                age_counts["age_12_14"] += 1
+
+        results.append({
+            "badge_name": badge.name,
+            "age_8_10": age_counts["age_8_10"],
+            "age_10_12": age_counts["age_10_12"],
+            "age_12_14": age_counts["age_12_14"],
+        })
+
+    return jsonify(results), 200
+
+
+@only_admin
+def get_learning_funnel_chart(session_info):
+    try:
+        # Users who started any skill (at least one lesson)
+        started_lesson_subq = db.session.query(
+            LessonHistory.child_id
+        ).distinct().subquery()
+
+        user_started_skill = db.session.query(started_lesson_subq.c.child_id).count()
+
+        # Total lessons completed (can be multiple per child)
+        lessons_completed = db.session.query(LessonHistory).count()
+
+        # Total quiz attempts
+        quizzes_attempted = db.session.query(QuizHistory).count()
+
+        # Badges earned (count of reward history)
+        badges_earned = db.session.query(BadgeHistory).count()
+
+        return jsonify([{
+            "user_started_skill": user_started_skill,
+            "lessons_completed": lessons_completed,
+            "quizzes_attempted": quizzes_attempted,
+            "badges_earned": badges_earned
+        }]), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to generate funnel metrics", "details": str(e)}), 500
+
+@only_admin
+def get_age_group_distribution_chart(session_info):
+    today = date.today()
+    age_brackets = [
+        ("age_8_10", 8, 10),
+        ("age_10_12", 10, 12),
+        ("age_12_14", 12, 14),
+    ]
+
+    skills = Skill.query.all()
+    result = []
+
+    for skill in skills:
+        skill_obj = {
+            "skill_id": str(skill.skill_id),
+            "skill_name": skill.name,
+            "lesson_started_count": {},
+            "lesson_completed_count": {},
+            "quiz_attempted_count": {},
+        }
+
+        lessons = Lesson.query.filter_by(skill_id=skill.skill_id).all()
+        lesson_ids = [lesson.lesson_id for lesson in lessons]
+
+        quizzes = Quiz.query.filter(Quiz.lesson_id.in_(lesson_ids)).all()
+        quiz_ids = [quiz.quiz_id for quiz in quizzes]
+
+        for bracket_label, min_age, max_age in age_brackets:
+            # Get children in this age bracket
+            children_in_bracket = Child.query.filter(Child.dob != None).all()
+            children_ids = [
+                child.child_id for child in children_in_bracket
+                if min_age <= (today.year - child.dob.year - ((today.month, today.day) < (child.dob.month, child.dob.day))) <= max_age
+            ]
+
+            # Lessons started (unique children who started any lesson in this skill and age bracket)
+            started_count = LessonHistory.query.filter(
+                LessonHistory.child_id.in_(children_ids),
+                LessonHistory.lesson_id.in_(lesson_ids)
+            ).distinct(LessonHistory.child_id).count()
+
+            # Lessons completed (total completed records in bracket, or you may want distinct by lesson/child)
+            completed_count = LessonHistory.query.filter(
+                LessonHistory.child_id.in_(children_ids),
+                LessonHistory.lesson_id.in_(lesson_ids)
+            ).count()
+
+            # Quizzes attempted (total attempted in bracket)
+            quiz_attempted = QuizHistory.query.filter(
+                QuizHistory.child_id.in_(children_ids),
+                QuizHistory.quiz_id.in_(quiz_ids)
+            ).count()
+
+            skill_obj["lesson_started_count"][bracket_label] = started_count
+            skill_obj["lesson_completed_count"][bracket_label] = completed_count
+            skill_obj["quiz_attempted_count"][bracket_label] = quiz_attempted
+
+        result.append(skill_obj)
+
+    return jsonify(result), 200

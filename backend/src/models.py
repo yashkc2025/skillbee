@@ -151,7 +151,6 @@ class Quiz(db.Model):
     lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.lesson_id'), nullable=False, index=True)
     position = db.Column(db.Integer, nullable=False)
     badge_id = db.Column(db.Integer, db.ForeignKey('badge.badge_id'), nullable=True)
-    image = db.Column(db.LargeBinary, nullable=True) 
 
     quiz_histories = db.relationship('QuizHistory', backref='quiz', lazy=True)
 
