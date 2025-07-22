@@ -25,8 +25,9 @@ console.log(props.isFitToContent);
   display: flex;
   /* border: 1px solid var(--color-border); */
   border-radius: var(--border-radius);
-  background-color: var(--color-background);
+  background-color: #fffde7;
   width: fit-content;
+  background: #fffde7;
 }
 
 .card-title {

@@ -3,75 +3,91 @@ import sitemap from "../../router/sitemap.json";
 
 const navOptions = [
   {
-    label: "Dashboard",
+    label: "🏠 Dashboard",
     link: sitemap.child_app.dashboard,
   },
   {
-    label: "Curriculum",
+    label: "📚 Curriculum",
     link: sitemap.child_app.curriculum.curriculums,
   },
   {
-    label: "Achievements",
+    label: "🏅 Achievements",
     link: sitemap.child_app.achievements,
   },
   {
-    label: "Settings",
+    label: "⚙️ Settings",
     link: sitemap.child_app.settings,
   },
 ];
 </script>
 
 <template>
-  <div class="navbar box-shadow">
+  <div class="navbar box-shadow kid-navbar">
     <section class="logo-parent">
-      <img src="/logo.png" alt="" />
+      <img src="/logo.png" alt="Kid App Logo" />
     </section>
     <section class="items-parent">
-      <a :href="n.link" class="nav-items" v-for="n in navOptions" :key="n.label">{{
-        n.label
-        }}</a>
-      <a class="danger" href="/">Logout</a>
+      <a :href="n.link" class="nav-items" v-for="n in navOptions" :key="n.label" tabindex="0">
+        {{ n.label }}
+      </a>
+      <a class="danger" href="/" tabindex="0">🚪 Logout</a>
     </section>
   </div>
 </template>
 
 <style scoped>
-.navbar {
-  padding: var(--size-2xs) var(--size-md);
-  border: 1px solid var(--color-border);
-  border-radius: 30px;
+.navbar.kid-navbar {
+  padding: var(--size-xs) var(--size-lg);
   display: flex;
   flex-direction: row;
-  background-color: var(--color-text-light);
-  gap: var(--size-xl);
-  /* max-width: fit-content; */
-  min-width: 1000px;
+  background: #fff3e0;
+  width: 100%;
   justify-content: space-between;
-
+  align-items: center;
+  border-bottom: 1px solid rgba(211, 210, 210, 0.455);
 }
 
-.items-parent,
-.third-parent {
+.items-parent {
   display: flex;
   flex-direction: row;
-  gap: 10px;
+  align-items: center;
 }
 
-a {
-  color: var(--color-text-dark);
-  padding: var(--size-2xs) var(--size-xs);
-  border-radius: calc(var(--border-radius) / 2);
-  font-size: var(--font-sm);
-  /* border-radius: var(--border-radius); */
-  border: 1px solid none;
+a.nav-items {
+  color: #4a148c;
+  padding: 5px 18px;
   font-family: "VAGRoundedNext";
-  font-weight: 400;
+  font-weight: bold;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
   text-decoration: none;
 }
 
-a:hover {
-  background-color: var(--color-hover);
-  border-color: var(--color-border);
+a.nav-items:hover,
+a.nav-items:focus {
+  color: #d84315;
+  transform: scale(1.02);
+}
+
+a.danger {
+  color: #e53935;
+  padding: 5px 18px;
+  font-family: "VAGRoundedNext";
+  font-weight: bold;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+  margin-left: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+a.danger:hover,
+a.danger:focus {
+  color: #b71c1c;
+  transform: scale(1.02);
 }
 
 .logo-parent {
@@ -83,9 +99,14 @@ a:hover {
 img {
   width: 90px;
   padding: var(--size-2xs) var(--size-xs);
+  /* border-radius: 50%; */
+  /* background: #fffde7; */
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.10);
+  /* border: 2px solid #ffb300; */
+  transition: transform 0.2s;
 }
 
-.danger {
-  color: var(--color-pink);
-}
+/* img:hover {transform: scale(1.08) rotate(-6deg);
+  box-shadow: 0 4px 16px rgba(255, 193, 7, 0.18);
+} */
 </style>
