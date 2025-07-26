@@ -1217,13 +1217,13 @@ def child_profile_image(child_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         return jsonify({'status': 'error', 'message': 'Database error occurred'}), 500
-
-@only_admin_or_parent
-def get_children(session_info):
-    if "admin_id" in session_info:
+    
+def get_children(current_user, role):
+    # Admin: all children; Parent: only their children
+    if role == "admin":
         children = Child.query.all()
-    elif "parent_id" in session_info:
-        children = Child.query.filter_by(parent_id=session_info["parent_id"]).all()
+    elif role == "parent":
+        children = Child.query.filter_by(parent_id=current_user.parent_id).all()
     else:
         return jsonify({"error": "Forbidden"}), 403
 
@@ -1240,21 +1240,20 @@ def get_children(session_info):
 
     return jsonify(response), 200
 
-@only_admin_or_parent
-def get_lessons(session_info):
+def get_lessons():
     lessons = Lesson.query.all()
     response = []
     for lesson in lessons:
+        # curriculum is the associated Skill name
         response.append({
             'id': lesson.lesson_id,
             'title': lesson.title,
             'curriculum': lesson.skill.name if lesson.skill else None
         })
+    return jsonify(response), 200
 
-    return jsonify(response)
 
-@only_admin_or_parent
-def get_quizzes(session_info):
+def get_quizzes():
     lesson_id = request.args.get('lesson_id', type=int)
 
     query = Quiz.query
@@ -1275,8 +1274,7 @@ def get_quizzes(session_info):
 
     return jsonify(result)
 
-@only_admin_or_parent
-def get_activities(session_info):
+def get_activities():
     lesson_id = request.args.get('lesson_id', type=int)
 
     query = Activity.query
@@ -1299,8 +1297,7 @@ def get_activities(session_info):
 
     return jsonify(response)
 
-@only_admin_or_parent
-def get_badges(session_info):
+def get_badges():
     badges = Badge.query.all()
     response = []
 
@@ -1320,12 +1317,10 @@ def get_badges(session_info):
 
     return jsonify(response), 200
 
-
-@only_parent 
-@only_parent
-def create_child(session_info):
+def create_child(*args, current_user, role, **kwargs):
     data = request.get_json()
 
+    # Required fields as per contract
     required_fields = ["name", "username", "password", "confirmPass", "dob", "school"]
     if not all(field in data for field in required_fields):
         return jsonify({"error": "Missing required fields"}), 400
@@ -1334,18 +1329,26 @@ def create_child(session_info):
     username = data["username"].strip()
     password = data["password"]
     confirm_password = data["confirmPass"]
-    dob_str = data["dob"]
+    dob_str = data["dob"].strip()
     school = data["school"].strip()
-    pic = data.get("profile_image")
-    if pic == "":
-        pic = None
 
+    # Image is optional; if present, decode base64
+    pic = data.get("profile_image")
+    if pic and pic != "":
+        try:
+            profile_image = base64.b64decode(pic)
+        except Exception:
+            return jsonify({"error": "Invalid base64 image for profile_image"}), 400
+    else:
+        profile_image = None
+
+    # Password confirmation and length checks
     if password != confirm_password:
         return jsonify({"error": "Password and confirm password do not match"}), 400
-
     if len(password) < 4:
         return jsonify({"error": "Password must be at least 4 characters long"}), 400
 
+    # Date and age validation
     try:
         dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
     except ValueError:
@@ -1355,8 +1358,14 @@ def create_child(session_info):
     if age < 8 or age > 14:
         return jsonify({'error': 'Only children aged 8 to 14 can register'}), 400
 
+    # Uniqueness checks
     if Child.query.filter_by(username=username).first():
         return jsonify({"error": "Username already exists"}), 409
+
+    # Optionally check for email if your form allows (some models have nullable email)
+    email = data.get("email")
+    if email and Child.query.filter_by(email_id=email).first():
+        return jsonify({"error": "Email already registered"}), 409
 
     hashed_password = generate_password_hash(password)
 
@@ -1366,8 +1375,9 @@ def create_child(session_info):
         password=hashed_password,
         dob=dob,
         school=school,
-        parent_id=session_info['parent_id'],
-        profile_image=pic
+        parent_id=current_user.parent_id,  # comes directly from token/session
+        profile_image=profile_image,
+        email_id=email if email else None
     )
 
     db.session.add(new_child)
@@ -1381,8 +1391,6 @@ def create_child(session_info):
         "school": new_child.school
     }), 201
 
- 
-@only_admin   
 def get_parents():
     parents = Parent.query.all()
 
@@ -1397,8 +1405,7 @@ def get_parents():
 
     return jsonify(response), 200
 
-@only_admin
-def create_badge(session_info):
+def create_badge():
     data = request.get_json()
     name = data.get("title")
     description = data.get("description", "")
@@ -1434,8 +1441,7 @@ def create_badge(session_info):
         "points":badge.points
     }), 201
 
-@only_admin_or_parent
-def create_activity(session_info):
+def create_activity():
     lesson_id = request.args.get('lesson_id', type=int)
     data = request.get_json()
     required_fields = ['title','description','image','instructions','difficulty', 'answer_format']
@@ -1480,8 +1486,7 @@ def create_activity(session_info):
         "difficulty" : activity.difficulty
     }), 201
 
-@only_admin  
-def create_lesson(session_info):
+def create_lesson():
     skill_id = request.args.get('skill_id', type=int)
     try:
         data = request.get_json()
@@ -1540,8 +1545,7 @@ def create_lesson(session_info):
     }), 201
     
 
-@only_admin
-def create_quiz(session_info):
+def create_quiz():
     lesson_id = request.args.get('lesson_id', type=int)
     
     try:
@@ -1626,8 +1630,7 @@ def create_quiz(session_info):
     }), 201
     
     
-@only_admin_or_parent
-def admin_child_profile(session_info):
+def admin_child_profile(current_user, role):
     child_id = request.args.get('id', type=int)
     if not child_id:
         return jsonify({'error': 'Child ID is required as query param ?id='}), 400
@@ -1637,7 +1640,7 @@ def admin_child_profile(session_info):
         return jsonify({'error': 'Child not found'}), 404
 
     # Ensure parent can only access their own child
-    if 'parent_id' in session_info and child.parent_id != session_info['parent_id']:
+    if role == "parent" and child.parent_id != current_user.parent_id:
         return jsonify({'error': 'Access denied to this child profile'}), 403
 
     # Get parent info
@@ -1674,7 +1677,7 @@ def admin_child_profile(session_info):
             "quiz_attempted_count": quiz_attempted_count
         })
 
-    # Points earned: by quiz date
+    # Points earned
     point_earned = []
     quiz_histories = QuizHistory.query.join(Quiz).filter(
         QuizHistory.child_id == child_id
@@ -1697,7 +1700,7 @@ def admin_child_profile(session_info):
                 "title": quiz.quiz_name,
                 "date": quiz.created_at.strftime("%Y-%m-%d") if quiz.created_at else "N/A",
                 "score": qh.score,
-                "max_score": 100
+                "max_score": quiz.points
             })
 
     activity_histories = ActivityHistory.query.join(Activity).filter(
@@ -1710,12 +1713,12 @@ def admin_child_profile(session_info):
             "skill_id": str(activity.lesson.skill_id) if activity.lesson else "N/A",
             "assessment_type": "Activity",
             "title": activity.name,
-            "date": ah.created_at.strftime("%Y-%m-%d") if ah.created_at else "N/A",
+            "date": ah.created_at.strftime("%Y-%m-%d") if hasattr(ah, "created_at") and ah.created_at else "N/A",
             "score": "Pass",
             "max_score": "Pass"
         })
 
-    # Badges
+    # Badges (encode images)
     badges = []
     badge_histories = BadgeHistory.query.join(Badge).filter(
         BadgeHistory.child_id == child_id
@@ -1723,12 +1726,12 @@ def admin_child_profile(session_info):
     for bh in badge_histories:
         badge_img_base64 = ""
         if bh.badge and bh.badge.image:
-            badge_img_base64 = base64.b64encode(bh.badge.image).decode("utf-8")
+            badge_img_base64 = "data:image/png;base64," + base64.b64encode(bh.badge.image).decode("utf-8")
         badges.append({
             "badge_id": str(bh.badge_id),
-            "title": bh.badge.name,
+            "title": bh.badge.name if bh.badge else "",
             "image": badge_img_base64,
-            "awarded_on": bh.awarded_on.strftime("%Y-%m-%d") if bh.awarded_on else "N/A"
+            "awarded_on": bh.created_at.strftime("%Y-%m-%d") if hasattr(bh, 'created_at') and bh.created_at else "N/A"
         })
 
     return jsonify({
@@ -1750,29 +1753,27 @@ def admin_child_profile(session_info):
     }), 200
 
 
-@only_admin
-def update_admin_email(session_info):
+def update_admin_email(current_user):
     data = request.get_json()
     new_email = data.get("email")
 
     if not new_email or "@" not in new_email:
         return jsonify({"error": "A valid email is required."}), 400
 
-    existing = Admin.query.filter(Admin.email_id == new_email).first()
+    # Check if the new email already exists in another admin account
+    existing = Admin.query.filter(Admin.email_id == new_email, Admin.admin_id != current_user.admin_id).first()
     if existing:
         return jsonify({"error": "An account with this email already exists."}), 409
 
-    admin = Admin.query.get(session_info['admin_id'])
-    if not admin:
+    if not current_user:
         return jsonify({"error": "Admin not found."}), 404
 
-    admin.email_id = new_email
+    current_user.email_id = new_email
     db.session.commit()
 
     return jsonify({"message": "Email updated successfully."}), 200
 
-@only_admin
-def update_admin_password(session_info):
+def update_admin_password(current_user):
     data = request.get_json()
     
     old_password = data.get("oldPassword")
@@ -1785,7 +1786,7 @@ def update_admin_password(session_info):
     if new_password != confirm_password:
         return jsonify({"error": "New password & confirmation do not match."}), 400
 
-    admin_id = session_info["admin_id"]
+    admin_id = current_user.admin_id
     admin = Admin.query.get(admin_id)
 
     if not admin:
@@ -1799,8 +1800,7 @@ def update_admin_password(session_info):
 
     return jsonify({"message": "Password updated successfully."}), 200
 
-@only_admin
-def block_child(session_info):
+def block_child():
     data = request.get_json()
     child_id = data.get("id")
 
@@ -1819,8 +1819,7 @@ def block_child(session_info):
 
     return jsonify({"message": f"Child with ID {child_id} has been blocked."}), 200
 
-@only_admin
-def unblock_child(session_info):
+def unblock_child():
     data = request.get_json()
     child_id = data.get("id")
 
@@ -1839,8 +1838,7 @@ def unblock_child(session_info):
 
     return jsonify({"message": f"Child with ID {child_id} has been unblocked."}), 200
 
-@only_admin
-def block_parent(session_info):
+def block_parent():
     data = request.get_json()
     parent_id = data.get("id")
 
@@ -1859,8 +1857,7 @@ def block_parent(session_info):
 
     return jsonify({"message": f"Parent with ID {parent_id} has been blocked."}), 200
 
-@only_admin
-def unblock_parent(session_info):
+def unblock_parent():
     data = request.get_json()
     parent_id = data.get("id")
 
@@ -1879,8 +1876,7 @@ def unblock_parent(session_info):
 
     return jsonify({"message": f"Parent with ID {parent_id} has been unblocked."}), 200
 
-@only_admin
-def update_activity(session_info):
+def update_activity():
     data = request.get_json()
 
     activity_id = data.get('id')
@@ -1934,8 +1930,7 @@ def update_activity(session_info):
         "answer_format": activity.answer_format
     }), 200
     
-@only_admin
-def update_quiz(session_info):
+def update_quiz():
     try:
         data = request.get_json()
     except Exception:
@@ -2017,8 +2012,7 @@ def update_quiz(session_info):
         "time_duration": quiz.time_duration
     }), 200
 
-@only_admin
-def update_lesson(session_info):
+def update_lesson():
     try:
         data = request.get_json()
     except Exception:
@@ -2068,8 +2062,7 @@ def update_lesson(session_info):
         "title": lesson.title,
     }), 200
 
-@only_admin
-def delete_badge(session_info):
+def delete_badge():
     try:
         data = request.get_json()
     except Exception:
@@ -2096,8 +2089,7 @@ def delete_badge(session_info):
         "message": f"Badge with ID {badge_id} has been deleted."
     }), 
 
-@only_admin    
-def delete_activity(session_info):
+def delete_activity():
     try:
         data = request.get_json()
     except Exception:
@@ -2123,8 +2115,7 @@ def delete_activity(session_info):
         "message": f"Activity with ID {activity_id} has been deleted successfully."
     }), 200
  
-@only_admin   
-def delete_quiz(session_info):
+def delete_quiz():
     try:
         data = request.get_json()
     except Exception:
@@ -2150,8 +2141,7 @@ def delete_quiz(session_info):
         "message": f"Quiz with ID {quiz_id} has been deleted successfully."
     }), 200
 
-@only_admin
-def delete_lesson(session_info):
+def delete_lesson():
     try:
         data = request.get_json()
     except Exception:
@@ -2178,8 +2168,7 @@ def delete_lesson(session_info):
     }), 200
 
 
-@only_admin
-def get_active_users_chart(session_info):
+def get_active_users_chart():
     try:
         end_date = datetime.today().date()
         start_date = end_date - timedelta(days=20)
@@ -2235,8 +2224,7 @@ def get_active_users_chart(session_info):
     except Exception as e:
         return jsonify({"error": "Failed to generate active users chart", "details": str(e)}), 500
 
-@only_admin
-def get_skill_engagment_chart(session_info):
+def get_skill_engagment_chart():
     # Prepare result: skill name by age group
     results = {
         "age_8_10": {},
@@ -2294,8 +2282,7 @@ def get_skill_engagment_chart(session_info):
         "age_12_14": results["age_12_14"]
     }), 200
 
-@only_admin
-def get_badge_by_age_group_chart(session_info):
+def get_badge_by_age_group_chart():
     # Get all badges
     badge_objs = Badge.query.all()
     results = []
@@ -2329,8 +2316,7 @@ def get_badge_by_age_group_chart(session_info):
     return jsonify(results), 200
 
 
-@only_admin
-def get_learning_funnel_chart(session_info):
+def get_learning_funnel_chart():
     try:
         # Users who started any skill (at least one lesson)
         started_lesson_subq = db.session.query(
@@ -2359,8 +2345,7 @@ def get_learning_funnel_chart(session_info):
         db.session.rollback()
         return jsonify({"error": "Failed to generate funnel metrics", "details": str(e)}), 500
 
-@only_admin
-def get_age_group_distribution_chart(session_info):
+def get_age_group_distribution_chart():
     today = date.today()
     age_brackets = [
         ("age_8_10", 8, 10),
@@ -2420,8 +2405,7 @@ def get_age_group_distribution_chart(session_info):
 
     return jsonify(result), 200
 
-@only_parent
-def update_personal_details(session_info):
+def update_personal_details(current_user):
     data = request.get_json()
     if not data:
         return jsonify({'error': 'No data provided'}), 400
@@ -2433,7 +2417,7 @@ def update_personal_details(session_info):
     if not name or not email:
         return jsonify({'error': 'Both name and email are required.'}), 400
 
-    parent_id = session_info.get('parent_id')
+    parent_id = current_user.parent_id
     parent = Parent.query.get(parent_id)
     if not parent:
         return jsonify({'error': 'Parent not found.'}), 404
@@ -2456,8 +2440,7 @@ def update_personal_details(session_info):
         "message": "Personal details updated successfully."
     }), 200
 
-@only_parent
-def update_parent_password(session_info):
+def update_parent_password(current_user):
     data = request.get_json()
     if not data:
         return jsonify({"error": "No data provided"}), 400
@@ -2476,7 +2459,7 @@ def update_parent_password(session_info):
     if len(new_password) < 4:
         return jsonify({"error": "New password must be at least 4 characters long."}), 400
 
-    parent = Parent.query.get(session_info["parent_id"])
+    parent = Parent.query.get(current_user.parent_id)
     if not parent:
         return jsonify({"error": "Parent not found"}), 404
 
@@ -2491,8 +2474,7 @@ def update_parent_password(session_info):
 
     return jsonify({"message": "Password updated successfully."}), 200
 
-@only_parent
-def post_feedback(session_info):
+def post_feedback():
     data = request.get_json()
     
     skill_type = data.get("skill_type")
