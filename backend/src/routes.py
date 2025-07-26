@@ -14,7 +14,7 @@ from .controllers import (
     get_lesson_details, mark_lesson_completed, get_lesson_activities,
     get_lesson_quizzes, get_activity_details, post_feedback, submit_activity,
     get_activity_history, get_activity_submission, get_quiz_questions,
-    submit_quiz, get_quiz_history, get_child_profile,
+    submit_quiz, get_quiz_history, get_child_profile_controller,
     update_child_profile, change_child_password, child_profile_image,
     get_children, get_parents, get_lessons,
     get_quizzes, get_activities, get_badges,
@@ -258,7 +258,7 @@ def delete_badges():
 def delete_activities():
     return delete_activity()
 
-@api.route('/admin/lesson', methdods=['DELETE'])
+@api.route('/admin/lesson', methods=['DELETE'])
 def delete_lessons():
     return delete_lesson()
 
@@ -294,7 +294,7 @@ def get_active_users():
 def feedback():
     return post_feedback()
 
-@api.route('parent/update_personal_details', methods=['PUT'])
+@api.route('/parent/update_personal_details', methods=['PUT'])
 def update_parent_details():
     return update_personal_details()
 
@@ -366,7 +366,7 @@ def get_quiz_history_route(quiz_id, current_user, role):
 @api.route('/api/child/setting', methods=['GET'])
 @token_required(allowed_roles=['child'])
 def get_child_profile_route(current_user, role):
-    return get_child_profile(current_user.child_id)
+    return get_child_profile_controller(current_user.child_id)
 
 @api.route('/api/child/update_profile', methods=['PUT'])
 @token_required(allowed_roles=['child'])
