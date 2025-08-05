@@ -17,13 +17,14 @@ import ChildNavbar from "@/components/child/ChildNavbar.vue";
 
 <style scoped>
 .navbar-parent {
-  position: absolute;
+  position: fixed;
   top: 0;
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding-top: var(--size-sm);
+  /* padding-top: var(--size-sm); */
+  z-index: 1000;
 }
 
 .app-layout {
@@ -36,7 +37,7 @@ import ChildNavbar from "@/components/child/ChildNavbar.vue";
 
 .app-layout>div {
   /* background-color: blue; */
-  max-width: 1200px;
+  /* max-width: 1200px; */
   width: 100%;
   margin-top: var(--size-4xl);
   padding: 0 1rem;

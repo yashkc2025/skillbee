@@ -1,4 +1,6 @@
-from flask import request, jsonify
+from io import BytesIO
+import json
+from flask import request, jsonify, send_file
 from .db import db
 from .models import Admin, Session, Parent, Child, Skill, Lesson, LessonHistory, Activity, ActivityHistory, Quiz, QuizHistory, Badge, BadgeHistory
 from .demoData import createDummyData
@@ -7,8 +9,8 @@ from datetime import datetime, date,timedelta
 import uuid
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 import time
-from functools import wraps
-
+import base64
+from .decorators import only_admin, only_admin_or_parent, only_parent
 
 def parent_regisc(request):
     # Function for parent registration that will later be sent as a request to the routes
@@ -1196,96 +1198,1453 @@ def get_child_profile_controller(child_id):
         return jsonify({'error': 'Database error occurred', 'details': str(e)}), 500
 
 
-def get_curriculums_for_child(current_user, role):
-    child_id = current_user.child_id
-    child = current_user
-    age = age_calc(child.dob)
-    skills = Skill.query.filter(Skill.min_age <= age, Skill.max_age >= age).all()
-    skill_ids = [s.skill_id for s in skills]
-    lessons = Lesson.query.filter(Lesson.skill_id.in_(skill_ids)).all()
-    lesson_ids = [l.lesson_id for l in lessons]
-    lesson_map = {}
+def update_child_profile(child_id):
+    try:
+        child = Child.query.get(child_id)
+        if not child:
+            return jsonify({'error': 'Child not found'}), 404
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Check if at least one field is provided
+        allowed_fields = ['name', 'email', 'dob', 'school']
+        if not any(field in data for field in allowed_fields):
+            return jsonify({'error': 'At least one field must be provided'}), 400
+        
+        # Update name if provided
+        if 'name' in data:
+            if not data['name'] or not data['name'].strip():
+                return jsonify({'error': 'Name cannot be empty'}), 400
+            child.name = data['name'].strip()
+        
+        # Update email if provided
+        if 'email' in data:
+            email = data['email']
+            if email:  # If email is not empty, validate it
+                # Check if email is already taken by another child
+                existing_child = Child.query.filter(
+                    Child.email_id == email,
+                    Child.child_id != child_id
+                ).first()
+                if existing_child:
+                    return jsonify({'error': 'Email already registered by another child'}), 409
+                child.email_id = email
+            else:
+                child.email_id = None  # Allow setting email to null
+        
+        # Update date of birth if provided
+        if 'dob' in data:
+            dob_str = data['dob']
+            if dob_str:
+                try:
+                    dob = datetime.strptime(dob_str, '%Y-%m-%d').date()
+                    # Validate age (8-14 years old)
+                    age = age_calc(dob)
+                    if age < 8 or age > 14:
+                        return jsonify({'error': 'Child must be between 8 and 14 years old'}), 400
+                    child.dob = dob
+                except ValueError:
+                    return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+            else:
+                return jsonify({'error': 'Date of birth cannot be empty'}), 400
+        
+        # Update school if provided
+        if 'school' in data:
+            child.school = data['school']  # Allow school to be empty/null
+        
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Profile details updated'
+        }), 200
+        
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({'error': 'Database error occurred', 'details': str(e)}), 500
+
+
+def change_child_password(child_id):
+    try:
+        child = Child.query.get(child_id)
+        if not child:
+            return jsonify({'status': 'error', 'message': 'Child not found'}), 404
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'status': 'error', 'message': 'No data provided'}), 400
+        
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+        confirm_password = data.get('confirm_password')
+        
+        # Validate required fields
+        if not all([current_password, new_password, confirm_password]):
+            return jsonify({
+                'status': 'error', 
+                'message': 'Current password, new password, and confirm password are required'
+            }), 400
+        
+        # Verify current password
+        if not check_password_hash(child.password, current_password):
+            return jsonify({
+                'status': 'error', 
+                'message': 'Current password is incorrect'
+            }), 400
+        
+        # Validate new password matches confirm password
+        if new_password != confirm_password:
+            return jsonify({
+                'status': 'error', 
+                'message': 'New password and confirm password do not match'
+            }), 400
+        
+        # Validate new password length (optional - add your own requirements)
+        if len(new_password) < 4:
+            return jsonify({
+                'status': 'error', 
+                'message': 'New password must be at least 4 characters long'
+            }), 400
+        
+        # Ensure new password is different from current password
+        if check_password_hash(child.password, new_password):
+            return jsonify({
+                'status': 'error', 
+                'message': 'New password must be different from current password'
+            }), 400
+        
+        # Hash and update the new password
+        child.password = generate_password_hash(new_password)
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Password changed successfully'
+        }), 200
+        
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': 'Database error occurred'}), 500
+
+
+
+def child_profile_image(child_id):
+    """
+    Handle both GET and POST requests for child profile images.
+    GET: Retrieve profile image
+    POST: Upload/update profile image
+    """
+    try:
+        # Find the child
+        child = Child.query.get(child_id)
+        
+        if request.method == 'POST':
+            data=request.get_json()
+            pic= data.get('profile_image') if (data.get('profile_image') != '') else None
+            
+            child.profile_image = pic
+            db.session.commit()
+
+        elif request.method == 'GET':
+            return jsonify({
+                'profile_image': child.profile_image if child.profile_image else '',
+            }), 200
+        
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': 'Database error occurred'}), 500
+    
+def get_children(current_user, role):
+    # Admin: all children; Parent: only their children
+    if role == "admin":
+        children = Child.query.all()
+    elif role == "parent":
+        children = Child.query.filter_by(parent_id=current_user.parent_id).all()
+    else:
+        return jsonify({"error": "Forbidden"}), 403
+
+    response = []
+    for child in children:
+        response.append({
+            "id": child.child_id,
+            "name": child.name,
+            "email": child.email_id,
+            "age": age_calc(child.dob),
+            "school_name": child.school,
+            "last_login": child.last_login.isoformat() if child.last_login else None,
+        })
+
+    return jsonify(response), 200
+
+def get_lessons():
+    lessons = Lesson.query.all()
+    response = []
     for lesson in lessons:
-        lesson_map.setdefault(lesson.skill_id, []).append(lesson.lesson_id)
-    activities = Activity.query.filter(Activity.lesson_id.in_(lesson_ids)).all()
-    quizzes = Quiz.query.filter(Quiz.lesson_id.in_(lesson_ids)).all()
-    completed_lessons = {
-        lh.lesson_id for lh in LessonHistory.query.filter(
+        # curriculum is the associated Skill name
+        response.append({
+            'id': lesson.lesson_id,
+            'title': lesson.title,
+            'curriculum': lesson.skill.name if lesson.skill else None
+        })
+    return jsonify(response), 200
+
+
+def get_quizzes():
+    lesson_id = request.args.get('lesson_id', type=int)
+
+    query = Quiz.query
+    if lesson_id is not None:
+        query = query.filter_by(lesson_id=lesson_id)
+
+    quizzes = query.all()
+    result = []
+    for quiz in quizzes:
+        lesson = quiz.lesson
+        skill = lesson.skill if lesson else None
+        result.append({
+            "id": quiz.quiz_id,
+            "title": quiz.quiz_name,
+            "lesson": lesson.title if lesson else None,
+            "curriculum": skill.name if skill else None
+        })
+
+    return jsonify(result)
+
+def get_activities():
+    lesson_id = request.args.get('lesson_id', type=int)
+
+    query = Activity.query
+    if lesson_id is not None:
+        query = query.filter_by(lesson_id=lesson_id)
+
+    activities = query.all()
+
+    response = []
+    for activity in activities:
+        lesson = activity.lesson
+        skill = lesson.skill if lesson else None
+
+        response.append({
+            'id': activity.activity_id,
+            'title': activity.name,
+            'lesson': lesson.title if lesson else None,
+            'curriculum': skill.name if skill else None
+        })
+
+    return jsonify(response)
+
+def get_badges():
+    badges = Badge.query.all()
+    response = []
+
+    for badge in badges:
+        # Convert binary image to base64 string (if available)
+        if badge.image:
+            image_base64 = base64.b64encode(badge.image).decode("utf-8")
+        else:
+            image_base64 = ""
+
+        response.append({
+            "id": badge.badge_id,
+            "label": badge.name,
+            "image": image_base64,
+            "points": badge.points
+        })
+
+    return jsonify(response), 200
+
+def create_child(*args, current_user, role, **kwargs):
+    data = request.get_json()
+
+    # Required fields as per contract
+    required_fields = ["name", "username", "password", "confirmPass", "dob", "school"]
+    if not all(field in data for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    name = data["name"].strip()
+    username = data["username"].strip()
+    password = data["password"]
+    confirm_password = data["confirmPass"]
+    dob_str = data["dob"].strip()
+    school = data["school"].strip()
+
+    # Image is optional; if present, decode base64
+    pic = data.get("profile_image")
+    if pic and pic != "":
+        try:
+            profile_image = base64.b64decode(pic)
+        except Exception:
+            return jsonify({"error": "Invalid base64 image for profile_image"}), 400
+    else:
+        profile_image = None
+
+    # Password confirmation and length checks
+    if password != confirm_password:
+        return jsonify({"error": "Password and confirm password do not match"}), 400
+    if len(password) < 4:
+        return jsonify({"error": "Password must be at least 4 characters long"}), 400
+
+    # Date and age validation
+    try:
+        dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
+    except ValueError:
+        return jsonify({"error": "Invalid DOB format. Expected YYYY-MM-DD."}), 400
+
+    age = age_calc(dob)
+    if age < 8 or age > 14:
+        return jsonify({'error': 'Only children aged 8 to 14 can register'}), 400
+
+    # Uniqueness checks
+    if Child.query.filter_by(username=username).first():
+        return jsonify({"error": "Username already exists"}), 409
+
+    # Optionally check for email if your form allows (some models have nullable email)
+    email = data.get("email")
+    if email and Child.query.filter_by(email_id=email).first():
+        return jsonify({"error": "Email already registered"}), 409
+
+    hashed_password = generate_password_hash(password)
+
+    new_child = Child(
+        name=name,
+        username=username,
+        password=hashed_password,
+        dob=dob,
+        school=school,
+        parent_id=current_user.parent_id,  # comes directly from token/session
+        profile_image=profile_image,
+        email_id=email if email else None
+    )
+
+    db.session.add(new_child)
+    db.session.commit()
+
+    return jsonify({
+        "id": new_child.child_id,
+        "name": new_child.name,
+        "username": new_child.username,
+        "dob": new_child.dob.isoformat(),
+        "school": new_child.school
+    }), 201
+
+def get_parents():
+    parents = Parent.query.all()
+
+    response = []
+    for parent in parents:
+        response.append({
+            "id": parent.parent_id,
+            "name": parent.name,
+            "email": parent.email_id,
+            "blocked": parent.is_blocked
+        })
+
+    return jsonify(response), 200
+
+def create_badge():
+    data = request.get_json()
+    name = data.get("title")
+    description = data.get("description", "")
+    image_base64 = data.get("image")
+    points = data.get('points')
+
+    if not name or not image_base64 or not points or not description:
+        return jsonify({"error": "Missing required fields"}), 400
+
+    try:
+        if image_base64:
+            image_binary = base64.b64decode(image_base64)
+        else:
+            image_binary = None
+    except Exception:
+        return jsonify({"error": "Invalid base64 image"}), 400
+
+    badge = Badge(
+        name=name,
+        description=description,
+        image=image_binary,
+        points=points
+    )
+
+    db.session.add(badge)
+    db.session.commit()
+
+    return jsonify({
+        "id": badge.badge_id,
+        "label": badge.name,
+        "image": badge.image,
+        "description":badge.description,
+        "points":badge.points
+    }), 201
+
+def create_activity():
+    lesson_id = request.args.get('lesson_id', type=int)
+    data = request.get_json()
+    required_fields = ['title','description','image','instructions','difficulty', 'answer_format']
+    
+    if not all(field in data for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    title = data['title']
+    description = data['description']
+    image = data['image']
+    instructions=data['instructions']
+    difficulty=data['difficulty']    
+    answer_format = data['answer_format']
+
+    try:
+        if image:
+            image_base64 = base64.b64decode(image)
+        else:
+            image_base64 = None
+    except Exception:
+        return jsonify({"error": "Invalid base64 image"}), 400
+    allowed_formats = ['text', 'image', 'pdf']
+    if answer_format not in allowed_formats:
+        return jsonify({"error": "Invalid answer_format. Must be one of: text, image, pdf"}), 400
+
+    activity = Activity(
+        name = title,
+        description = description,
+        instructions = instructions,
+        difficulty = difficulty,
+        image = image_base64,
+        lesson_id = lesson_id,
+        answer_format = answer_format
+    )
+    db.session.add(activity)
+    db.session.commit()
+
+    return jsonify({
+        "id": activity.activity_id,
+        "title": activity.name,
+        "answer_format": activity.answer_format,
+        "difficulty" : activity.difficulty
+    }), 201
+
+def create_lesson():
+    skill_id = request.args.get('skill_id', type=int)
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({'error': 'Invalid JSON'}), 400
+
+    required = ['title', 'content', 'image']
+    if not all(k in data for k in required):
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    title = data['title']
+    content_raw = data['content']
+    image_base64 = data['image']
+    if description:
+        description = data['description']
+    else:
+        description = None
+
+    skill = Skill.query.get(skill_id)
+    if not skill:
+        return jsonify({'error': 'Invalid curriculum_id'}), 404
+
+    try:
+        content = json.loads(content_raw) if isinstance(content_raw, str) else content_raw
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Content must be valid JSON'}), 400
+
+    try:
+        if image_base64:
+            image_binary = base64.b64decode(image_base64)
+        else:
+            image_binary = None
+    except Exception:
+        return jsonify({'error': 'Invalid base64 image'}), 400
+
+    max_position = db.session.query(db.func.max(Lesson.position)).filter_by(skill_id=skill_id).scalar()
+    next_position = (max_position or 0) + 1
+
+    lesson = Lesson(
+        skill_id=skill_id,
+        title=title,
+        content=content,
+        description=description,
+        image=image_binary,
+        position=next_position
+    )
+
+    db.session.add(lesson)
+    db.session.commit()
+
+    return jsonify({
+        "id": lesson.lesson_id,
+        "title": lesson.title,
+        "curriculum": skill.name,
+        "position": lesson.position
+    }), 201
+    
+
+def create_quiz():
+    lesson_id = request.args.get('lesson_id', type=int)
+    
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({'error': 'Invalid JSON format'}), 400
+
+    required_fields = ['title','image','description', 'difficulty', 'time_duration','point', 'questions']
+    if not all(field in data for field in required_fields):
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    picture = data['image']
+    title = data['title']
+    description = data['description']
+    difficulty = data['difficulty']
+    points = data['point']
+    time_duration = data['time_duration']
+    questions = data['questions']
+
+    try:
+        if picture:
+            image_binary = base64.b64decode(picture)
+        else:
+            image_binary = None
+    except Exception:
+        return jsonify({'error': 'Invalid base64 image'}), 400
+
+    if not isinstance(questions, list) or not questions:
+        return jsonify({'error': 'questions must be a non-empty list'}), 400
+
+    questions_json = []
+    answers_json = []
+
+    for idx, question in enumerate(questions):
+        q_text = question.get('question')
+        opts = question.get('options', [])
+
+        if not q_text or not isinstance(opts, list) or not opts:
+            return jsonify({'error': f"Invalid format in question #{idx + 1}"}), 400
+
+        questions_json.append({
+            "question": q_text,
+            "options": opts
+        })
+
+        correct_answers = [opt['text'] for opt in opts if opt.get('isCorrect') is True]
+
+        if not correct_answers:
+            return jsonify({"error": f"No correct answer specified for question '{q_text}'"}), 400
+
+        answers_json.append({
+            "question": q_text,
+            "correct_answers": correct_answers
+        })
+
+    max_position = db.session.query(db.func.max(Quiz.position)).filter_by(lesson_id=lesson_id).scalar()
+    next_position = (max_position or 0) + 1
+
+    quiz = Quiz(
+        quiz_name=title,
+        description=description,
+        questions=questions_json,
+        answers = answers_json,
+        difficulty=difficulty,
+        points=points,
+        image=image_binary,
+        lesson_id=lesson_id,
+        position=next_position,
+        is_visible=True,
+        created_at=datetime.utcnow(),
+        time_duration=time_duration
+    )
+
+    db.session.add(quiz)
+    db.session.commit()
+
+    return jsonify({
+        "id": quiz.quiz_id,
+        "title": quiz.quiz_name,
+        "difficulty": quiz.difficulty,
+        "points": quiz.points
+    }), 201
+    
+    
+def admin_child_profile(current_user, role):
+    child_id = request.args.get('id', type=int)
+    if not child_id:
+        return jsonify({'error': 'Child ID is required as query param ?id='}), 400
+
+    child = Child.query.get(child_id)
+    if not child:
+        return jsonify({'error': 'Child not found'}), 404
+
+    # Ensure parent can only access their own child
+    if role == "parent" and child.parent_id != current_user.parent_id:
+        return jsonify({'error': 'Access denied to this child profile'}), 403
+
+    # Get parent info
+    child_age = age_calc(child.dob)
+    parent = Parent.query.get(child.parent_id)
+    parent_info = {
+        "id": parent.parent_id,
+        "name": parent.name,
+        "email": parent.email_id
+    } if parent else None
+
+    # Skill progress
+    all_skills = Skill.query.all()
+    skills_progress = []
+    for skill in all_skills:
+        lessons = Lesson.query.filter_by(skill_id=skill.skill_id).all()
+        lesson_ids = [l.lesson_id for l in lessons]
+
+        lesson_started_count = len(lesson_ids)
+        lesson_completed_count = LessonHistory.query.filter(
             LessonHistory.child_id == child_id,
             LessonHistory.lesson_id.in_(lesson_ids)
-        )
-    }
-    completed_activities = {
-        ah.activity_id for ah in ActivityHistory.query.filter(
-            ActivityHistory.activity_id.in_([a.activity_id for a in activities])
-        )
-    }
-    passed_quizzes = {
-        qh.quiz_id for qh in QuizHistory.query.filter(
-            QuizHistory.child_id == child_id,
-            QuizHistory.quiz_id.in_([q.quiz_id for q in quizzes]),
-            QuizHistory.score >= 40
-        )
-    }
-    # result
-    result = []
-    for skill in skills:
-        lids = lesson_map.get(skill.skill_id, [])
-        aids = [a.activity_id for a in activities if a.lesson_id in lids]
-        qids = [q.quiz_id for q in quizzes if q.lesson_id in lids]
-        total = len(lids) + len(aids) + len(qids)
-        completed = (
-            sum(1 for lid in lids if lid in completed_lessons) +
-            sum(1 for aid in aids if aid in completed_activities) +
-            sum(1 for qid in qids if qid in passed_quizzes)
-        )
-        progress = round((completed / total) * 100) if total else 0
-        result.append({
-            "curriculum_id": skill.skill_id,
-            "name": skill.name,
-            "description": skill.description,
-            "image": None,
-            "progress_status": progress
+        ).count()
+        quiz_attempted_count = QuizHistory.query.join(Quiz).filter(
+            Quiz.lesson_id.in_(lesson_ids),
+            QuizHistory.child_id == child_id
+        ).count()
+
+        skills_progress.append({
+            "skill_id": str(skill.skill_id),
+            "skill_name": skill.name,
+            "lesson_started_count": lesson_started_count,
+            "lesson_completed_count": lesson_completed_count,
+            "quiz_attempted_count": quiz_attempted_count
         })
-    return jsonify({"curriculums": result}), 200
+
+    # Points earned
+    point_earned = []
+    quiz_histories = QuizHistory.query.join(Quiz).filter(
+        QuizHistory.child_id == child_id
+    ).all()
+    for qh in quiz_histories:
+        point_earned.append({
+            "point": qh.score,
+            "date": qh.quiz.created_at.strftime("%Y-%m-%d") if qh.quiz and qh.quiz.created_at else "N/A"
+        })
+
+    # Assessments (quizzes + activities)
+    assessments = []
+    for qh in quiz_histories:
+        quiz = Quiz.query.get(qh.quiz_id)
+        if quiz:
+            assessments.append({
+                "id": qh.quiz_history_id,
+                "skill_id": str(quiz.lesson.skill_id),
+                "assessment_type": "Quiz",
+                "title": quiz.quiz_name,
+                "date": quiz.created_at.strftime("%Y-%m-%d") if quiz.created_at else "N/A",
+                "score": qh.score,
+                "max_score": quiz.points
+            })
+
+    activity_histories = ActivityHistory.query.join(Activity).filter(
+        Activity.child_id == child_id
+    ).all()
+    for ah in activity_histories:
+        activity = ah.activity
+        assessments.append({
+            "id": ah.activity_history_id,
+            "skill_id": str(activity.lesson.skill_id) if activity.lesson else "N/A",
+            "assessment_type": "Activity",
+            "title": activity.name,
+            "date": ah.created_at.strftime("%Y-%m-%d") if hasattr(ah, "created_at") and ah.created_at else "N/A",
+            "score": "Pass",
+            "max_score": "Pass"
+        })
+
+    # Badges (encode images)
+    badges = []
+    badge_histories = BadgeHistory.query.join(Badge).filter(
+        BadgeHistory.child_id == child_id
+    ).all()
+    for bh in badge_histories:
+        badge_img_base64 = ""
+        if bh.badge and bh.badge.image:
+            badge_img_base64 = "data:image/png;base64," + base64.b64encode(bh.badge.image).decode("utf-8")
+        badges.append({
+            "badge_id": str(bh.badge_id),
+            "title": bh.badge.name if bh.badge else "",
+            "image": badge_img_base64,
+            "awarded_on": bh.created_at.strftime("%Y-%m-%d") if hasattr(bh, 'created_at') and bh.created_at else "N/A"
+        })
+
+    return jsonify({
+        "info": {
+            "child_id": str(child.child_id),
+            "full_name": child.name,
+            "age": child_age,
+            "enrollment_date": child.enrollment_date.strftime("%Y-%m-%d") if child.enrollment_date else None,
+            "status": "Blocked" if child.is_blocked else "Active",
+            "parent": parent_info
+        },
+        "skills_progress": skills_progress,
+        "point_earned": point_earned,
+        "assessments": sorted(assessments, key=lambda x: x['date'], reverse=True),
+        "achievements": {
+            "badges": badges,
+            "streak": child.streak or 0
+        }
+    }), 200
 
 
-# def get_curriculums_for_child(child_id):
-#     # Get skills
-#     child = Child.query.get(child_id)
-#     if not child:
-#         return jsonify({"error": "Child not found"}), 404
-#     age = age_calc(child.dob)
-#     skills = Skill.query.filter(Skill.min_age <= age, Skill.max_age >= age).all()
-#     result = []
-#     for skill in skills:
-#         # Lessons, Activities, Quizzes under this skill
-#         lessons = Lesson.query.filter_by(skill_id=skill.skill_id).all()
-#         lesson_ids = [l.lesson_id for l in lessons]
-#         activities = Activity.query.filter(Activity.lesson_id.in_(lesson_ids)).all()
-#         activity_ids = [a.activity_id for a in activities]
-#         quizzes = Quiz.query.filter(Quiz.lesson_id.in_(lesson_ids)).all()
-#         quiz_ids = [q.quiz_id for q in quizzes]
-#         total_items = len(lesson_ids) + len(activity_ids) + len(quiz_ids)
-#         completed_lessons = LessonHistory.query.filter(
-#             LessonHistory.child_id == child_id,
-#             LessonHistory.lesson_id.in_(lesson_ids)
-#         ).count()
-#         submitted_activities = ActivityHistory.query.filter(
-#             ActivityHistory.activity_id.in_(activity_ids)
-#         ).count()
-#         passed_quizzes = QuizHistory.query.filter(
-#             QuizHistory.child_id == child_id,
-#             QuizHistory.quiz_id.in_(quiz_ids),
-#             QuizHistory.score >= 40  # as per iitm
-#         ).count()
-#         completed_items = completed_lessons + submitted_activities + passed_quizzes
-#         progress = round((completed_items / total_items) * 100) if total_items else 0
-#         result.append({
-#             "curriculum_id": skill.skill_id,
-#             "name": skill.name,
-#             "description": skill.description,
-#             "image": None,
-#             "progress_status": progress
-#         })
-#     return jsonify({"curriculums": result}), 200
+def update_admin_email(current_user):
+    data = request.get_json()
+    new_email = data.get("email")
+
+    if not new_email or "@" not in new_email:
+        return jsonify({"error": "A valid email is required."}), 400
+
+    # Check if the new email already exists in another admin account
+    existing = Admin.query.filter(Admin.email_id == new_email, Admin.admin_id != current_user.admin_id).first()
+    if existing:
+        return jsonify({"error": "An account with this email already exists."}), 409
+
+    if not current_user:
+        return jsonify({"error": "Admin not found."}), 404
+
+    current_user.email_id = new_email
+    db.session.commit()
+
+    return jsonify({"message": "Email updated successfully."}), 200
+
+def update_admin_password(current_user):
+    data = request.get_json()
+    
+    old_password = data.get("oldPassword")
+    new_password = data.get("newPassword")
+    confirm_password = data.get("confirmPassword")
+
+    if not old_password or not new_password or not confirm_password:
+        return jsonify({"error": "All password fields are required."}), 400
+
+    if new_password != confirm_password:
+        return jsonify({"error": "New password & confirmation do not match."}), 400
+
+    admin_id = current_user.admin_id
+    admin = Admin.query.get(admin_id)
+
+    if not admin:
+        return jsonify({"error": "Admin not found."}), 404
+
+    if not check_password_hash(admin.password, old_password):
+        return jsonify({"error": "Old password is incorrect."}), 401
+
+    admin.password = generate_password_hash(new_password)
+    db.session.commit()
+
+    return jsonify({"message": "Password updated successfully."}), 200
+
+def block_child():
+    data = request.get_json()
+    child_id = data.get("id")
+
+    if not child_id:
+        return jsonify({"error": "Missing 'id' in request body"}), 400
+
+    child = Child.query.get(child_id)
+    if not child:
+        return jsonify({"error": "Child not found"}), 404
+
+    if child.is_blocked:
+        return jsonify({"message": "Child is already blocked."}), 200
+
+    child.is_blocked = True
+    db.session.commit()
+
+    return jsonify({"message": f"Child with ID {child_id} has been blocked."}), 200
+
+def unblock_child():
+    data = request.get_json()
+    child_id = data.get("id")
+
+    if not child_id:
+        return jsonify({"error": "Missing 'id' in request body"}), 400
+
+    child = Child.query.get(child_id)
+    if not child:
+        return jsonify({"error": "Child not found"}), 404
+
+    if not child.is_blocked:
+        return jsonify({"message": "Child is already unblocked."}), 200
+
+    child.is_blocked = False
+    db.session.commit()
+
+    return jsonify({"message": f"Child with ID {child_id} has been unblocked."}), 200
+
+def block_parent():
+    data = request.get_json()
+    parent_id = data.get("id")
+
+    if not parent_id:
+        return jsonify({"error": "Missing 'id' in request body"}), 400
+
+    parent = Parent.query.get(parent_id)
+    if not parent:
+        return jsonify({"error": "Parent not found"}), 404
+
+    if parent.is_blocked:
+        return jsonify({"message": "Parent is already blocked."}), 200
+
+    parent.is_blocked = True
+    db.session.commit()
+
+    return jsonify({"message": f"Parent with ID {parent_id} has been blocked."}), 200
+
+def unblock_parent():
+    data = request.get_json()
+    parent_id = data.get("id")
+
+    if not parent_id:
+        return jsonify({"error": "Missing 'id' in request body"}), 400
+
+    parent = Parent.query.get(parent_id)
+    if not parent:
+        return jsonify({"error": "Parent not found"}), 404
+
+    if not parent.is_blocked:
+        return jsonify({"message": "Parent is already unblocked."}), 200
+
+    parent.is_blocked = False
+    db.session.commit()
+
+    return jsonify({"message": f"Parent with ID {parent_id} has been unblocked."}), 200
+
+def update_activity():
+    data = request.get_json()
+
+    activity_id = data.get('id')
+    if not activity_id:
+        return jsonify({"error": "Missing required field: id"}), 400
+
+    activity = Activity.query.get(activity_id)
+    if not activity:
+        return jsonify({"error": "Activity not found"}), 404
+
+    image = data.get("image")
+    title = data.get("title")
+    description = data.get("description")
+    instructions = data.get("instructions")
+    difficulty = data.get("difficulty")
+    point = data.get("point")
+    answer_format = data.get("answer_format")
+
+    if image is not None:
+        try:
+            activity.image = base64.b64decode(image) if image else None
+        except Exception:
+            return jsonify({"error": "Invalid base64 image format"}), 400
+
+    if title is not None:
+        activity.name = title
+    if description is not None:
+        activity.description = description
+    if instructions is not None:
+        activity.instructions = instructions
+    if difficulty is not None:
+        activity.difficulty = difficulty
+    if point is not None:
+        activity.points = point
+    if answer_format is not None:
+        allowed_formats = ['text', 'image', 'pdf']
+        if answer_format not in allowed_formats:
+            return jsonify({
+                "error": f"Invalid answer_format. Must be one of: {', '.join(allowed_formats)}"
+            }), 400
+        activity.answer_format = answer_format
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Activity updated successfully.",
+        "id": activity.activity_id,
+        "title": activity.name,
+        "difficulty": activity.difficulty,
+        "points": activity.points,
+        "answer_format": activity.answer_format
+    }), 200
+    
+def update_quiz():
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({"error": "Invalid JSON format"}), 400
+
+    quiz_id = data.get("id")
+    if not quiz_id:
+        return jsonify({"error": "Missing quiz 'id'"}), 400
+
+    quiz = Quiz.query.get(quiz_id)
+    if not quiz:
+        return jsonify({"error": "Quiz not found"}), 404
+
+    title = data.get("title")
+    description = data.get("description")
+    difficulty = data.get("difficulty")
+    points = data.get("point")
+    time_duration = data.get("time_duration")
+    image_base64 = data.get("image")
+    questions = data.get("questions")
+
+    if image_base64 is not None:
+        try:
+            quiz.image = base64.b64decode(image_base64) if image_base64 else None
+        except Exception:
+            return jsonify({"error": "Invalid base64 image"}), 400
+
+    if title is not None:
+        quiz.quiz_name = title
+    if description is not None:
+        quiz.description = description
+    if difficulty is not None:
+        quiz.difficulty = difficulty
+    if points is not None:
+        quiz.points = points
+    if time_duration is not None:
+        quiz.time_duration = time_duration
+
+    if questions is not None:
+        if not isinstance(questions, list) or not questions:
+            return jsonify({'error': 'questions must be a non-empty list'}), 400
+
+        questions_json = []
+        answers_json = []
+
+        for idx, question in enumerate(questions):
+            q_text = question.get("question")
+            opts = question.get("options", [])
+
+            if not q_text or not isinstance(opts, list) or not opts:
+                return jsonify({'error': f"Invalid question format at index {idx}"}), 400
+
+            questions_json.append({
+                "question": q_text,
+                "options": opts
+            })
+
+            correct_answers = [opt["text"] for opt in opts if opt.get("isCorrect") is True]
+
+            if not correct_answers:
+                return jsonify({'error': f"No correct answer specified for question: {q_text}"}), 400
+
+            answers_json.append({
+                "question": q_text,
+                "correct_answers": correct_answers
+            })
+
+        quiz.questions = questions_json
+        quiz.answers = answers_json
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Quiz updated successfully",
+        "id": quiz.quiz_id,
+        "title": quiz.quiz_name,
+        "difficulty": quiz.difficulty,
+        "points": quiz.points,
+        "time_duration": quiz.time_duration
+    }), 200
+
+def update_lesson():
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({'error': 'Invalid JSON format'}), 400
+
+    lesson_id = data.get('id')
+    if not lesson_id:
+        return jsonify({'error': 'Missing required field: id'}), 400
+
+    lesson = Lesson.query.get(lesson_id)
+    if not lesson:
+        return jsonify({'error': f'Lesson with ID {lesson_id} not found'}), 404
+
+    title = data.get('title')
+    content_raw = data.get('content')
+    image_base64 = data.get('image')
+    description = data.get('description')
+    curriculum_id = data.get('curriculum_id')
+
+    if title is not None:
+        lesson.title = title
+        
+    if description is not None:
+        lesson.description = description
+    
+    if curriculum_id is not None:
+        lesson.skill_id = curriculum_id
+
+    if content_raw is not None:
+        try:
+            content_json = json.loads(content_raw) if isinstance(content_raw, str) else content_raw
+            lesson.content = content_json
+        except Exception:
+            return jsonify({'error': 'Invalid content format. Must be valid JSON.'}), 400
+
+    if image_base64 is not None:
+        try:
+            lesson.image = base64.b64decode(image_base64) if image_base64 else None
+        except Exception:
+            return jsonify({'error': 'Invalid base64 image format'}), 400
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Lesson updated successfully.",
+        "id": lesson.lesson_id,
+        "title": lesson.title,
+    }), 200
+
+def delete_badge():
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({'error': 'Invalid JSON format'}), 400
+
+    badge_id = data.get("id")
+
+    if not badge_id:
+        return jsonify({"error": "Missing 'id' field in request body"}), 400
+
+    try:
+        badge_id = int(badge_id)
+    except ValueError:
+        return jsonify({"error": "Invalid badge ID format."}), 400
+
+    badge = Badge.query.get(badge_id)
+    if not badge:
+        return jsonify({"error": "Badge not found"}), 404
+
+    db.session.delete(badge)
+    db.session.commit()
+
+    return jsonify({
+        "message": f"Badge with ID {badge_id} has been deleted."
+    }), 
+
+def delete_activity():
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({'error': 'Invalid JSON format'}), 400
+
+    activity_id = data.get('id')
+    if not activity_id:
+        return jsonify({"error": "Missing 'id' in request body"}), 400
+
+    try:
+        activity_id = int(activity_id)
+    except ValueError:
+        return jsonify({"error": "Activity ID must be a valid number."}), 400
+
+    activity = Activity.query.get(activity_id)
+    if not activity:
+        return jsonify({"error": f"Activity with ID {activity_id} not found."}), 404
+
+    db.session.delete(activity)
+    db.session.commit()
+
+    return jsonify({
+        "message": f"Activity with ID {activity_id} has been deleted successfully."
+    }), 200
+ 
+def delete_quiz():
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({"error": "Invalid JSON format"}), 400
+
+    quiz_id = data.get('id')
+    if not quiz_id:
+        return jsonify({"error": "Missing 'id' in request body"}), 400
+
+    try:
+        quiz_id = int(quiz_id)
+    except ValueError:
+        return jsonify({"error": "Quiz ID must be a valid number."}), 400
+
+    quiz = Quiz.query.get(quiz_id)
+    if not quiz:
+        return jsonify({"error": f"Quiz with ID {quiz_id} not found."}), 404
+
+    db.session.delete(quiz)
+    db.session.commit()
+
+    return jsonify({
+        "message": f"Quiz with ID {quiz_id} has been deleted successfully."
+    }), 200
+
+def delete_lesson():
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({"error": "Invalid JSON format"}), 400
+
+    lesson_id = data.get("id")
+    if not lesson_id:
+        return jsonify({"error": "Missing 'id' in request body"}), 400
+
+    try:
+        lesson_id = int(lesson_id)
+    except ValueError:
+        return jsonify({"error": "Invalid lesson ID. Must be a number."}), 400
+
+    lesson = Lesson.query.get(lesson_id)
+    if not lesson:
+        return jsonify({"error": f"Lesson with ID {lesson_id} not found."}), 404
+
+    db.session.delete(lesson)
+    db.session.commit()
+
+    return jsonify({
+        "message": f"Lesson with ID {lesson_id} has been deleted successfully."
+    }), 200
+
+
+def get_active_users_chart():
+    try:
+        end_date = datetime.today().date()
+        start_date = end_date - timedelta(days=20)
+        date_range = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+
+        result = {
+            "dates": [],
+            "active_children": [],
+            "active_parents": [],
+            "new_children_signups": [],
+            "new_parent_signups": [],
+            "total_active_users": []
+        }
+
+        for day in date_range:
+            day_start = datetime.combine(day, datetime.min.time())
+            day_end = datetime.combine(day, datetime.max.time())
+
+            # Active children (last_login on this date)
+            active_children_count = Child.query.filter(
+                Child.last_login >= day_start,
+                Child.last_login <= day_end
+            ).count()
+
+            # Active parents (no last_login field in model, fallback to assumption: enrollment_date if using session tracking)
+            active_parents_count = Parent.query.filter(
+                Parent.children.any(
+                    Child.last_login >= day_start,
+                    Child.last_login <= day_end
+                )
+            ).count()
+
+            # New child signups (enrollment_date on this date)
+            new_children = Child.query.filter(
+                Child.enrollment_date >= day_start,
+                Child.enrollment_date <= day_end
+            ).count()
+
+            # New parent signups (using created_at assumed via id + date, fallback logic if no date field)
+            new_parents = Parent.query.filter(
+                db.func.date(Parent.children.any(Child.enrollment_date)) == day
+            ).count()
+
+            result["dates"].append(day.strftime("%Y-%m-%d"))
+            result["active_children"].append(active_children_count)
+            result["active_parents"].append(active_parents_count)
+            result["new_children_signups"].append(new_children)
+            result["new_parent_signups"].append(new_parents)
+            result["total_active_users"].append(active_children_count + active_parents_count)
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({"error": "Failed to generate active users chart", "details": str(e)}), 500
+
+def get_skill_engagment_chart():
+    # Prepare result: skill name by age group
+    results = {
+        "age_8_10": {},
+        "age_10_12": {},
+        "age_12_14": {}
+    }
+
+    all_skills = Skill.query.all()
+
+    # For each skill, aggregate lessons and quizzes
+    for skill in all_skills:
+        skill_name = skill.name
+        lesson_ids = [lesson.lesson_id for lesson in skill.lessons]
+        quiz_ids = []
+        for lesson in skill.lessons:
+            quiz_ids += [quiz.quiz_id for quiz in lesson.quizzes]
+
+        # Prepare counts per age group
+        counts = {"age_8_10": 0, "age_10_12": 0, "age_12_14": 0}
+
+        # Loop all children with DOB
+        children = Child.query.filter(Child.dob != None).all()
+        for child in children:
+            today = date.today()
+            age = age_calc(child.dob)
+            group = None
+            if 8 <= age <= 10:
+                group = "age_8_10"
+            elif 10 < age <= 12:
+                group = "age_10_12"
+            elif 12 < age <= 14:
+                group = "age_12_14"
+            if not group:
+                continue
+
+            lesson_count = LessonHistory.query.filter(
+                LessonHistory.child_id == child.child_id,
+                LessonHistory.lesson_id.in_(lesson_ids)
+            ).count()
+            quiz_count = QuizHistory.query.filter(
+                QuizHistory.child_id == child.child_id,
+                QuizHistory.quiz_id.in_(quiz_ids)
+            ).count()
+            counts[group] += lesson_count + quiz_count
+
+        # Store per age group
+        results["age_8_10"][skill_name] = counts["age_8_10"]
+        results["age_10_12"][skill_name] = counts["age_10_12"]
+        results["age_12_14"][skill_name] = counts["age_12_14"]
+
+    # Format to contract spec
+    return jsonify({
+        "age_8_10": results["age_8_10"],
+        "age_10_12": results["age_10_12"],
+        "age_12_14": results["age_12_14"]
+    }), 200
+
+def get_badge_by_age_group_chart():
+    # Get all badges
+    badge_objs = Badge.query.all()
+    results = []
+    today = date.today()
+
+    for badge in badge_objs:
+        # Fetch all BadgeHistory for this badge, joined with Child for age computation
+        badge_histories = BadgeHistory.query.filter_by(badge_id=badge.badge_id).all()
+
+        age_counts = {"age_8_10": 0, "age_10_12": 0, "age_12_14": 0}
+
+        for hist in badge_histories:
+            child = Child.query.get(hist.child_id)
+            if not child or not child.dob:
+                continue
+            age = age_calc(child.dob)
+            if 8 <= age <= 10:
+                age_counts["age_8_10"] += 1
+            elif 10 < age <= 12:
+                age_counts["age_10_12"] += 1
+            elif 12 < age <= 14:
+                age_counts["age_12_14"] += 1
+
+        results.append({
+            "badge_name": badge.name,
+            "age_8_10": age_counts["age_8_10"],
+            "age_10_12": age_counts["age_10_12"],
+            "age_12_14": age_counts["age_12_14"],
+        })
+
+    return jsonify(results), 200
+
+
+def get_learning_funnel_chart():
+    try:
+        # Users who started any skill (at least one lesson)
+        started_lesson_subq = db.session.query(
+            LessonHistory.child_id
+        ).distinct().subquery()
+
+        user_started_skill = db.session.query(started_lesson_subq.c.child_id).count()
+
+        # Total lessons completed (can be multiple per child)
+        lessons_completed = db.session.query(LessonHistory).count()
+
+        # Total quiz attempts
+        quizzes_attempted = db.session.query(QuizHistory).count()
+
+        # Badges earned (count of reward history)
+        badges_earned = db.session.query(BadgeHistory).count()
+
+        return jsonify([{
+            "user_started_skill": user_started_skill,
+            "lessons_completed": lessons_completed,
+            "quizzes_attempted": quizzes_attempted,
+            "badges_earned": badges_earned
+        }]), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to generate funnel metrics", "details": str(e)}), 500
+
+def get_age_group_distribution_chart():
+    today = date.today()
+    age_brackets = [
+        ("age_8_10", 8, 10),
+        ("age_10_12", 10, 12),
+        ("age_12_14", 12, 14),
+    ]
+
+    skills = Skill.query.all()
+    result = []
+
+    for skill in skills:
+        skill_obj = {
+            "skill_id": str(skill.skill_id),
+            "skill_name": skill.name,
+            "lesson_started_count": {},
+            "lesson_completed_count": {},
+            "quiz_attempted_count": {},
+        }
+
+        lessons = Lesson.query.filter_by(skill_id=skill.skill_id).all()
+        lesson_ids = [lesson.lesson_id for lesson in lessons]
+
+        quizzes = Quiz.query.filter(Quiz.lesson_id.in_(lesson_ids)).all()
+        quiz_ids = [quiz.quiz_id for quiz in quizzes]
+
+        for bracket_label, min_age, max_age in age_brackets:
+            # Get children in this age bracket
+            children_in_bracket = Child.query.filter(Child.dob != None).all()
+            children_ids = [
+                child.child_id for child in children_in_bracket
+                if min_age <= (today.year - child.dob.year - ((today.month, today.day) < (child.dob.month, child.dob.day))) <= max_age
+            ]
+
+            # Lessons started (unique children who started any lesson in this skill and age bracket)
+            started_count = LessonHistory.query.filter(
+                LessonHistory.child_id.in_(children_ids),
+                LessonHistory.lesson_id.in_(lesson_ids)
+            ).distinct(LessonHistory.child_id).count()
+
+            # Lessons completed (total completed records in bracket, or you may want distinct by lesson/child)
+            completed_count = LessonHistory.query.filter(
+                LessonHistory.child_id.in_(children_ids),
+                LessonHistory.lesson_id.in_(lesson_ids)
+            ).count()
+
+            # Quizzes attempted (total attempted in bracket)
+            quiz_attempted = QuizHistory.query.filter(
+                QuizHistory.child_id.in_(children_ids),
+                QuizHistory.quiz_id.in_(quiz_ids)
+            ).count()
+
+            skill_obj["lesson_started_count"][bracket_label] = started_count
+            skill_obj["lesson_completed_count"][bracket_label] = completed_count
+            skill_obj["quiz_attempted_count"][bracket_label] = quiz_attempted
+
+        result.append(skill_obj)
+
+    return jsonify(result), 200
+
+def update_personal_details(current_user):
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    name = data.get("name", "").strip()
+    email = data.get("email", "").strip()
+
+    # Check if both fields are present
+    if not name or not email:
+        return jsonify({'error': 'Both name and email are required.'}), 400
+
+    parent_id = current_user.parent_id
+    parent = Parent.query.get(parent_id)
+    if not parent:
+        return jsonify({'error': 'Parent not found.'}), 404
+
+    # Check for email uniqueness if it's changed
+    if parent.email_id != email:
+        existing = Parent.query.filter(Parent.email_id == email, Parent.parent_id != parent_id).first()
+        if existing:
+            return jsonify({'error': 'Email already registered to another account.'}), 409
+
+    # Update fields
+    parent.name = name
+    parent.email_id = email
+    db.session.commit()
+
+    return jsonify({
+        "id": parent.parent_id,
+        "name": parent.name,
+        "email": parent.email_id,
+        "message": "Personal details updated successfully."
+    }), 200
+
+def update_parent_password(current_user):
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    old_password = data.get("oldPassword")
+    new_password = data.get("newPassword")
+    confirm_password = data.get("confirmPassword")
+
+    # Validate required fields
+    if not all([old_password, new_password, confirm_password]):
+        return jsonify({"error": "All fields (oldPassword, newPassword, confirmPassword) are required."}), 400
+
+    if new_password != confirm_password:
+        return jsonify({"error": "New password and confirm password do not match."}), 400
+
+    if len(new_password) < 4:
+        return jsonify({"error": "New password must be at least 4 characters long."}), 400
+
+    parent = Parent.query.get(current_user.parent_id)
+    if not parent:
+        return jsonify({"error": "Parent not found"}), 404
+
+    if not check_password_hash(parent.password, old_password):
+        return jsonify({"error": "Old password is incorrect."}), 401
+
+    if check_password_hash(parent.password, new_password):
+        return jsonify({"error": "New password must be different from the current password."}), 409
+
+    parent.password = generate_password_hash(new_password)
+    db.session.commit()
+
+    return jsonify({"message": "Password updated successfully."}), 200
+
+def post_feedback():
+    data = request.get_json()
+    
+    skill_type = data.get("skill_type")
+    item_id = data.get("id")
+    feedback_text = data.get("text", "").strip()
+
+    if skill_type not in ("Quiz", "Activity"):
+        return jsonify({"error": "Invalid skill_type. Must be 'Quiz' or 'Activity'."}), 400
+
+    if not item_id or not isinstance(item_id, int):
+        return jsonify({"error": "Valid numeric 'id' is required."}), 400
+
+    if not feedback_text:
+        return jsonify({"error": "Feedback text cannot be empty."}), 400
+
+    try:
+        if skill_type == "Quiz":
+            quiz_history = QuizHistory.query.get(item_id)
+            if not quiz_history:
+                return jsonify({"error": "Quiz attempt not found."}), 404
+            quiz_history.feedback = feedback_text
+
+        elif skill_type == "Activity":
+            activity_history = ActivityHistory.query.get(item_id)
+            if not activity_history:
+                return jsonify({"error": "Activity attempt not found."}), 404
+            activity_history.feedback = feedback_text
+
+        db.session.commit()
+
+        return jsonify({"message": "Feedback submitted successfully."}), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({"error": "Database error occurred", "details": str(e)}), 500
