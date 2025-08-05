@@ -1,4 +1,6 @@
-from flask import request, jsonify
+from io import BytesIO
+import json
+from flask import request, jsonify, send_file
 from .db import db
 from .models import Admin, Session, Parent, Child, Skill, Lesson, LessonHistory, Activity, ActivityHistory, Quiz, QuizHistory, Badge, BadgeHistory
 from .demoData import createDummyData
@@ -7,6 +9,8 @@ from datetime import datetime, date,timedelta
 import uuid
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 import time
+import base64
+from .decorators import only_admin, only_admin_or_parent, only_parent
 
 def parent_regisc(request):
     # Function for parent registration that will later be sent as a request to the routes
@@ -1213,13 +1217,13 @@ def child_profile_image(child_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         return jsonify({'status': 'error', 'message': 'Database error occurred'}), 500
-
-@only_admin_or_parent
-def get_children(session_info):
-    if "admin_id" in session_info:
+    
+def get_children(current_user, role):
+    # Admin: all children; Parent: only their children
+    if role == "admin":
         children = Child.query.all()
-    elif "parent_id" in session_info:
-        children = Child.query.filter_by(parent_id=session_info["parent_id"]).all()
+    elif role == "parent":
+        children = Child.query.filter_by(parent_id=current_user.parent_id).all()
     else:
         return jsonify({"error": "Forbidden"}), 403
 
@@ -1236,21 +1240,20 @@ def get_children(session_info):
 
     return jsonify(response), 200
 
-@only_admin_or_parent
-def get_lessons(session_info):
+def get_lessons():
     lessons = Lesson.query.all()
     response = []
     for lesson in lessons:
+        # curriculum is the associated Skill name
         response.append({
             'id': lesson.lesson_id,
             'title': lesson.title,
             'curriculum': lesson.skill.name if lesson.skill else None
         })
+    return jsonify(response), 200
 
-    return jsonify(response)
 
-@only_admin_or_parent
-def get_quizzes(session_info):
+def get_quizzes():
     lesson_id = request.args.get('lesson_id', type=int)
 
     query = Quiz.query
@@ -1271,8 +1274,7 @@ def get_quizzes(session_info):
 
     return jsonify(result)
 
-@only_admin_or_parent
-def get_activities(session_info):
+def get_activities():
     lesson_id = request.args.get('lesson_id', type=int)
 
     query = Activity.query
@@ -1295,63 +1297,87 @@ def get_activities(session_info):
 
     return jsonify(response)
 
-BADGE_IMAGE_BASE_URL = "/home/ektabansal/soft-engg-project-may-2025-se-May-9/frontend/public/badges"
-
-@only_admin_or_parent
-def get_badges(session_info):
+def get_badges():
     badges = Badge.query.all()
     response = []
+
     for badge in badges:
-        image_url = f"{BADGE_IMAGE_BASE_URL}{badge.badge_id}.png"
+        # Convert binary image to base64 string (if available)
+        if badge.image:
+            image_base64 = base64.b64encode(badge.image).decode("utf-8")
+        else:
+            image_base64 = ""
 
         response.append({
             "id": badge.badge_id,
             "label": badge.name,
-            "image": image_url
+            "image": image_base64,
+            "points": badge.points
         })
 
-    return jsonify(response)
+    return jsonify(response), 200
 
-@only_parent 
-def create_child(session_info):
+def create_child(*args, current_user, role, **kwargs):
     data = request.get_json()
-    required_fields = ["name", "username", "password", "dob", "school"]
+
+    # Required fields as per contract
+    required_fields = ["name", "username", "password", "confirmPass", "dob", "school"]
     if not all(field in data for field in required_fields):
         return jsonify({"error": "Missing required fields"}), 400
 
-    name = data["name"]
-    username = data["username"]
+    name = data["name"].strip()
+    username = data["username"].strip()
     password = data["password"]
-    dob_str = data["dob"]
-    school = data["school"]
-    pic=data.get('profile_image')
-    if pic == '':
-        pic = None
+    confirm_password = data["confirmPass"]
+    dob_str = data["dob"].strip()
+    school = data["school"].strip()
 
+    # Image is optional; if present, decode base64
+    pic = data.get("profile_image")
+    if pic and pic != "":
+        try:
+            profile_image = base64.b64decode(pic)
+        except Exception:
+            return jsonify({"error": "Invalid base64 image for profile_image"}), 400
+    else:
+        profile_image = None
+
+    # Password confirmation and length checks
+    if password != confirm_password:
+        return jsonify({"error": "Password and confirm password do not match"}), 400
+    if len(password) < 4:
+        return jsonify({"error": "Password must be at least 4 characters long"}), 400
+
+    # Date and age validation
     try:
         dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
     except ValueError:
         return jsonify({"error": "Invalid DOB format. Expected YYYY-MM-DD."}), 400
-    
-    if Child.query.filter_by(username=username).first():
-        return jsonify({"error": "Username already exists"}), 409
+
     age = age_calc(dob)
     if age < 8 or age > 14:
         return jsonify({'error': 'Only children aged 8 to 14 can register'}), 400
-    else:
-        children=Child.query.filter_by(username=username).first()
-        if children:
-            return jsonify({'error':'Username already registered'}), 409
 
-    hashed_password=generate_password_hash(password)
+    # Uniqueness checks
+    if Child.query.filter_by(username=username).first():
+        return jsonify({"error": "Username already exists"}), 409
+
+    # Optionally check for email if your form allows (some models have nullable email)
+    email = data.get("email")
+    if email and Child.query.filter_by(email_id=email).first():
+        return jsonify({"error": "Email already registered"}), 409
+
+    hashed_password = generate_password_hash(password)
+
     new_child = Child(
         name=name,
         username=username,
-        password=hashed_password,  
+        password=hashed_password,
         dob=dob,
         school=school,
-        parent_id=session_info['parent_id'],
-        profile_image=pic  
+        parent_id=current_user.parent_id,  # comes directly from token/session
+        profile_image=profile_image,
+        email_id=email if email else None
     )
 
     db.session.add(new_child)
@@ -1362,10 +1388,9 @@ def create_child(session_info):
         "name": new_child.name,
         "username": new_child.username,
         "dob": new_child.dob.isoformat(),
-        "school": new_child.school,
+        "school": new_child.school
     }), 201
- 
-@only_admin   
+
 def get_parents():
     parents = Parent.query.all()
 
@@ -1380,14 +1405,14 @@ def get_parents():
 
     return jsonify(response), 200
 
-@only_admin
-def create_badge(session_info):
+def create_badge():
     data = request.get_json()
     name = data.get("title")
     description = data.get("description", "")
     image_base64 = data.get("image")
+    points = data.get('points')
 
-    if not name or not image_base64:
+    if not name or not image_base64 or not points or not description:
         return jsonify({"error": "Missing required fields"}), 400
 
     try:
@@ -1401,7 +1426,8 @@ def create_badge(session_info):
     badge = Badge(
         name=name,
         description=description,
-        image=image_binary
+        image=image_binary,
+        points=points
     )
 
     db.session.add(badge)
@@ -1411,11 +1437,11 @@ def create_badge(session_info):
         "id": badge.badge_id,
         "label": badge.name,
         "image": badge.image,
-        "description":badge.description
+        "description":badge.description,
+        "points":badge.points
     }), 201
 
-@only_admin_or_parent
-def create_activity(session_info):
+def create_activity():
     lesson_id = request.args.get('lesson_id', type=int)
     data = request.get_json()
     required_fields = ['title','description','image','instructions','difficulty', 'answer_format']
@@ -1460,8 +1486,7 @@ def create_activity(session_info):
         "difficulty" : activity.difficulty
     }), 201
 
-@only_admin  
-def create_lesson(session_info):
+def create_lesson():
     skill_id = request.args.get('skill_id', type=int)
     try:
         data = request.get_json()
@@ -1475,6 +1500,10 @@ def create_lesson(session_info):
     title = data['title']
     content_raw = data['content']
     image_base64 = data['image']
+    if description:
+        description = data['description']
+    else:
+        description = None
 
     skill = Skill.query.get(skill_id)
     if not skill:
@@ -1500,6 +1529,7 @@ def create_lesson(session_info):
         skill_id=skill_id,
         title=title,
         content=content,
+        description=description,
         image=image_binary,
         position=next_position
     )
@@ -1515,8 +1545,7 @@ def create_lesson(session_info):
     }), 201
     
 
-@only_admin
-def create_quiz(session_info):
+def create_quiz():
     lesson_id = request.args.get('lesson_id', type=int)
     
     try:
@@ -1601,30 +1630,36 @@ def create_quiz(session_info):
     }), 201
     
     
-@only_admin_or_parent
-def get_child_profile(session_info):
+def admin_child_profile(current_user, role):
     child_id = request.args.get('id', type=int)
     if not child_id:
-        return jsonify({'error': 'Child ID is required as query param ?id=<number>'}), 400
+        return jsonify({'error': 'Child ID is required as query param ?id='}), 400
 
     child = Child.query.get(child_id)
     if not child:
         return jsonify({'error': 'Child not found'}), 404
 
-    if 'parent_id' in session_info and child.parent_id != session_info['parent_id']:
+    # Ensure parent can only access their own child
+    if role == "parent" and child.parent_id != current_user.parent_id:
         return jsonify({'error': 'Access denied to this child profile'}), 403
 
-    today = datetime.today()
-    age = today.year - child.dob.year - ((today.month, today.day) < (child.dob.month, child.dob.day))
+    # Get parent info
+    child_age = age_calc(child.dob)
     parent = Parent.query.get(child.parent_id)
+    parent_info = {
+        "id": parent.parent_id,
+        "name": parent.name,
+        "email": parent.email_id
+    } if parent else None
 
-    skills_progress = []
+    # Skill progress
     all_skills = Skill.query.all()
+    skills_progress = []
     for skill in all_skills:
         lessons = Lesson.query.filter_by(skill_id=skill.skill_id).all()
         lesson_ids = [l.lesson_id for l in lessons]
-        lesson_started_count = len(lesson_ids)
 
+        lesson_started_count = len(lesson_ids)
         lesson_completed_count = LessonHistory.query.filter(
             LessonHistory.child_id == child_id,
             LessonHistory.lesson_id.in_(lesson_ids)
@@ -1642,30 +1677,35 @@ def get_child_profile(session_info):
             "quiz_attempted_count": quiz_attempted_count
         })
 
+    # Points earned
     point_earned = []
-
-    quiz_points = QuizHistory.query.filter_by(child_id=child_id).all()
-    for qp in quiz_points:
+    quiz_histories = QuizHistory.query.join(Quiz).filter(
+        QuizHistory.child_id == child_id
+    ).all()
+    for qh in quiz_histories:
         point_earned.append({
-            "point": qp.score,
-            "date": qp.quiz.created_at.strftime("%Y-%m-%d") if qp.quiz and qp.quiz.created_at else "N/A"
+            "point": qh.score,
+            "date": qh.quiz.created_at.strftime("%Y-%m-%d") if qh.quiz and qh.quiz.created_at else "N/A"
         })
 
-    quizzes = QuizHistory.query.filter_by(child_id=child_id).all()
+    # Assessments (quizzes + activities)
     assessments = []
-    for qh in quizzes:
+    for qh in quiz_histories:
         quiz = Quiz.query.get(qh.quiz_id)
-        assessments.append({
-            "id": qh.quiz_history_id,
-            "skill_id": str(quiz.lesson.skill_id),
-            "assessment_type": "Quiz",
-            "title": quiz.quiz_name,
-            "date": quiz.created_at.strftime("%Y-%m-%d") if quiz.created_at else "N/A",
-            "score": qh.score,
-            "max_score": 100  # or make dynamic if needed
-        })
+        if quiz:
+            assessments.append({
+                "id": qh.quiz_history_id,
+                "skill_id": str(quiz.lesson.skill_id),
+                "assessment_type": "Quiz",
+                "title": quiz.quiz_name,
+                "date": quiz.created_at.strftime("%Y-%m-%d") if quiz.created_at else "N/A",
+                "score": qh.score,
+                "max_score": quiz.points
+            })
 
-    activity_histories = ActivityHistory.query.join(Activity).filter(Activity.child_id == child_id).all()
+    activity_histories = ActivityHistory.query.join(Activity).filter(
+        Activity.child_id == child_id
+    ).all()
     for ah in activity_histories:
         activity = ah.activity
         assessments.append({
@@ -1673,68 +1713,67 @@ def get_child_profile(session_info):
             "skill_id": str(activity.lesson.skill_id) if activity.lesson else "N/A",
             "assessment_type": "Activity",
             "title": activity.name,
-            "date": "N/A",  # You can add created_at to Activity if you want
-            "score": "Pass",  # assumption — no scoring system for activity
+            "date": ah.created_at.strftime("%Y-%m-%d") if hasattr(ah, "created_at") and ah.created_at else "N/A",
+            "score": "Pass",
             "max_score": "Pass"
         })
 
-    badge_history = BadgeHistory.query.filter_by(child_id=child_id).all()
+    # Badges (encode images)
     badges = []
-    for bh in badge_history:
-        badge = Badge.query.get(bh.badge_id)
-        if badge:
-            badges.append({
-                "badge_id": str(badge.badge_id),
-                "title": badge.name,
-                "image": "",  # Convert to base64 or use a badge URL if available
-                "awarded_on": bh.awarded_on
-            })
+    badge_histories = BadgeHistory.query.join(Badge).filter(
+        BadgeHistory.child_id == child_id
+    ).all()
+    for bh in badge_histories:
+        badge_img_base64 = ""
+        if bh.badge and bh.badge.image:
+            badge_img_base64 = "data:image/png;base64," + base64.b64encode(bh.badge.image).decode("utf-8")
+        badges.append({
+            "badge_id": str(bh.badge_id),
+            "title": bh.badge.name if bh.badge else "",
+            "image": badge_img_base64,
+            "awarded_on": bh.created_at.strftime("%Y-%m-%d") if hasattr(bh, 'created_at') and bh.created_at else "N/A"
+        })
 
     return jsonify({
         "info": {
             "child_id": str(child.child_id),
             "full_name": child.name,
-            "age": age,
-            "enrollment_date": child.enrollment_date,
+            "age": child_age,
+            "enrollment_date": child.enrollment_date.strftime("%Y-%m-%d") if child.enrollment_date else None,
             "status": "Blocked" if child.is_blocked else "Active",
-            "parent": {
-                "id": parent.parent_id,
-                "name": parent.name,
-                "email": parent.email_id
-            }
+            "parent": parent_info
         },
         "skills_progress": skills_progress,
         "point_earned": point_earned,
-        "assessments": sorted(assessments, key=lambda a: a.get("date"), reverse=True),
+        "assessments": sorted(assessments, key=lambda x: x['date'], reverse=True),
         "achievements": {
             "badges": badges,
-            "streak": child.streak
+            "streak": child.streak or 0
         }
     }), 200
 
-@only_admin
-def update_admin_email(session_info):
+
+def update_admin_email(current_user):
     data = request.get_json()
     new_email = data.get("email")
 
     if not new_email or "@" not in new_email:
         return jsonify({"error": "A valid email is required."}), 400
 
-    existing = Admin.query.filter(Admin.email_id == new_email).first()
+    # Check if the new email already exists in another admin account
+    existing = Admin.query.filter(Admin.email_id == new_email, Admin.admin_id != current_user.admin_id).first()
     if existing:
         return jsonify({"error": "An account with this email already exists."}), 409
 
-    admin = Admin.query.get(session_info['admin_id'])
-    if not admin:
+    if not current_user:
         return jsonify({"error": "Admin not found."}), 404
 
-    admin.email_id = new_email
+    current_user.email_id = new_email
     db.session.commit()
 
     return jsonify({"message": "Email updated successfully."}), 200
 
-@only_admin
-def update_admin_password(session_info):
+def update_admin_password(current_user):
     data = request.get_json()
     
     old_password = data.get("oldPassword")
@@ -1747,7 +1786,7 @@ def update_admin_password(session_info):
     if new_password != confirm_password:
         return jsonify({"error": "New password & confirmation do not match."}), 400
 
-    admin_id = session_info["admin_id"]
+    admin_id = current_user.admin_id
     admin = Admin.query.get(admin_id)
 
     if not admin:
@@ -1761,8 +1800,7 @@ def update_admin_password(session_info):
 
     return jsonify({"message": "Password updated successfully."}), 200
 
-@only_admin
-def block_child(session_info):
+def block_child():
     data = request.get_json()
     child_id = data.get("id")
 
@@ -1781,8 +1819,7 @@ def block_child(session_info):
 
     return jsonify({"message": f"Child with ID {child_id} has been blocked."}), 200
 
-@only_admin
-def unblock_child(session_info):
+def unblock_child():
     data = request.get_json()
     child_id = data.get("id")
 
@@ -1801,8 +1838,7 @@ def unblock_child(session_info):
 
     return jsonify({"message": f"Child with ID {child_id} has been unblocked."}), 200
 
-@only_admin
-def block_parent(session_info):
+def block_parent():
     data = request.get_json()
     parent_id = data.get("id")
 
@@ -1821,8 +1857,7 @@ def block_parent(session_info):
 
     return jsonify({"message": f"Parent with ID {parent_id} has been blocked."}), 200
 
-@only_admin
-def unblock_parent(session_info):
+def unblock_parent():
     data = request.get_json()
     parent_id = data.get("id")
 
@@ -1841,8 +1876,7 @@ def unblock_parent(session_info):
 
     return jsonify({"message": f"Parent with ID {parent_id} has been unblocked."}), 200
 
-@only_admin
-def update_activity(session_info):
+def update_activity():
     data = request.get_json()
 
     activity_id = data.get('id')
@@ -1896,8 +1930,7 @@ def update_activity(session_info):
         "answer_format": activity.answer_format
     }), 200
     
-@only_admin
-def update_quiz(session_info):
+def update_quiz():
     try:
         data = request.get_json()
     except Exception:
@@ -1979,8 +2012,7 @@ def update_quiz(session_info):
         "time_duration": quiz.time_duration
     }), 200
 
-@only_admin
-def update_lesson(session_info):
+def update_lesson():
     try:
         data = request.get_json()
     except Exception:
@@ -1997,9 +2029,17 @@ def update_lesson(session_info):
     title = data.get('title')
     content_raw = data.get('content')
     image_base64 = data.get('image')
+    description = data.get('description')
+    curriculum_id = data.get('curriculum_id')
 
     if title is not None:
         lesson.title = title
+        
+    if description is not None:
+        lesson.description = description
+    
+    if curriculum_id is not None:
+        lesson.skill_id = curriculum_id
 
     if content_raw is not None:
         try:
@@ -2022,8 +2062,7 @@ def update_lesson(session_info):
         "title": lesson.title,
     }), 200
 
-@only_admin
-def delete_badge(session_info):
+def delete_badge():
     try:
         data = request.get_json()
     except Exception:
@@ -2050,8 +2089,7 @@ def delete_badge(session_info):
         "message": f"Badge with ID {badge_id} has been deleted."
     }), 
 
-@only_admin    
-def delete_activity(session_info):
+def delete_activity():
     try:
         data = request.get_json()
     except Exception:
@@ -2077,8 +2115,7 @@ def delete_activity(session_info):
         "message": f"Activity with ID {activity_id} has been deleted successfully."
     }), 200
  
-@only_admin   
-def delete_quiz(session_info):
+def delete_quiz():
     try:
         data = request.get_json()
     except Exception:
@@ -2104,8 +2141,7 @@ def delete_quiz(session_info):
         "message": f"Quiz with ID {quiz_id} has been deleted successfully."
     }), 200
 
-@only_admin
-def delete_lesson(session_info):
+def delete_lesson():
     try:
         data = request.get_json()
     except Exception:
@@ -2132,4 +2168,345 @@ def delete_lesson(session_info):
     }), 200
 
 
+def get_active_users_chart():
+    try:
+        end_date = datetime.today().date()
+        start_date = end_date - timedelta(days=20)
+        date_range = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
 
+        result = {
+            "dates": [],
+            "active_children": [],
+            "active_parents": [],
+            "new_children_signups": [],
+            "new_parent_signups": [],
+            "total_active_users": []
+        }
+
+        for day in date_range:
+            day_start = datetime.combine(day, datetime.min.time())
+            day_end = datetime.combine(day, datetime.max.time())
+
+            # Active children (last_login on this date)
+            active_children_count = Child.query.filter(
+                Child.last_login >= day_start,
+                Child.last_login <= day_end
+            ).count()
+
+            # Active parents (no last_login field in model, fallback to assumption: enrollment_date if using session tracking)
+            active_parents_count = Parent.query.filter(
+                Parent.children.any(
+                    Child.last_login >= day_start,
+                    Child.last_login <= day_end
+                )
+            ).count()
+
+            # New child signups (enrollment_date on this date)
+            new_children = Child.query.filter(
+                Child.enrollment_date >= day_start,
+                Child.enrollment_date <= day_end
+            ).count()
+
+            # New parent signups (using created_at assumed via id + date, fallback logic if no date field)
+            new_parents = Parent.query.filter(
+                db.func.date(Parent.children.any(Child.enrollment_date)) == day
+            ).count()
+
+            result["dates"].append(day.strftime("%Y-%m-%d"))
+            result["active_children"].append(active_children_count)
+            result["active_parents"].append(active_parents_count)
+            result["new_children_signups"].append(new_children)
+            result["new_parent_signups"].append(new_parents)
+            result["total_active_users"].append(active_children_count + active_parents_count)
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({"error": "Failed to generate active users chart", "details": str(e)}), 500
+
+def get_skill_engagment_chart():
+    # Prepare result: skill name by age group
+    results = {
+        "age_8_10": {},
+        "age_10_12": {},
+        "age_12_14": {}
+    }
+
+    all_skills = Skill.query.all()
+
+    # For each skill, aggregate lessons and quizzes
+    for skill in all_skills:
+        skill_name = skill.name
+        lesson_ids = [lesson.lesson_id for lesson in skill.lessons]
+        quiz_ids = []
+        for lesson in skill.lessons:
+            quiz_ids += [quiz.quiz_id for quiz in lesson.quizzes]
+
+        # Prepare counts per age group
+        counts = {"age_8_10": 0, "age_10_12": 0, "age_12_14": 0}
+
+        # Loop all children with DOB
+        children = Child.query.filter(Child.dob != None).all()
+        for child in children:
+            today = date.today()
+            age = age_calc(child.dob)
+            group = None
+            if 8 <= age <= 10:
+                group = "age_8_10"
+            elif 10 < age <= 12:
+                group = "age_10_12"
+            elif 12 < age <= 14:
+                group = "age_12_14"
+            if not group:
+                continue
+
+            lesson_count = LessonHistory.query.filter(
+                LessonHistory.child_id == child.child_id,
+                LessonHistory.lesson_id.in_(lesson_ids)
+            ).count()
+            quiz_count = QuizHistory.query.filter(
+                QuizHistory.child_id == child.child_id,
+                QuizHistory.quiz_id.in_(quiz_ids)
+            ).count()
+            counts[group] += lesson_count + quiz_count
+
+        # Store per age group
+        results["age_8_10"][skill_name] = counts["age_8_10"]
+        results["age_10_12"][skill_name] = counts["age_10_12"]
+        results["age_12_14"][skill_name] = counts["age_12_14"]
+
+    # Format to contract spec
+    return jsonify({
+        "age_8_10": results["age_8_10"],
+        "age_10_12": results["age_10_12"],
+        "age_12_14": results["age_12_14"]
+    }), 200
+
+def get_badge_by_age_group_chart():
+    # Get all badges
+    badge_objs = Badge.query.all()
+    results = []
+    today = date.today()
+
+    for badge in badge_objs:
+        # Fetch all BadgeHistory for this badge, joined with Child for age computation
+        badge_histories = BadgeHistory.query.filter_by(badge_id=badge.badge_id).all()
+
+        age_counts = {"age_8_10": 0, "age_10_12": 0, "age_12_14": 0}
+
+        for hist in badge_histories:
+            child = Child.query.get(hist.child_id)
+            if not child or not child.dob:
+                continue
+            age = age_calc(child.dob)
+            if 8 <= age <= 10:
+                age_counts["age_8_10"] += 1
+            elif 10 < age <= 12:
+                age_counts["age_10_12"] += 1
+            elif 12 < age <= 14:
+                age_counts["age_12_14"] += 1
+
+        results.append({
+            "badge_name": badge.name,
+            "age_8_10": age_counts["age_8_10"],
+            "age_10_12": age_counts["age_10_12"],
+            "age_12_14": age_counts["age_12_14"],
+        })
+
+    return jsonify(results), 200
+
+
+def get_learning_funnel_chart():
+    try:
+        # Users who started any skill (at least one lesson)
+        started_lesson_subq = db.session.query(
+            LessonHistory.child_id
+        ).distinct().subquery()
+
+        user_started_skill = db.session.query(started_lesson_subq.c.child_id).count()
+
+        # Total lessons completed (can be multiple per child)
+        lessons_completed = db.session.query(LessonHistory).count()
+
+        # Total quiz attempts
+        quizzes_attempted = db.session.query(QuizHistory).count()
+
+        # Badges earned (count of reward history)
+        badges_earned = db.session.query(BadgeHistory).count()
+
+        return jsonify([{
+            "user_started_skill": user_started_skill,
+            "lessons_completed": lessons_completed,
+            "quizzes_attempted": quizzes_attempted,
+            "badges_earned": badges_earned
+        }]), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to generate funnel metrics", "details": str(e)}), 500
+
+def get_age_group_distribution_chart():
+    today = date.today()
+    age_brackets = [
+        ("age_8_10", 8, 10),
+        ("age_10_12", 10, 12),
+        ("age_12_14", 12, 14),
+    ]
+
+    skills = Skill.query.all()
+    result = []
+
+    for skill in skills:
+        skill_obj = {
+            "skill_id": str(skill.skill_id),
+            "skill_name": skill.name,
+            "lesson_started_count": {},
+            "lesson_completed_count": {},
+            "quiz_attempted_count": {},
+        }
+
+        lessons = Lesson.query.filter_by(skill_id=skill.skill_id).all()
+        lesson_ids = [lesson.lesson_id for lesson in lessons]
+
+        quizzes = Quiz.query.filter(Quiz.lesson_id.in_(lesson_ids)).all()
+        quiz_ids = [quiz.quiz_id for quiz in quizzes]
+
+        for bracket_label, min_age, max_age in age_brackets:
+            # Get children in this age bracket
+            children_in_bracket = Child.query.filter(Child.dob != None).all()
+            children_ids = [
+                child.child_id for child in children_in_bracket
+                if min_age <= (today.year - child.dob.year - ((today.month, today.day) < (child.dob.month, child.dob.day))) <= max_age
+            ]
+
+            # Lessons started (unique children who started any lesson in this skill and age bracket)
+            started_count = LessonHistory.query.filter(
+                LessonHistory.child_id.in_(children_ids),
+                LessonHistory.lesson_id.in_(lesson_ids)
+            ).distinct(LessonHistory.child_id).count()
+
+            # Lessons completed (total completed records in bracket, or you may want distinct by lesson/child)
+            completed_count = LessonHistory.query.filter(
+                LessonHistory.child_id.in_(children_ids),
+                LessonHistory.lesson_id.in_(lesson_ids)
+            ).count()
+
+            # Quizzes attempted (total attempted in bracket)
+            quiz_attempted = QuizHistory.query.filter(
+                QuizHistory.child_id.in_(children_ids),
+                QuizHistory.quiz_id.in_(quiz_ids)
+            ).count()
+
+            skill_obj["lesson_started_count"][bracket_label] = started_count
+            skill_obj["lesson_completed_count"][bracket_label] = completed_count
+            skill_obj["quiz_attempted_count"][bracket_label] = quiz_attempted
+
+        result.append(skill_obj)
+
+    return jsonify(result), 200
+
+def update_personal_details(current_user):
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    name = data.get("name", "").strip()
+    email = data.get("email", "").strip()
+
+    # Check if both fields are present
+    if not name or not email:
+        return jsonify({'error': 'Both name and email are required.'}), 400
+
+    parent_id = current_user.parent_id
+    parent = Parent.query.get(parent_id)
+    if not parent:
+        return jsonify({'error': 'Parent not found.'}), 404
+
+    # Check for email uniqueness if it's changed
+    if parent.email_id != email:
+        existing = Parent.query.filter(Parent.email_id == email, Parent.parent_id != parent_id).first()
+        if existing:
+            return jsonify({'error': 'Email already registered to another account.'}), 409
+
+    # Update fields
+    parent.name = name
+    parent.email_id = email
+    db.session.commit()
+
+    return jsonify({
+        "id": parent.parent_id,
+        "name": parent.name,
+        "email": parent.email_id,
+        "message": "Personal details updated successfully."
+    }), 200
+
+def update_parent_password(current_user):
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    old_password = data.get("oldPassword")
+    new_password = data.get("newPassword")
+    confirm_password = data.get("confirmPassword")
+
+    # Validate required fields
+    if not all([old_password, new_password, confirm_password]):
+        return jsonify({"error": "All fields (oldPassword, newPassword, confirmPassword) are required."}), 400
+
+    if new_password != confirm_password:
+        return jsonify({"error": "New password and confirm password do not match."}), 400
+
+    if len(new_password) < 4:
+        return jsonify({"error": "New password must be at least 4 characters long."}), 400
+
+    parent = Parent.query.get(current_user.parent_id)
+    if not parent:
+        return jsonify({"error": "Parent not found"}), 404
+
+    if not check_password_hash(parent.password, old_password):
+        return jsonify({"error": "Old password is incorrect."}), 401
+
+    if check_password_hash(parent.password, new_password):
+        return jsonify({"error": "New password must be different from the current password."}), 409
+
+    parent.password = generate_password_hash(new_password)
+    db.session.commit()
+
+    return jsonify({"message": "Password updated successfully."}), 200
+
+def post_feedback():
+    data = request.get_json()
+    
+    skill_type = data.get("skill_type")
+    item_id = data.get("id")
+    feedback_text = data.get("text", "").strip()
+
+    if skill_type not in ("Quiz", "Activity"):
+        return jsonify({"error": "Invalid skill_type. Must be 'Quiz' or 'Activity'."}), 400
+
+    if not item_id or not isinstance(item_id, int):
+        return jsonify({"error": "Valid numeric 'id' is required."}), 400
+
+    if not feedback_text:
+        return jsonify({"error": "Feedback text cannot be empty."}), 400
+
+    try:
+        if skill_type == "Quiz":
+            quiz_history = QuizHistory.query.get(item_id)
+            if not quiz_history:
+                return jsonify({"error": "Quiz attempt not found."}), 404
+            quiz_history.feedback = feedback_text
+
+        elif skill_type == "Activity":
+            activity_history = ActivityHistory.query.get(item_id)
+            if not activity_history:
+                return jsonify({"error": "Activity attempt not found."}), 404
+            activity_history.feedback = feedback_text
+
+        db.session.commit()
+
+        return jsonify({"message": "Feedback submitted successfully."}), 200
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({"error": "Database error occurred", "details": str(e)}), 500

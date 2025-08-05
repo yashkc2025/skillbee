@@ -117,6 +117,7 @@
   id: number;
   label: string;
   image: string; // Base64
+  points: number;
 }[]
 ```
 
@@ -315,7 +316,8 @@
 ```ts
 {
   title: string;
-  content: string;
+  content: JSON;
+  description: string;
   image: string; // Base64
 }
 ```
@@ -332,6 +334,7 @@
   title: string;
   description: string;
   image: string; // Base64
+  points: number;
 }
 ```
 
@@ -510,10 +513,9 @@
 {
   id : number;
   title: string | null;
-  content: string | null;
+  content: JSON | null;
   image: string | null; // Base64
   description: string | null;
-  badge_id: number | null;
   curriculum_id: number | null;
 }
 ```
