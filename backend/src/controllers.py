@@ -1,4 +1,5 @@
 from io import BytesIO
+from functools import wraps
 import json
 from flask import request, jsonify, send_file
 from .db import db
@@ -1753,7 +1754,7 @@ def create_quiz():
         lesson_id=lesson_id,
         position=next_position,
         is_visible=True,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(),
         time_duration=time_duration
     )
 

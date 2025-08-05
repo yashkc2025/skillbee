@@ -1,3 +1,5 @@
+# According to User Stories tha major ones are based around the child dashboard's components only.The child/user will be able to navigate to the respective parts from hereon.
+
 openapi: 3.0.3
 info:
   title: Child Dashboard and User Data API

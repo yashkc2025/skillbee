@@ -1,3 +1,5 @@
+# According to User Story 2, a child should be able to take quizzes after completing a few lessons and after ompleting said quiz their score will be visible to them.The APIs desinged here are based in accordance to that.
+
 openapi: 3.0.3
 info:
   title: Quiz API Contract
