@@ -46,6 +46,7 @@ def parent_regisc(request):
                 "login_time": datetime.now().isoformat()
             }
             new_session = Session(session_id=session_id, session_information=session_info)
+            print(new_session)
             db.session.add(new_session)
             db.session.commit()
             return jsonify({
@@ -64,8 +65,6 @@ def parent_regisc(request):
 def age_calc(dob):
     today = date.today()
     return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-
-    
 
 def child_regisc(request):
     # Function for children registration that will later be sent as a request to the routes
@@ -117,8 +116,10 @@ def child_regisc(request):
                     "login_time": datetime.now().isoformat()
                 }
                 new_session = Session(session_id=session_id, session_information=session_info)
+                
                 db.session.add(new_session)
                 db.session.commit()
+                print(new_session)
                 return jsonify({
                 "session": {
                     "token": session_id,
@@ -373,10 +374,6 @@ def get_auser(current_user, role):
 
 @token_required(allowed_roles=["child"])
 def get_child_dashboard_stats(current_user, role):
-    # gets the stats for the child
-    child_id = current_user.child_id
-def get_child_dashboard_stats(current_user, role):
-    # gets the stats for the child
     child_id = current_user.child_id
     lessons_completed = LessonHistory.query.filter_by(child_id=child_id).count()
     all_lessons = Lesson.query.all()
@@ -396,7 +393,11 @@ def get_child_dashboard_stats(current_user, role):
     badges_earned = BadgeHistory.query.filter_by(child_id=child_id).count()
     child = Child.query.get(child_id)
     streak = child.streak if child else 0
-    leaderboard_rank = 1  
+    all_children = Child.query.order_by(Child.points.desc()).all()
+    leaderboard_rank = next(
+        (index + 1 for index, c in enumerate(all_children) if c.child_id == child_id),
+        None
+    )  
     heatmap = [
         {"date": datetime.now().strftime('%Y-%m-%d'), "status": 1}
     ]
@@ -411,9 +412,6 @@ def get_child_dashboard_stats(current_user, role):
 
 
 @token_required(allowed_roles=["child"])
-def get_user_skill_progress(current_user, role):
-    # gets the child lesson progress
-    child_id = current_user.child_id
 def get_user_skill_progress(current_user, role):
     # gets the child lesson progress
     child_id = current_user.child_id
@@ -437,10 +435,22 @@ def get_user_skill_progress(current_user, role):
 
 @token_required(allowed_roles=["child"])
 def get_user_badges(current_user, role):
-    #  gets the child badges
     child_id = current_user.child_id
-    data = db.session.query(Badge.name).join(BadgeHistory).filter(BadgeHistory.child_id == child_id).all()
-    response = [{"name": name, "image": ""} for (name,) in data]
+
+    # Get badge name and image by joining Badge and BadgeHistory
+    data = db.session.query(Badge.name, Badge.image).join(BadgeHistory).filter(
+        BadgeHistory.child_id == child_id
+    ).all()
+
+    # Convert image from binary to base64 string (for testing in JSON)
+    response = []
+    for name, image in data:
+        image_str = base64.b64encode(image).decode('utf-8') if image else ""
+        response.append({
+            "name": name,
+            "image": image_str
+        })
+
     return jsonify(response), 200
 
 
@@ -483,13 +493,7 @@ def get_lesson_quizzes(current_user, role, curriculum_id, lesson_id):
         "quizzes": quiz_list
     }), 200
 
-def get_user_badges(current_user, role):
-    #  gets the child badges
-    child_id = current_user.child_id
-    data = db.session.query(Badge.name).join(BadgeHistory).filter(BadgeHistory.child_id == child_id).all()
-    response = [{"name": name, "image": ""} for (name,) in data]
-    return jsonify(response), 200
-
+# @token_required(allowed_roles=["child"])
 def get_curriculums_for_child(current_user, role):
     child_id = current_user.child_id
     child = current_user
@@ -543,6 +547,7 @@ def get_curriculums_for_child(current_user, role):
         })
     return jsonify({"curriculums": result}), 200
 
+# @token_required(allowed_roles=["child"])
 def get_skill_lessons(child_id, skill_id):
     try:
         skill = Skill.query.get(skill_id)
