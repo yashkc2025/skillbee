@@ -1,4 +1,5 @@
 from io import BytesIO
+from functools import wraps
 import json
 from flask import request, jsonify, send_file
 from .db import db
@@ -279,6 +280,62 @@ def child_loginc(request):
 
 # dashboard
 
+def token_required(allowed_roles=None):
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            token = None
+            if 'Authorization' in request.headers:
+                token = request.headers['Authorization'].split(' ')[-1] 
+            
+            if not token:
+                return jsonify({'error': 'Token is missing'}), 401
+
+            try:
+                session = Session.query.filter_by(session_id=token).first()
+                if not session:
+                    return jsonify({'error': 'Invalid token'}), 401
+
+                session_info = session.session_information
+                
+                login_time = datetime.fromisoformat(session_info['login_time'])
+                if datetime.now() > login_time + timedelta(hours=3):
+                    db.session.delete(session)
+                    db.session.commit()
+                    return jsonify({'error': 'Token has expired'}), 401
+
+                current_user = None
+                role = None
+
+                if 'admin_id' in session_info:
+                    current_user = Admin.query.get(session_info['admin_id'])
+                    role = 'admin'
+                elif 'parent_id' in session_info:
+                    current_user = Parent.query.get(session_info['parent_id'])
+                    role = 'parent'
+                elif 'child_id' in session_info:
+                    current_user = Child.query.get(session_info['child_id'])
+                    role = 'child'
+
+                if not current_user:
+                    return jsonify({'error': 'User not found'}), 401
+
+                if allowed_roles and role not in allowed_roles:
+                    return jsonify({'error': 'Insufficient permissions'}), 403
+
+                kwargs['current_user'] = current_user
+                kwargs['role'] = role
+
+                return f(*args, **kwargs)
+
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                return jsonify({'error': 'Database error occurred', 'details': str(e)}), 500
+
+        return decorated
+    return decorator
+
+@token_required()
 def get_auser(current_user, role):
     # this is according to auth.md and fetches the details of users from the session id as authorisation bearer BUT it returns full profile info
     if role == "child":
@@ -313,6 +370,11 @@ def get_auser(current_user, role):
         }), 200
     return jsonify({'error': 'Invalid session data'}), 401
 
+
+@token_required(allowed_roles=["child"])
+def get_child_dashboard_stats(current_user, role):
+    # gets the stats for the child
+    child_id = current_user.child_id
 def get_child_dashboard_stats(current_user, role):
     # gets the stats for the child
     child_id = current_user.child_id
@@ -347,6 +409,11 @@ def get_child_dashboard_stats(current_user, role):
         "heatmap": heatmap
     }), 200
 
+
+@token_required(allowed_roles=["child"])
+def get_user_skill_progress(current_user, role):
+    # gets the child lesson progress
+    child_id = current_user.child_id
 def get_user_skill_progress(current_user, role):
     # gets the child lesson progress
     child_id = current_user.child_id
@@ -366,6 +433,55 @@ def get_user_skill_progress(current_user, role):
         })
 
     return jsonify(response), 200
+
+
+@token_required(allowed_roles=["child"])
+def get_user_badges(current_user, role):
+    #  gets the child badges
+    child_id = current_user.child_id
+    data = db.session.query(Badge.name).join(BadgeHistory).filter(BadgeHistory.child_id == child_id).all()
+    response = [{"name": name, "image": ""} for (name,) in data]
+    return jsonify(response), 200
+
+
+@token_required(allowed_roles=["child"])
+def get_lesson_quizzes(current_user, role, curriculum_id, lesson_id):
+    # Get curriculum(Skill)
+    child_id = current_user.child_id
+    curriculum = Skill.query.get(curriculum_id)
+    if not curriculum:
+        return jsonify({'error': 'Curriculum not found'}), 404
+    #G et lesson 
+    lesson = Lesson.query.filter_by(lesson_id=lesson_id, skill_id=curriculum_id).first()
+    if not lesson:
+        return jsonify({'error': 'Lesson not found'}), 404
+    quizzes = Quiz.query.filter_by(lesson_id=lesson_id).all()
+    attempted_quiz_ids = {
+        qh.quiz_id for qh in QuizHistory.query.filter_by(child_id=child_id).all()
+    }
+    quiz_list = []
+    for quiz in quizzes:
+        quiz_data = {
+            "quiz_id": quiz.quiz_id,
+            "name": quiz.quiz_name,
+            "description": quiz.description,
+            "time_duration": f"{quiz.time_duration // 60} mins" if quiz.time_duration else "N/A",
+            "difficulty": "Medium",  
+            "progress_status": 100 if quiz.quiz_id in attempted_quiz_ids else 0,
+            "image": None  
+        }
+        quiz_list.append(quiz_data)
+    return jsonify({
+        "curriculum": {
+            "curriculum_id": curriculum.skill_id,
+            "name": curriculum.name
+        },
+        "lesson": {
+            "lesson_id": lesson.lesson_id,
+            "title": lesson.title
+        },
+        "quizzes": quiz_list
+    }), 200
 
 def get_user_badges(current_user, role):
     #  gets the child badges
@@ -854,6 +970,29 @@ def get_lesson_quizzes(child_id, lesson_id):
         db.session.rollback()
         return jsonify({'error': 'Database error occurred', 'details': str(e)}), 500
 
+@token_required(allowed_roles=["child"])
+def get_quiz_history(current_user, role, quiz_id):
+    # Get teh quiz history
+    child_id = current_user.child_id
+    histories = QuizHistory.query.filter_by(child_id=child_id, quiz_id=quiz_id).all()
+    if not histories:
+        return jsonify({"quizzes_history": []}), 200
+    child = Child.query.get(child_id)
+    parent_name = child.parent.name if child.parent else None
+    parent_email = child.parent.email_id if child.parent else None
+    history_list = []
+    for h in histories:
+        history_list.append({
+            "quiz_history_id": h.quiz_history_id,
+            "quiz_id": h.quiz_id,
+            "attempted_at": h.created_at.isoformat() if hasattr(h, "created_at") else "N/A",
+            "score": h.score,
+            "feedback": {
+                "admin": "admin@gmail.com",  
+                "parent": f"Parent: {parent_name} ({parent_email})" if parent_name else ""
+            }
+        })
+    return jsonify({"quizzes_history": history_list}), 200
 def get_quiz_history(child_id, quiz_id):
     try:
         quiz = Quiz.query.get(quiz_id)
@@ -1615,7 +1754,7 @@ def create_quiz():
         lesson_id=lesson_id,
         position=next_position,
         is_visible=True,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(),
         time_duration=time_duration
     )
 

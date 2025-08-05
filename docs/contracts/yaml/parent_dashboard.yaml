@@ -1,3 +1,5 @@
+# According to User Story 3, the parent should be able to monitor their child's progress from their dashboards and this is based in accordance to that.
+
 openapi: 3.0.3
 info:
   title: Parent Dashboard API
