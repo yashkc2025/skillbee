@@ -1,0 +1,251 @@
+openapi: 3.0.3
+
+info:
+  title: Activity Management API
+  version: 1.0.0
+  description: API contract for managing activities.
+
+paths:
+  /api/child/{child_id}/curriculum/{curriculum_id}/lesson/{lesson_id}/activities:
+    get:
+      summary: Get Lesson Activities
+      description: Returns curriculum, lesson, and activities which are created by admin and parent to their child.
+      parameters:
+        - in: path
+          name: child_id
+          schema:
+            type: integer
+          required: true
+          description: Child ID
+        - in: path
+          name: curriculum_id
+          schema:
+            type: integer
+          required: true
+          description: Curriculum ID
+        - in: path
+          name: lesson_id
+          schema:
+            type: integer
+          required: true
+          description: Lesson ID
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  curriculum:
+                    type: object
+                    properties:
+                      curriculum_id:
+                        type: integer
+                      name:
+                        type: string
+                  lesson:
+                    type: object
+                    properties:
+                      lesson_id:
+                        type: integer
+                      title:
+                        type: string
+                  activities:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        activity_id:
+                          type: integer
+                        name:
+                          type: string
+                        description:
+                          type: string
+                        image:
+                          type: string
+                          format: url
+                        difficulty:
+                          type: string
+                          enum: [Easy, Medium, Hard]
+                        progress_status:
+                          type: number
+                          format: float
+                          minimum: 0
+                          maximum: 100
+              examples:
+                example1:
+                  value:
+                    curriculum:
+                      curriculum_id: 1
+                      name: "Science Basics"
+                    lesson:
+                      lesson_id: 101
+                      title: "Introduction to Physics"
+                    activities:
+                      - activity_id: 201
+                        name: "Build a Simple Circuit"
+                        description: "Hands-on activity to understand basic circuits."
+                        image: "http://example.com/circuit.jpg"
+                        difficulty: "Easy"
+                        progress_status: 100
+                      - activity_id: 202
+                        name: "Measure Gravity"
+                        description: "Experiment to measure the acceleration due to gravity."
+                        image: "http://example.com/gravity.png"
+                        difficulty: "Medium"
+                        progress_status: 0
+      x-notes:
+        - Includes activities from both admin and parents
+        - "`progress_status` = 100 if any submission exists"
+        - "`progress_status` = 0 if not any submission exists"
+
+  /api/activity/{activity_id}:
+    get:
+      summary: Get Activity Details
+      description: Returns activity details
+      parameters:
+        - in: path
+          name: activity_id
+          schema:
+            type: integer
+          required: true
+          description: Activity ID
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  selected_activity:
+                    type: object
+                    properties:
+                      activity_id:
+                        type: integer
+                      name:
+                        type: string
+                      description:
+                        type: string
+                      instruction:
+                        type: string
+                      difficulty:
+                        type: string
+                      progress_status:
+                        type: number
+                        format: float
+                        minimum: 0
+                        maximum: 100
+
+  /api/child/{child_id}/activity/{activity_id}/submit:
+    post:
+      summary: Submit Activity Work
+      description: Stores activity submission
+      parameters:
+        - in: path
+          name: child_id
+          schema:
+            type: integer
+          required: true
+          description: Child ID
+        - in: path
+          name: activity_id
+          schema:
+            type: integer
+          required: true
+          description: Activity ID
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPG, JPEG, PNG, or PDF
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  activity_history_id:
+                    type: integer
+                  submitted_at:
+                    type: string
+                    format: date-time
+                    description: ISO format
+
+  /api/child/{child_id}/activity/{activity_id}/history:
+    get:
+      summary: Get Activity History
+      description: Returns submission history
+      parameters:
+        - in: path
+          name: child_id
+          schema:
+            type: integer
+          required: true
+          description: Child ID
+        - in: path
+          name: activity_id
+          schema:
+            type: integer
+          required: true
+          description: Activity ID
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  activities_submission:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        activity_history_id:
+                          type: integer
+                        activity_id:
+                          type: integer
+                        submitted_at:
+                          type: string
+                          format: date-time
+                          description: ISO format
+                        feedback:
+                          type: object
+                          properties:
+                            admin:
+                              type: string
+                            parent:
+                              type: string
+
+  /api/activity/history/{activity_history_id}:
+    get:
+      summary: Get Activity Submission
+      description: Returns submission file
+      parameters:
+        - in: path
+          name: activity_history_id
+          schema:
+            type: integer
+          required: true
+          description: History record ID
+      responses:
+        "200":
+          description: Successful response - File stream
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+              encoding:
+                "*":
+                  contentType: application/octet-stream

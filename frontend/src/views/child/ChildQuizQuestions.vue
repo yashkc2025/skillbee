@@ -58,43 +58,50 @@ const quiz = { quiz_id: 1, name: 'General Knowledge Quiz', time_duration: 90 };
 
 const timeDuration = ref(quiz.time_duration); // 5 minutes in seconds
 
-const questions = {
-    "1": {
+const questions = [
+    {
+        "question_index": 0,
         "question": "What is the capital of France?",
         "options": ["Berlin", "Madrid", "Paris", "Rome"],
         "marks": 10,
     },
-    "2": {
+    {
+        "question_index": 1,
         "question": "What is the largest planet in our solar system?",
         "options": ["Earth", "Mars", "Jupiter", "Saturn"],
         "marks": 10,
     },
-    "3": {
+    {
+        "question_index": 2,
         "question": "What is the chemical symbol for water?",
         "options": ["H2O", "CO2", "O2", "NaCl"],
         "marks": 10,
     },
-    "4": {
+    {
+        "question_index": 3,
         "question": "What is the smallest prime number?",
         "options": ["1", "2", "3", "5"],
         "marks": 10,
     },
-    "5": {
+    {
+        "question_index": 4,
         "question": "What is the main ingredient in guacamole?",
         "options": ["Tomato", "Avocado", "Onion", "Pepper"],
         "marks": 10,
     },
-    "6": {
+    {
+        "question_index": 5,
         "question": "What is the largest mammal in the world?",
         "options": ["Elephant", "Blue Whale", "Giraffe", "Hippopotamus"],
         "marks": 10,
     },
-    "7": {
+    {
+        "question_index": 6,
         "question": "What is the capital of Japan?",
         "options": ["Seoul", "Beijing", "Tokyo", "Bangkok"],
         "marks": 10,
     },
-};
+];
 const questionList = Object.values(questions);
 
 const selectedOptions = ref<{ [key: number]: number }>({});
