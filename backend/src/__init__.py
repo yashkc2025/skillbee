@@ -11,7 +11,7 @@ def create_app():
     app.config.from_object(Config)
 
     db.init_app(app)
-    CORS(app)
+    CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
 
     app.register_blueprint(api)
 
