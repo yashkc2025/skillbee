@@ -208,27 +208,27 @@ def parent_children():
 @api.route('/admin/badge', methods=['POST'])
 @token_required(allowed_roles=['admin'])
 def admin_badge(current_user, role):
-    return create_badge(current_user, role)
+    return create_badge(current_user.admin_id, role)
 
 @api.route('/admin/activity', methods=['POST'])
 @token_required(allowed_roles=['admin'])
 def admin_activity(current_user, role):
-    return create_activity(current_user, role)
+    return create_activity(current_user.admin_id, role)
 
 @api.route('/admin/lesson', methods=['POST'])
 @token_required(allowed_roles=['admin'])
 def admin_lesson(current_user, role):
-    return create_lesson(current_user, role)
+    return create_lesson(current_user.admin_id, role)
 
 @api.route('/admin/quiz', methods=['POST'])
 @token_required(allowed_roles=['admin'])
 def admin_quiz(current_user, role):
-    return create_quiz(current_user, role)
+    return create_quiz(current_user.admin_id, role)
 
 @api.route('/admin/update_email',methods=['PUT'])
 @token_required(allowed_roles=['admin'])
-def admin_email():
-    return update_admin_email()
+def admin_email(current_user, role):
+    return update_admin_email(current_user.admin_id, role)
 
 @api.route('/admin/update_password', methods=['PUT'])
 @token_required(allowed_roles=['admin'])
@@ -257,8 +257,8 @@ def unblock_parents():
 
 @api.route('/admin/activity', methods=['PUT'])
 @token_required(allowed_roles=['admin'])
-def update_activities():
-    return update_activity()
+def update_activities(current_user, role):
+    return update_activity(current_user.admin_id, role)
 
 @api.route('/admin/quiz',methods=['PUT'])
 @token_required(allowed_roles=['admin'])
@@ -298,27 +298,27 @@ def children_profile(current_user, role):
 @api.route('/admin/age_distribution_chart', methods=['GET'])
 @token_required(allowed_roles=['admin'])
 def get_age_distribution_chart(current_user, role):
-    return get_age_group_distribution_chart(current_user, role)
+    return get_age_group_distribution_chart(current_user.admin_id, role)
 
 @api.route('/admin/learning_funnel_chart',methods=['GET'])
 @token_required(allowed_roles=['admin'])
 def get_funnel_chart(current_user, role):
-    return get_learning_funnel_chart(current_user, role)
+    return get_learning_funnel_chart(current_user.admin_id, role)
 
 @api.route('/admin/badge_by_age_group_chart',methods=['GET'])
 @token_required(allowed_roles=['admin'])
 def get_badge_by_age_group(current_user, role):
-    return get_badge_by_age_group_chart(current_user, role)
+    return get_badge_by_age_group_chart(current_user.admin_id, role)
 
 @api.route('/admin/skill_engagment_chart',methods=['GET'])
 @token_required(allowed_roles=['admin'])
 def get_skill_engagement(current_user, role):
-    return get_skill_engagment_chart(current_user, role)
+    return get_skill_engagment_chart(current_user.admin_id, role)
 
 @api.route('/admin/active_users_chart', methods=['GET'])
 @token_required(allowed_roles=['admin'])
 def get_active_users(current_user, role):
-    return get_active_users_chart(current_user, role)
+    return get_active_users_chart(current_user.admin_id, role)
 
 @api.route('/feedback', methods=['POST'])
 @token_required(allowed_roles=['parent'])

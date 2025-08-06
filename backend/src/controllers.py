@@ -2381,13 +2381,11 @@ def get_active_users_chart(current_user, role):
             day_start = datetime.combine(day, datetime.min.time())
             day_end = datetime.combine(day, datetime.max.time())
 
-            # Active children (last_login on this date)
             active_children_count = Child.query.filter(
                 Child.last_login >= day_start,
                 Child.last_login <= day_end
             ).count()
 
-            # Active parents (no last_login field in model, fallback to assumption: enrollment_date if using session tracking)
             active_parents_count = Parent.query.filter(
                 Parent.children.any(
                     Child.last_login >= day_start,
@@ -2395,16 +2393,15 @@ def get_active_users_chart(current_user, role):
                 )
             ).count()
 
-            # New child signups (enrollment_date on this date)
             new_children = Child.query.filter(
                 Child.enrollment_date >= day_start,
                 Child.enrollment_date <= day_end
             ).count()
 
-            # New parent signups (using created_at assumed via id + date, fallback logic if no date field)
-            new_parents = Parent.query.filter(
-                db.func.date(Parent.children.any(Child.enrollment_date)) == day
-            ).count()
+            new_parents = Parent.query.join(Parent.children).filter(
+                Child.enrollment_date >= day_start,
+                Child.enrollment_date <= day_end
+            ).distinct().count()
 
             result["dates"].append(day.strftime("%Y-%m-%d"))
             result["active_children"].append(active_children_count)
