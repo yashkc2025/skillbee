@@ -1384,7 +1384,7 @@ def get_children(current_user, role):
 
     return jsonify(response), 200
 
-def get_lessons():
+def get_lessons(current_user, role):
     lessons = Lesson.query.all()
     response = []
     for lesson in lessons:
@@ -1397,7 +1397,7 @@ def get_lessons():
     return jsonify(response), 200
 
 
-def get_quizzes():
+def get_quizzes(current_user, role):
     lesson_id = request.args.get('lesson_id', type=int)
 
     query = Quiz.query
@@ -1418,7 +1418,7 @@ def get_quizzes():
 
     return jsonify(result)
 
-def get_activities():
+def get_activities(current_user, role):
     lesson_id = request.args.get('lesson_id', type=int)
 
     query = Activity.query
@@ -1441,7 +1441,7 @@ def get_activities():
 
     return jsonify(response)
 
-def get_badges():
+def get_badges(current_user, role):
     badges = Badge.query.all()
     response = []
 
@@ -1535,7 +1535,7 @@ def create_child(*args, current_user, role, **kwargs):
         "school": new_child.school
     }), 201
 
-def get_parents():
+def get_parents(current_user, role):
     parents = Parent.query.all()
 
     response = []
@@ -1549,14 +1549,14 @@ def get_parents():
 
     return jsonify(response), 200
 
-def create_badge():
+def create_badge(current_user, role):
     data = request.get_json()
     name = data.get("title")
     description = data.get("description", "")
     image_base64 = data.get("image")
     points = data.get('points')
 
-    if not name or not image_base64 or not points or not description:
+    if not name or not points or not description:
         return jsonify({"error": "Missing required fields"}), 400
 
     try:
@@ -1585,7 +1585,7 @@ def create_badge():
         "points":badge.points
     }), 201
 
-def create_activity():
+def create_activity(current_user, role):
     lesson_id = request.args.get('lesson_id', type=int)
     data = request.get_json()
     required_fields = ['title','description','image','instructions','difficulty', 'answer_format']
@@ -1630,90 +1630,140 @@ def create_activity():
         "difficulty" : activity.difficulty
     }), 201
 
-def create_lesson():
-    skill_id = request.args.get('skill_id', type=int)
+def create_skills():
+    skills = [
+        {
+            "name": "Critical Thinking",
+            "description": "Improve Critical Thinking",
+            "min_age": 8,
+            "max_age": 14,
+        },
+        {
+            "name": "Communication Skills",
+            "description": "Improve communication.",
+            "min_age": 8,
+            "max_age": 14,
+        },
+        {
+            "name": "Time Management",
+            "description": "Learn to manage Time",
+            "min_age": 8,
+            "max_age": 14,
+        },
+        {
+            "name": "Extracurricular Activities",
+            "description": "Extra Activities",
+            "min_age": 8,
+            "max_age": 14,
+        },
+        {
+            "name": "Financial Literacy",
+            "description": "Understand Money",
+            "min_age": 8,
+            "max_age": 14,
+        }
+    ]
+
+    for skill in skills:
+        existing = Skill.query.filter_by(name=skill["name"]).first()
+        if not existing:
+            skill = Skill(
+                name=skill["name"],
+                description=skill["description"],
+                min_age=skill["min_age"],
+                max_age=skill["max_age"],
+                image=None
+            )
+            db.session.add(skill)
+    db.session.commit()
+
+def create_lesson(current_user, role):
     try:
         data = request.get_json()
-    except Exception:
+        print("Received data:", data)
+    except Exception as e:
+        print("Error parsing JSON:", e)
         return jsonify({'error': 'Invalid JSON'}), 400
 
-    required = ['title', 'content', 'image']
+    required = ['title', 'content', 'image', 'skill_id']
     if not all(k in data for k in required):
         return jsonify({'error': 'Missing required fields'}), 400
 
+    skill_id = data['skill_id']
     title = data['title']
     content_raw = data['content']
     image_base64 = data['image']
-    if description:
-        description = data['description']
-    else:
-        description = None
+    description = data.get('description', None)
 
     skill = Skill.query.get(skill_id)
     if not skill:
         return jsonify({'error': 'Invalid curriculum_id'}), 404
 
     try:
-        content = json.loads(content_raw) if isinstance(content_raw, str) else content_raw
+        # content = json.loads(content_raw) if isinstance(content_raw, str) else content_raw
+        content=content_raw
     except json.JSONDecodeError:
         return jsonify({'error': 'Content must be valid JSON'}), 400
 
     try:
-        if image_base64:
-            image_binary = base64.b64decode(image_base64)
-        else:
-            image_binary = None
-    except Exception:
+        image_binary = base64.b64decode(image_base64) if image_base64 else None
+    except Exception as e:
+        print("Image decoding error:", e)
         return jsonify({'error': 'Invalid base64 image'}), 400
 
-    max_position = db.session.query(db.func.max(Lesson.position)).filter_by(skill_id=skill_id).scalar()
-    next_position = (max_position or 0) + 1
+    try:
+        max_position = db.session.query(db.func.max(Lesson.position)).filter_by(skill_id=skill_id).scalar()
+        next_position = (max_position or 0) + 1
 
-    lesson = Lesson(
-        skill_id=skill_id,
-        title=title,
-        content=content,
-        description=description,
-        image=image_binary,
-        position=next_position
-    )
+        lesson = Lesson(
+            skill_id=skill_id,
+            title=title,
+            content=content,
+            description=description,
+            image=image_binary,
+            position=next_position
+        )
 
-    db.session.add(lesson)
-    db.session.commit()
+        db.session.add(lesson)
+        db.session.commit()
 
-    return jsonify({
-        "id": lesson.lesson_id,
-        "title": lesson.title,
-        "curriculum": skill.name,
-        "position": lesson.position
-    }), 201
+        return jsonify({
+            "id": lesson.lesson_id,
+            "title": lesson.title,
+            "curriculum": skill.name,
+            "position": lesson.position
+        }), 201
+    except Exception as e:
+        print("DB Error:", e)
+        db.session.rollback()
+        return jsonify({'error': 'Database error'}), 500
+
     
-
-def create_quiz():
-    lesson_id = request.args.get('lesson_id', type=int)
-    
+def create_quiz(current_user, role):
     try:
         data = request.get_json()
     except Exception:
         return jsonify({'error': 'Invalid JSON format'}), 400
-
-    required_fields = ['title','image','description', 'difficulty', 'time_duration','point', 'questions']
+    required_fields = ['title', 'image', 'description', 'difficulty', 'time_duration', 'points', 'questions']
     if not all(field in data for field in required_fields):
         return jsonify({'error': 'Missing required fields'}), 400
+    lesson_id = data.get('lesson_id')
+    if not lesson_id:
+        return jsonify({'error': 'Missing or invalid lesson_id in query params'}), 400
 
-    picture = data['image']
+    lesson = Lesson.query.get(lesson_id)
+    if not lesson:
+        return jsonify({'error': 'Lesson not found'}), 404
     title = data['title']
+    picture = data['image']
     description = data['description']
     difficulty = data['difficulty']
-    points = data['point']
+    points = data['points']
     time_duration = data['time_duration']
     questions = data['questions']
 
     try:
-        if picture:
-            image_binary = base64.b64decode(picture)
-        else:
-            image_binary = None
+        image_binary = base64.b64decode(picture) if picture else None
     except Exception:
         return jsonify({'error': 'Invalid base64 image'}), 400
 
@@ -1736,7 +1786,6 @@ def create_quiz():
         })
 
         correct_answers = [opt['text'] for opt in opts if opt.get('isCorrect') is True]
-
         if not correct_answers:
             return jsonify({"error": f"No correct answer specified for question '{q_text}'"}), 400
 
@@ -1752,7 +1801,7 @@ def create_quiz():
         quiz_name=title,
         description=description,
         questions=questions_json,
-        answers = answers_json,
+        answers=answers_json,
         difficulty=difficulty,
         points=points,
         image=image_binary,
@@ -1772,12 +1821,13 @@ def create_quiz():
         "difficulty": quiz.difficulty,
         "points": quiz.points
     }), 201
+
     
     
 def admin_child_profile(current_user, role):
     child_id = request.args.get('id', type=int)
     if not child_id:
-        return jsonify({'error': 'Child ID is required as query param ?id='}), 400
+        return jsonify({'error': 'Child ID is required as query param id='}), 400
 
     child = Child.query.get(child_id)
     if not child:
@@ -2020,7 +2070,7 @@ def unblock_parent():
 
     return jsonify({"message": f"Parent with ID {parent_id} has been unblocked."}), 200
 
-def update_activity():
+def update_activity(current_user, role):
     data = request.get_json()
 
     activity_id = data.get('id')
@@ -2074,7 +2124,7 @@ def update_activity():
         "answer_format": activity.answer_format
     }), 200
     
-def update_quiz():
+def update_quiz(current_user, role):
     try:
         data = request.get_json()
     except Exception:
@@ -2156,7 +2206,7 @@ def update_quiz():
         "time_duration": quiz.time_duration
     }), 200
 
-def update_lesson():
+def update_lesson(current_user, role):
     try:
         data = request.get_json()
     except Exception:
@@ -2187,8 +2237,8 @@ def update_lesson():
 
     if content_raw is not None:
         try:
-            content_json = json.loads(content_raw) if isinstance(content_raw, str) else content_raw
-            lesson.content = content_json
+            # content_json = json.loads(content_raw) if isinstance(content_raw, str) else content_raw
+            lesson.content = content_raw
         except Exception:
             return jsonify({'error': 'Invalid content format. Must be valid JSON.'}), 400
 
@@ -2206,7 +2256,7 @@ def update_lesson():
         "title": lesson.title,
     }), 200
 
-def delete_badge():
+def delete_badge(current_user, role):
     try:
         data = request.get_json()
     except Exception:
@@ -2231,9 +2281,9 @@ def delete_badge():
 
     return jsonify({
         "message": f"Badge with ID {badge_id} has been deleted."
-    }), 
+    }), 200
 
-def delete_activity():
+def delete_activity(current_user, role):
     try:
         data = request.get_json()
     except Exception:
@@ -2259,7 +2309,7 @@ def delete_activity():
         "message": f"Activity with ID {activity_id} has been deleted successfully."
     }), 200
  
-def delete_quiz():
+def delete_quiz(current_user, role):
     try:
         data = request.get_json()
     except Exception:
@@ -2285,7 +2335,7 @@ def delete_quiz():
         "message": f"Quiz with ID {quiz_id} has been deleted successfully."
     }), 200
 
-def delete_lesson():
+def delete_lesson(current_user, role):
     try:
         data = request.get_json()
     except Exception:
@@ -2312,7 +2362,7 @@ def delete_lesson():
     }), 200
 
 
-def get_active_users_chart():
+def get_active_users_chart(current_user, role):
     try:
         end_date = datetime.today().date()
         start_date = end_date - timedelta(days=20)
@@ -2331,13 +2381,11 @@ def get_active_users_chart():
             day_start = datetime.combine(day, datetime.min.time())
             day_end = datetime.combine(day, datetime.max.time())
 
-            # Active children (last_login on this date)
             active_children_count = Child.query.filter(
                 Child.last_login >= day_start,
                 Child.last_login <= day_end
             ).count()
 
-            # Active parents (no last_login field in model, fallback to assumption: enrollment_date if using session tracking)
             active_parents_count = Parent.query.filter(
                 Parent.children.any(
                     Child.last_login >= day_start,
@@ -2345,16 +2393,15 @@ def get_active_users_chart():
                 )
             ).count()
 
-            # New child signups (enrollment_date on this date)
             new_children = Child.query.filter(
                 Child.enrollment_date >= day_start,
                 Child.enrollment_date <= day_end
             ).count()
 
-            # New parent signups (using created_at assumed via id + date, fallback logic if no date field)
-            new_parents = Parent.query.filter(
-                db.func.date(Parent.children.any(Child.enrollment_date)) == day
-            ).count()
+            new_parents = Parent.query.join(Parent.children).filter(
+                Child.enrollment_date >= day_start,
+                Child.enrollment_date <= day_end
+            ).distinct().count()
 
             result["dates"].append(day.strftime("%Y-%m-%d"))
             result["active_children"].append(active_children_count)
@@ -2368,7 +2415,7 @@ def get_active_users_chart():
     except Exception as e:
         return jsonify({"error": "Failed to generate active users chart", "details": str(e)}), 500
 
-def get_skill_engagment_chart():
+def get_skill_engagment_chart(current_user, role):
     # Prepare result: skill name by age group
     results = {
         "age_8_10": {},
@@ -2426,7 +2473,7 @@ def get_skill_engagment_chart():
         "age_12_14": results["age_12_14"]
     }), 200
 
-def get_badge_by_age_group_chart():
+def get_badge_by_age_group_chart(current_user, role):
     # Get all badges
     badge_objs = Badge.query.all()
     results = []
@@ -2460,7 +2507,7 @@ def get_badge_by_age_group_chart():
     return jsonify(results), 200
 
 
-def get_learning_funnel_chart():
+def get_learning_funnel_chart(current_user, role):
     try:
         # Users who started any skill (at least one lesson)
         started_lesson_subq = db.session.query(
@@ -2489,7 +2536,7 @@ def get_learning_funnel_chart():
         db.session.rollback()
         return jsonify({"error": "Failed to generate funnel metrics", "details": str(e)}), 500
 
-def get_age_group_distribution_chart():
+def get_age_group_distribution_chart(current_user, role):
     today = date.today()
     age_brackets = [
         ("age_8_10", 8, 10),
