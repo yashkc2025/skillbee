@@ -150,7 +150,7 @@ def admin_loginc():
     # Login function for the admin
     
     data = request.get_json()
-    email = data.get('email_id')
+    email = data.get('email')
     password = data.get('password')
     if not email or not password:
         return jsonify({"error": "Missing email or password"}), 500
@@ -239,7 +239,7 @@ def child_loginc(request):
     Handle child login request by validating credentials and generating a session token.
     """
     data = request.get_json()
-    identifier = data.get('email_or_username')
+    identifier = data.get('username')
     password = data.get('password')
 
     if not identifier or not password:

@@ -106,7 +106,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-// Types
+import { base_url } from "../router";
+
 interface UserData {
     username?: string;
     email?: string;
@@ -141,7 +142,7 @@ const registerData = ref<UserData>({
     dob: "",
     school: "",
 });
-// Computed properties
+
 const signInUserTypes = computed(() => ["Admin", "Parent", "Child"]);
 const signUpUserTypes = computed(() => ["Parent", "Child"]);
 const alternativeUserTypes = computed(() => {
@@ -182,7 +183,7 @@ const yyyy = today.getFullYear();
 const mm = String(today.getMonth() + 1).padStart(2, '0');
 const dd = String(today.getDate()).padStart(2, '0');
 
-// For 8-14 years old
+
 const maxDate = `${yyyy - 8}-${mm}-${dd}`;
 const minDate = `${yyyy - 14}-${mm}-${dd}`;
 
@@ -249,7 +250,7 @@ const slideText = computed(() => {
 const buttonText = computed(() => {
     return isSignUp.value ? "Sign in" : "Sign up";
 });
-// Methods
+
 const getIconClass = (icon: string): string => {
     const iconMap: Record<string, string> = {
         user: "bi bi-person",
@@ -342,7 +343,7 @@ const showError = (message: string) => {
     }, 5000);
 };
 
-let base_url = 'http://127.0.0.1:5000/'
+// let base_url = 'http://127.0.0.1:5000/'
 
 // const setCookie = (name: string, value: string, days = 1) => {
 //     const expires = new Date();
@@ -361,94 +362,76 @@ const handleLogin = async () => {
     }
     const { username, email, password } = loginData.value;
     const identifier = selectedUserType.value === "Child" ? username : email;
-    // showError(`${identifier}`)
-    // alert(`Logging in ${selectedUserType.value}: ${identifier}`);
-    // Here you would typically make an API call for authentication
+
+    let url = '';
+    let payload: Record<string, any> = {};
 
     if (selectedUserType.value === "Parent") {
-        router.push({ name: 'parent_dashboard' })
-    }
-    else if (selectedUserType.value === "Child") {
-        router.push({ name: 'child_dashboard' })
-    }
-    else if (selectedUserType.value === "Admin") {
-        router.push({ name: 'admin_dashboard' })
-    }
-    else {
-        showError("Invalid user type selected.");
+        url = base_url + '/auth/parent_login';
+        payload = {
+            email,
+            password,
+        };
+    } else if (selectedUserType.value === "Child") {
+        url = base_url + '/auth/children_login';
+        payload = {
+            username: username,
+            password,
+        };
+    } else if (selectedUserType.value === "Admin") {
+        url = base_url + '/auth/admin_login';
+        payload = {
+            email: email,
+            password,
+        };
+    } else {
+        showError("Invalid user type.")
         return;
     }
 
-    // let url = '';
-    // let payload: Record<string, any> = {};
+    try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload),
+        });
 
-    // if (selectedUserType.value === "Parent") {
-    //     url = base_url + '/auth/parent_login';
-    //     payload = {
-    //         email,
-    //         password,
-    //     };
-    // } else if (selectedUserType.value === "Child") {
-    //     url = base_url + '/auth/children_login';
-    //     payload = {
-    //         email_or_username: username,
-    //         password,
-    //     };
-    // } else if (selectedUserType.value === "Admin") {
-    //     url = base_url + '/auth/admin_login';
-    //     payload = {
-    //         email_id: email,
-    //         password,
-    //     };
-    // } else {
-    //     showError("Invalid user type.")
-    //     return;
-    // }
+        const result = await response.json();
 
-    // try {
-    //     const response = await fetch(url, {
-    //         method: "POST",
-    //         headers: {
-    //             "Content-Type": "application/json"
-    //         },
-    //         body: JSON.stringify(payload),
-    //     });
+        if (!response.ok) {
+            showError(`Login failed: ${result.error || "Unknown error"}`);
+            return;
+        }
 
-    //     const result = await response.json();
+        const token = result.session?.token;
+        const userId = result.user?.id;
 
-    //     if (!response.ok) {
-    //         showError(`Login failed: ${result.error || "Unknown error"}`);
-    //         return;
-    //     }
+        if (!token || !userId) {
+            showError("Invalid response from server");
+            return;
+        }
 
-    //     const token = result.session?.token;
-    //     const userId = result.user?.id;
 
-    //     if (!token || !userId) {
-    //         showError("Invalid response from server");
-    //         return;
-    //     }
-
-    //     // setCookie("session_token", token);
-
-    //     switch (selectedUserType.value) {
-    //         case "Admin":
-    //             router.push({ name: 'admin_dashboard' });
-    //             break;
-    //         case "Parent":
-    //             router.push({ name: 'parent_dashboard' });
-    //             break;
-    //         case "Child":
-    //             router.push({ name: 'child_dashboard' });
-    //             break;
-    //         default:
-    //             showError("Unknown user type");
-    //     }
-    //     resetForm();
-    // } catch (error) {
-    //     console.error("Login Error:", error);
-    //     showError("Something went wrong. Please try again.");
-    // }
+        switch (selectedUserType.value) {
+            case "Admin":
+                router.push({ name: 'admin_dashboard' });
+                break;
+            case "Parent":
+                router.push({ name: 'parent_dashboard' });
+                break;
+            case "Child":
+                router.push({ name: 'child_dashboard' });
+                break;
+            default:
+                showError("Unknown user type");
+        }
+        resetForm();
+    } catch (error) {
+        console.error("Login Error:", error);
+        showError("Something went wrong. Please try again.");
+    }
 
 };
 const handleRegister = async () => {
@@ -463,69 +446,60 @@ const handleRegister = async () => {
     } else {
         message += `, Email=${data.email}`;
     }
-    // alert(message);
-    // Here you would typically make an API call for registration
+
+    let url = '';
+    let payload = {};
 
     if (selectedUserType.value === "Parent") {
-        router.push({ name: 'parent_dashboard' });
+        url = base_url + '/auth/parent_register';
+        payload = {
+            name: data.name,
+            email: data.email,
+            password: data.password,
+        };
     } else if (selectedUserType.value === "Child") {
-        router.push({ name: 'child_dashboard' });
+        url = base_url + '/auth/children_register';
+        payload = {
+            name: data.name,
+            email: data.email,
+            username: data.username,
+            password: data.password,
+            dob: data.dob,
+            school: data.school,
+        };
     } else {
         showError("Invalid user type selected.");
         return;
     }
 
-    // let url = '';
-    // let payload: Record<string, any> = {
-    //     name: data.name,
-    //     email_id: data.email,
-    //     password: data.password,
-    //     profile_image: ''
-    // };
+    try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        });
 
-    // if (selectedUserType.value === "Parent") {
-    //     url = base_url + '/auth/parent_register';
-    // } else if (selectedUserType.value === "Child") {
-    //     url = base_url + '/auth/children_register';
-    //     payload = {
-    //         ...payload,
-    //         username: data.username,
-    //         dob: data.dob,
-    //         school: data.school
-    //     };
-    // } else {
-    //     showError("Invalid user type.");
-    //     return;
-    // }
+        const result = await response.json();
 
-    // try {
-    //     const response = await fetch(url, {
-    //         method: "POST",
-    //         headers: {
-    //             "Content-Type": "application/json",
-    //         },
-    //         body: JSON.stringify(payload),
-    //     });
+        if (!response.ok) {
+            showError(`Error: ${result.error || "Registration failed"}`);
+            return;
+        }
 
-    //     const result = await response.json();
+        if (selectedUserType.value === "Child") {
+            loginData.value.username = data.username!;
+        } else {
+            loginData.value.email = data.email!;
+        }
+        loginData.value.password = data.password!;
 
-    //     if (!response.ok) {
-    //         showError(`Error: ${result.error || "Registration failed"}`);
-    //         return;
-    //     }
-
-    //     if (selectedUserType.value === "Child") {
-    //         loginData.value.username = data.username!;
-    //     } else {
-    //         loginData.value.email = data.email!;
-    //     }
-    //     loginData.value.password = data.password!;
-
-    //     await handleLogin();
-    // } catch (error) {
-    //     console.error("Registration Error:", error);
-    //     showError("Something went wrong. Please try again.");
-    // }
+        await handleLogin();
+    } catch (error) {
+        console.error("Registration Error:", error);
+        showError("Something went wrong. Please try again.");
+    }
 
 };
 </script>
