@@ -30,7 +30,7 @@ import ParentChildrenProfile from '@/views/parent/ParentChildrenProfile.vue'
 import ChildrenProfile from '@/views/admin/ChildrenProfile.vue'
 import NewQuiz from '@/views/admin/new/NewQuiz.vue'
 
-export const base_url = 'http://127.0.0.1:5000/'
+export const base_url = 'http://127.0.0.1:5000'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

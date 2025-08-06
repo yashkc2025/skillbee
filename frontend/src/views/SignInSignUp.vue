@@ -445,7 +445,7 @@ const handleLogin = async () => {
   } else if (selectedUserType.value === "Admin") {
     url = base_url + "/auth/admin_login";
     payload = {
-      email: email,
+      email_id: email,
       password,
     };
   } else {
@@ -542,6 +542,7 @@ const handleRegister = async () => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
+      credentials: "include",
     });
 
     const result = await response.json();
