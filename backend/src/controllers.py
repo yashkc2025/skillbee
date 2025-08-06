@@ -1384,7 +1384,7 @@ def get_children(current_user, role):
 
     return jsonify(response), 200
 
-def get_lessons():
+def get_lessons(current_user, role):
     lessons = Lesson.query.all()
     response = []
     for lesson in lessons:
@@ -1397,7 +1397,7 @@ def get_lessons():
     return jsonify(response), 200
 
 
-def get_quizzes():
+def get_quizzes(current_user, role):
     lesson_id = request.args.get('lesson_id', type=int)
 
     query = Quiz.query
@@ -1418,7 +1418,7 @@ def get_quizzes():
 
     return jsonify(result)
 
-def get_activities():
+def get_activities(current_user, role):
     lesson_id = request.args.get('lesson_id', type=int)
 
     query = Activity.query
@@ -1441,7 +1441,7 @@ def get_activities():
 
     return jsonify(response)
 
-def get_badges():
+def get_badges(current_user, role):
     badges = Badge.query.all()
     response = []
 
@@ -1535,7 +1535,7 @@ def create_child(*args, current_user, role, **kwargs):
         "school": new_child.school
     }), 201
 
-def get_parents():
+def get_parents(current_user, role):
     parents = Parent.query.all()
 
     response = []
@@ -1549,14 +1549,14 @@ def get_parents():
 
     return jsonify(response), 200
 
-def create_badge():
+def create_badge(current_user, role):
     data = request.get_json()
     name = data.get("title")
     description = data.get("description", "")
     image_base64 = data.get("image")
     points = data.get('points')
 
-    if not name or not image_base64 or not points or not description:
+    if not name or not points or not description:
         return jsonify({"error": "Missing required fields"}), 400
 
     try:
@@ -1585,7 +1585,7 @@ def create_badge():
         "points":badge.points
     }), 201
 
-def create_activity():
+def create_activity(current_user, role):
     lesson_id = request.args.get('lesson_id', type=int)
     data = request.get_json()
     required_fields = ['title','description','image','instructions','difficulty', 'answer_format']
@@ -1630,7 +1630,7 @@ def create_activity():
         "difficulty" : activity.difficulty
     }), 201
 
-def create_lesson():
+def create_lesson(current_user, role):
     skill_id = request.args.get('skill_id', type=int)
     try:
         data = request.get_json()
@@ -1644,10 +1644,7 @@ def create_lesson():
     title = data['title']
     content_raw = data['content']
     image_base64 = data['image']
-    if description:
-        description = data['description']
-    else:
-        description = None
+    description = data.get('description', None)
 
     skill = Skill.query.get(skill_id)
     if not skill:
@@ -1659,10 +1656,7 @@ def create_lesson():
         return jsonify({'error': 'Content must be valid JSON'}), 400
 
     try:
-        if image_base64:
-            image_binary = base64.b64decode(image_base64)
-        else:
-            image_binary = None
+        image_binary = base64.b64decode(image_base64) if image_base64 else None
     except Exception:
         return jsonify({'error': 'Invalid base64 image'}), 400
 
@@ -1687,9 +1681,9 @@ def create_lesson():
         "curriculum": skill.name,
         "position": lesson.position
     }), 201
-    
 
-def create_quiz():
+    
+def create_quiz(current_user, role):
     lesson_id = request.args.get('lesson_id', type=int)
     
     try:
@@ -1777,7 +1771,7 @@ def create_quiz():
 def admin_child_profile(current_user, role):
     child_id = request.args.get('id', type=int)
     if not child_id:
-        return jsonify({'error': 'Child ID is required as query param ?id='}), 400
+        return jsonify({'error': 'Child ID is required as query param id='}), 400
 
     child = Child.query.get(child_id)
     if not child:
@@ -2312,7 +2306,7 @@ def delete_lesson():
     }), 200
 
 
-def get_active_users_chart():
+def get_active_users_chart(current_user, role):
     try:
         end_date = datetime.today().date()
         start_date = end_date - timedelta(days=20)
@@ -2368,7 +2362,7 @@ def get_active_users_chart():
     except Exception as e:
         return jsonify({"error": "Failed to generate active users chart", "details": str(e)}), 500
 
-def get_skill_engagment_chart():
+def get_skill_engagment_chart(current_user, role):
     # Prepare result: skill name by age group
     results = {
         "age_8_10": {},
@@ -2426,7 +2420,7 @@ def get_skill_engagment_chart():
         "age_12_14": results["age_12_14"]
     }), 200
 
-def get_badge_by_age_group_chart():
+def get_badge_by_age_group_chart(current_user, role):
     # Get all badges
     badge_objs = Badge.query.all()
     results = []
@@ -2460,7 +2454,7 @@ def get_badge_by_age_group_chart():
     return jsonify(results), 200
 
 
-def get_learning_funnel_chart():
+def get_learning_funnel_chart(current_user, role):
     try:
         # Users who started any skill (at least one lesson)
         started_lesson_subq = db.session.query(
@@ -2489,7 +2483,7 @@ def get_learning_funnel_chart():
         db.session.rollback()
         return jsonify({"error": "Failed to generate funnel metrics", "details": str(e)}), 500
 
-def get_age_group_distribution_chart():
+def get_age_group_distribution_chart(current_user, role):
     today = date.today()
     age_brackets = [
         ("age_8_10", 8, 10),

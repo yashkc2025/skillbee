@@ -50,4 +50,26 @@ similarly check the /child_dashboard_stats and /skill_categories.
 
 Dummy data has been added to seed_data.py and run once to add to database.
 
+Ok now we get into admin routes.
+We have token authorization as well.So we have to go to the Headers place sand add Authorisation then beside that Bearer 646a02d0-1cab-4564-9051-7eef7ebe0d0f  .
+Create new activities:  First go to the route  ​http://127.0.0.1:5000/admin/activity sand select POST. 
+Send this body in JSON:
+
+{
+    "title": "test",
+    "description": "abc",
+    "image": "",
+    "instructions": "1,2,3",
+    "difficulty": "Med",
+    "answer_format": "text"
+}
+
+Create new badges:  First go to the route  ​http://127.0.0.1:5000/admin/badge sand select POST. 
+{
+  "title": "test,
+  "description": "abc",
+  "image": "",
+  "points": "50
+}
+
 Urjaswi Banerjee
