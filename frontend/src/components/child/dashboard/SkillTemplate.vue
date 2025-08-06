@@ -27,11 +27,11 @@ function openCurriculum(curriculumId: number, curriculumName: string) {
 
 <template>
   <div>
-    <Card title="📚 Curriculums">
+    <Card title="🌟 Skill Categories">
       <CardItem v-for="(s, i) in props.skillTypes" :key="i">
-        <div @click.prevent="openCurriculum(s.curriculum_id, s.label)" class="skill-card"
+        <div @click.prevent="openCurriculum(s.curriculum_id, s.label)"
           style="display: grid; grid-template-columns: 30% 10% 60%; align-items: center">
-          <div class="">{{ s.label }}</div>
+          <div class="skill-card">{{ s.label }}</div>
           <div></div>
           <ProgressBar :progress="s.progress" />
         </div>
@@ -43,17 +43,5 @@ function openCurriculum(curriculumId: number, curriculumName: string) {
 <style scoped>
 .skill-card {
   cursor: pointer;
-  background: #fff8e1;
-  border-radius: var(--border-radius);
-  margin: 1px 0;
-  /* padding: 10px 0; */
-  padding: var(--size-xs) var(--size-md);
-  box-shadow: 0 1px 4px rgba(255, 193, 7, 0.08);
-  transition: background 0.2s, transform 0.15s;
-}
-
-.skill-card:hover {
-  background: #fff3e0;
-  /* transform: scale(1.02); */
 }
 </style>

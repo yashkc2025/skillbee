@@ -2,7 +2,7 @@ from flask import Flask
 from flask_cors import CORS
 from .config import Config
 from .db import db  
-from .routes import api, configure_scheduler
+from .routes import api
 from .controllers import admin_create
 
 def create_app():
@@ -17,10 +17,5 @@ def create_app():
     with app.app_context():
         db.create_all()
         admin_create()
-        
-    # Configure the session cleanup scheduler
-    configure_scheduler(app)
-    
+
     return app
-
-

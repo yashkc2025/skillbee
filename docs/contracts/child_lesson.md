@@ -2,13 +2,14 @@
 
 ## 1. Get Curriculum Lessons
 
-**Endpoint**: `GET /api/child/curriculum/{curriculum_id}/lessons`  
+**Endpoint**: `GET /api/child/{child_id}/curriculum/{curriculum_id}/lessons`  
 **Description**: Returns curriculum details and lessons with progress status
 
 ### Request Parameters
 
 | Parameter       | Type    | Description                     | Location |
 | --------------- | ------- | ------------------------------- | -------- |
+| `child_id`      | integer | Unique identifier for the child | Path     |
 | `curriculum_id` | integer | Curriculum ID to filter lessons | Path     |
 
 ### Response Format (200 OK)
@@ -57,13 +58,15 @@ progress_status = (completed_activities + completed_quizzes) / (total_activities
 
 ```json
 {
-  "lesson_id": "integer",
-  "title": "string",
-  "content": {
-    "text": "string"
-  },
-  "image": "string (URL) | null",
-  "completed_at": "datetime (ISO format) | null"
+  "selected_lesson": {
+    "lesson_id": "integer",
+    "title": "string",
+    "content": "string (HTML formatted)",
+    "url_details": {
+      "index": "string (URL)"
+    },
+    "completed_at": "datetime (ISO format) | null"
+  }
 }
 ```
 
@@ -71,7 +74,7 @@ progress_status = (completed_activities + completed_quizzes) / (total_activities
 
 ## 3. Mark Lesson as Read
 
-**Endpoint**: `POST /api/child/lesson/{lesson_id}/mark-read`  
+**Endpoint**: `POST /api/child/{child_id}/lesson/{lesson_id}/mark-read`  
 **Description**: Records lesson completion timestamp
 
 ### Request Parameters

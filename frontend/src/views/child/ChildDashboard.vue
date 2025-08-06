@@ -87,86 +87,35 @@ const stats = [
 
 <template>
   <ChildAppLayout>
-    <div class="dashboard kid-dashboard">
-      <div class="intro kid-intro">
+    <div class="dashboard">
+      <div class="intro">
         <p>{{ getIntroText("Yash") }}</p>
       </div>
-      <div class="top-section kid-top-section">
-        <div class="stats-grid kid-stats-grid">
+      <div class="top-section">
+        <div class="stats-grid">
           <Grid :stats="stats" />
         </div>
-        <div class="leaderboard box-shadow kid-heatmap">
-          <ChildHeatmap class="heatmap-fullwidth" />
+        <div class="leaderboard box-shadow">
+          <ChildHeatmap />
         </div>
       </div>
       <ChildLeaderboard />
       <SkillTemplate :skillTypes="skillTypes" />
-      <div class="kid-badges-section">
-        <BadgesTemplate :badges="badges" />
-      </div>
+      <BadgesTemplate :badges="badges" />
     </div>
   </ChildAppLayout>
 </template>
 
 <style scoped>
-.kid-dashboard {
+.intro {
+  font-family: "VAGRoundedNext";
+  font-size: var(--font-md);
+}
+
+.dashboard {
   display: flex;
   flex-direction: column;
-  gap: var(--size-lg);
-  background: #fffde7;
-  border-radius: var(--border-radius);
-  padding: 0 24px 24px 24px;
-  min-height: 100vh;
-}
-
-.kid-intro {
-  font-family: "VAGRoundedNext";
-  font-size: var(--font-lg);
-  color: #ff9800;
-  /* background: #fff8e1; */
-  border-radius: var(--border-radius);
-  padding: 18px 24px;
-  margin-bottom: 10px;
-  text-align: center;
-  /* box-shadow: 0 2px 8px rgba(255, 193, 7, 0.08); */
-  letter-spacing: 1px;
-}
-
-.kid-top-section {
-  display: flex;
-  flex-direction: row;
   gap: var(--size-md);
-  align-items: stretch;
-  margin-bottom: 10px;
-  height: 100%;
-  width: 100%;
-}
-
-.kid-stats-grid {
-  width: 32%;
-  min-width: 220px;
-}
-
-.kid-heatmap {
-  flex: 1;
-  background: linear-gradient(90deg, #e3f2fd 0%, #fffde7 100%);
-  border-radius: var(--border-radius);
-  /* display: flex;flex-direction: column; */
-  /* justify-content: center; */
-  /* align-items: center; */
-  border: 2px solid #ffd54f;
-  /* box-shadow: 0 2px 8px rgba(33, 150, 243, 0.08); */
-  /* padding: 18px 0; */
-  width: 100%;
-  /* height: 200px; */
-}
-
-.kid-badges-section {
-  margin: 18px 0 0 0;
-  background: #fff8e1;
-  border-radius: var(--border-radius);
-  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.08);
-  padding: 18px 0;
 }
 
 :global(.skill-card) {
@@ -175,15 +124,27 @@ const stats = [
   font-family: "VAGRoundedNext";
 }
 
-@media (max-width: 900px) {
-  .kid-top-section {
-    flex-direction: column;
-    gap: var(--size-md);
-  }
+.top-section {
+  display: flex;
+  flex-direction: row;
+  gap: var(--size-sm);
+  align-items: stretch;
+  /* Ensures children stretch to same height */
+}
 
-  .kid-stats-grid {
-    width: 100%;
-    min-width: unset;
-  }
+.stats-grid {
+  width: 30%;
+}
+
+.leaderboard {
+  /* width: 30%; */
+  background-color: var(--color-light);
+
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
 }
 </style>

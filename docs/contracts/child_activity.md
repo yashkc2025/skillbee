@@ -31,6 +31,7 @@
       "name": "string",
       "description": "string",
       "image": "string (URL)",
+      "difficulty": "string (Easy/Medium/Hard)",
       "progress_status": "number (0-100)"
     }
   ]
@@ -75,7 +76,7 @@
 
 ## 3. Submit Activity Work
 
-`POST /api/child/activity/{activity_id}/submit`  
+`POST /api/child/{child_id}/activity/{activity_id}/submit`  
 **Description**: Stores activity submission
 
 ### Request Parameters
@@ -104,13 +105,14 @@
 
 ## 4. Get Activity History
 
-`GET /api/child/activity/{activity_id}/history`  
+`GET /api/child/{child_id}/activity/{activity_id}/history`  
 **Description**: Returns submission history
 
 ### Request Parameters
 
 | Parameter     | Type    | Description | Location |
 | ------------- | ------- | ----------- | -------- |
+| `child_id`    | integer | Child ID    | Path     |
 | `activity_id` | integer | Activity ID | Path     |
 
 ### Response (200 OK)
@@ -122,7 +124,10 @@
       "activity_history_id": "integer",
       "activity_id": "integer",
       "submitted_at": "datetime (ISO format)",
-      "feedback":  "string"
+      "feedback": {
+        "admin": "string",
+        "parent": "string"
+      }
     }
   ]
 }
