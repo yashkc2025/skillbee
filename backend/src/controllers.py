@@ -1630,17 +1630,66 @@ def create_activity(current_user, role):
         "difficulty" : activity.difficulty
     }), 201
 
+def create_skills():
+    skills = [
+        {
+            "name": "Critical Thinking",
+            "description": "Improve Critical Thinking",
+            "min_age": 8,
+            "max_age": 14,
+        },
+        {
+            "name": "Communication Skills",
+            "description": "Improve communication.",
+            "min_age": 8,
+            "max_age": 14,
+        },
+        {
+            "name": "Time Management",
+            "description": "Learn to manage Time",
+            "min_age": 8,
+            "max_age": 14,
+        },
+        {
+            "name": "Extracurricular Activities",
+            "description": "Extra Activities",
+            "min_age": 8,
+            "max_age": 14,
+        },
+        {
+            "name": "Financial Literacy",
+            "description": "Understand Money",
+            "min_age": 8,
+            "max_age": 14,
+        }
+    ]
+
+    for skill in skills:
+        existing = Skill.query.filter_by(name=skill["name"]).first()
+        if not existing:
+            skill = Skill(
+                name=skill["name"],
+                description=skill["description"],
+                min_age=skill["min_age"],
+                max_age=skill["max_age"],
+                image=None
+            )
+            db.session.add(skill)
+    db.session.commit()
+
 def create_lesson(current_user, role):
-    skill_id = request.args.get('skill_id', type=int)
     try:
         data = request.get_json()
-    except Exception:
+        print("Received data:", data)
+    except Exception as e:
+        print("Error parsing JSON:", e)
         return jsonify({'error': 'Invalid JSON'}), 400
 
-    required = ['title', 'content', 'image']
+    required = ['title', 'content', 'image', 'skill_id']
     if not all(k in data for k in required):
         return jsonify({'error': 'Missing required fields'}), 400
 
+    skill_id = data['skill_id']
     title = data['title']
     content_raw = data['content']
     image_base64 = data['image']
@@ -1651,63 +1700,70 @@ def create_lesson(current_user, role):
         return jsonify({'error': 'Invalid curriculum_id'}), 404
 
     try:
-        content = json.loads(content_raw) if isinstance(content_raw, str) else content_raw
+        # content = json.loads(content_raw) if isinstance(content_raw, str) else content_raw
+        content=content_raw
     except json.JSONDecodeError:
         return jsonify({'error': 'Content must be valid JSON'}), 400
 
     try:
         image_binary = base64.b64decode(image_base64) if image_base64 else None
-    except Exception:
+    except Exception as e:
+        print("Image decoding error:", e)
         return jsonify({'error': 'Invalid base64 image'}), 400
 
-    max_position = db.session.query(db.func.max(Lesson.position)).filter_by(skill_id=skill_id).scalar()
-    next_position = (max_position or 0) + 1
+    try:
+        max_position = db.session.query(db.func.max(Lesson.position)).filter_by(skill_id=skill_id).scalar()
+        next_position = (max_position or 0) + 1
 
-    lesson = Lesson(
-        skill_id=skill_id,
-        title=title,
-        content=content,
-        description=description,
-        image=image_binary,
-        position=next_position
-    )
+        lesson = Lesson(
+            skill_id=skill_id,
+            title=title,
+            content=content,
+            description=description,
+            image=image_binary,
+            position=next_position
+        )
 
-    db.session.add(lesson)
-    db.session.commit()
+        db.session.add(lesson)
+        db.session.commit()
 
-    return jsonify({
-        "id": lesson.lesson_id,
-        "title": lesson.title,
-        "curriculum": skill.name,
-        "position": lesson.position
-    }), 201
+        return jsonify({
+            "id": lesson.lesson_id,
+            "title": lesson.title,
+            "curriculum": skill.name,
+            "position": lesson.position
+        }), 201
+    except Exception as e:
+        print("DB Error:", e)
+        db.session.rollback()
+        return jsonify({'error': 'Database error'}), 500
 
     
 def create_quiz(current_user, role):
-    lesson_id = request.args.get('lesson_id', type=int)
-    
     try:
         data = request.get_json()
     except Exception:
         return jsonify({'error': 'Invalid JSON format'}), 400
-
-    required_fields = ['title','image','description', 'difficulty', 'time_duration','point', 'questions']
+    required_fields = ['title', 'image', 'description', 'difficulty', 'time_duration', 'points', 'questions']
     if not all(field in data for field in required_fields):
         return jsonify({'error': 'Missing required fields'}), 400
+    lesson_id = data.get('lesson_id')
+    if not lesson_id:
+        return jsonify({'error': 'Missing or invalid lesson_id in query params'}), 400
 
-    picture = data['image']
+    lesson = Lesson.query.get(lesson_id)
+    if not lesson:
+        return jsonify({'error': 'Lesson not found'}), 404
     title = data['title']
+    picture = data['image']
     description = data['description']
     difficulty = data['difficulty']
-    points = data['point']
+    points = data['points']
     time_duration = data['time_duration']
     questions = data['questions']
 
     try:
-        if picture:
-            image_binary = base64.b64decode(picture)
-        else:
-            image_binary = None
+        image_binary = base64.b64decode(picture) if picture else None
     except Exception:
         return jsonify({'error': 'Invalid base64 image'}), 400
 
@@ -1730,7 +1786,6 @@ def create_quiz(current_user, role):
         })
 
         correct_answers = [opt['text'] for opt in opts if opt.get('isCorrect') is True]
-
         if not correct_answers:
             return jsonify({"error": f"No correct answer specified for question '{q_text}'"}), 400
 
@@ -1746,7 +1801,7 @@ def create_quiz(current_user, role):
         quiz_name=title,
         description=description,
         questions=questions_json,
-        answers = answers_json,
+        answers=answers_json,
         difficulty=difficulty,
         points=points,
         image=image_binary,
@@ -1766,6 +1821,7 @@ def create_quiz(current_user, role):
         "difficulty": quiz.difficulty,
         "points": quiz.points
     }), 201
+
     
     
 def admin_child_profile(current_user, role):
