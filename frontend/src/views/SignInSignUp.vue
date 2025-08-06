@@ -123,6 +123,8 @@ interface FormField {
     placeholder: string;
     icon: string;
     required: boolean;
+    min?: string;
+    max?: string;
 }
 // Reactive state
 const showPassword = ref(false);
@@ -274,6 +276,7 @@ const togglePasswordVisibility = () => {
 const resetForm = () => {
     selectedUserType.value = "";
     showAlternativeTypes.value = false;
+    errorMessage.value = '';
     loginData.value = {
         username: "",
         email: "",
@@ -291,10 +294,19 @@ const resetForm = () => {
 const handleUserTypeSelection = (userType: UserType) => {
     selectedUserType.value = userType;
     showAlternativeTypes.value = true;
+    errorMessage.value = '';
     loginData.value = {
         username: "",
         email: "",
         password: "",
+    };
+    registerData.value = {
+        name: "",
+        username: "",
+        email: "",
+        password: "",
+        dob: "",
+        school: "",
     };
 
 };
@@ -385,7 +397,7 @@ const handleLogin = async () => {
             password,
         };
     } else {
-        showError("Invalid user type.")
+        showError("Invalid user type.");
         return;
     }
 
@@ -440,12 +452,12 @@ const handleRegister = async () => {
         return;
     }
     const data = registerData.value;
-    let message = `Registering ${selectedUserType.value}: Name=${data.name}`;
-    if (selectedUserType.value === "Child") {
-        message += `, Username=${data.username}, Email=${data.email}, DOB=${data.dob}, School=${data.school}`;
-    } else {
-        message += `, Email=${data.email}`;
-    }
+    // let message = `Registering ${selectedUserType.value}: Name=${data.name}`;
+    // if (selectedUserType.value === "Child") {
+    //     message += `, Username=${data.username}, Email=${data.email}, DOB=${data.dob}, School=${data.school}`;
+    // } else {
+    //     message += `, Email=${data.email}`;
+    // }
 
     let url = '';
     let payload = {};
