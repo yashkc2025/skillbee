@@ -66,10 +66,10 @@ Send this body in JSON:
 
 Create new badges:  First go to the route  ​http://127.0.0.1:5000/admin/badge sand select POST. 
 {
-  "title": "test,
+  "title": "test",
   "description": "abc",
   "image": "",
-  "points": "50
+  "points": "50"
 }
 
 lessons:

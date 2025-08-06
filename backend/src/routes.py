@@ -262,33 +262,33 @@ def update_activities(current_user, role):
 
 @api.route('/admin/quiz',methods=['PUT'])
 @token_required(allowed_roles=['admin'])
-def update_quizzes():
-    return update_quiz()
+def update_quizzes(current_user, role):
+    return update_quiz(current_user.admin_id, role)
 
 @api.route('/admin/lesson', methods=['PUT'])
 @token_required(allowed_roles=['admin'])
-def update_lessons():
-    return update_lesson()
+def update_lessons(current_user, role):
+    return update_lesson(current_user.admin_id, role)
 
 @api.route('/admin/badge',methods=['DELETE'])
 @token_required(allowed_roles=['admin'])
-def delete_badges():
-    return delete_badge()
+def delete_badges(current_user, role):
+    return delete_badge(current_user.admin_id, role)
 
 @api.route('/admin/activity',methods=['DELETE'])
 @token_required(allowed_roles=['admin'])
-def delete_activities():
-    return delete_activity()
+def delete_activities(current_user, role):
+    return delete_activity(current_user.admin_id, role)
 
 @api.route('/admin/lesson', methods=['DELETE'])
 @token_required(allowed_roles=['admin'])
-def delete_lessons():
-    return delete_lesson()
+def delete_lessons(current_user, role):
+    return delete_lesson(current_user.admin_id, role)
 
 @api.route('/admin/quiz', methods=['DELETE'])
 @token_required(allowed_roles=['admin'])
-def delete_quizzes():
-    return delete_quiz()
+def delete_quizzes(current_user, role):
+    return delete_quiz(current_user.admin_id, role)
 
 @api.route('/children/profile', methods=['GET'])
 @token_required(allowed_roles=['admin', 'parent'])

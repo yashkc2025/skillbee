@@ -2070,7 +2070,7 @@ def unblock_parent():
 
     return jsonify({"message": f"Parent with ID {parent_id} has been unblocked."}), 200
 
-def update_activity():
+def update_activity(current_user, role):
     data = request.get_json()
 
     activity_id = data.get('id')
@@ -2124,7 +2124,7 @@ def update_activity():
         "answer_format": activity.answer_format
     }), 200
     
-def update_quiz():
+def update_quiz(current_user, role):
     try:
         data = request.get_json()
     except Exception:
@@ -2206,7 +2206,7 @@ def update_quiz():
         "time_duration": quiz.time_duration
     }), 200
 
-def update_lesson():
+def update_lesson(current_user, role):
     try:
         data = request.get_json()
     except Exception:
@@ -2237,8 +2237,8 @@ def update_lesson():
 
     if content_raw is not None:
         try:
-            content_json = json.loads(content_raw) if isinstance(content_raw, str) else content_raw
-            lesson.content = content_json
+            # content_json = json.loads(content_raw) if isinstance(content_raw, str) else content_raw
+            lesson.content = content_raw
         except Exception:
             return jsonify({'error': 'Invalid content format. Must be valid JSON.'}), 400
 
@@ -2256,7 +2256,7 @@ def update_lesson():
         "title": lesson.title,
     }), 200
 
-def delete_badge():
+def delete_badge(current_user, role):
     try:
         data = request.get_json()
     except Exception:
@@ -2281,9 +2281,9 @@ def delete_badge():
 
     return jsonify({
         "message": f"Badge with ID {badge_id} has been deleted."
-    }), 
+    }), 200
 
-def delete_activity():
+def delete_activity(current_user, role):
     try:
         data = request.get_json()
     except Exception:
@@ -2309,7 +2309,7 @@ def delete_activity():
         "message": f"Activity with ID {activity_id} has been deleted successfully."
     }), 200
  
-def delete_quiz():
+def delete_quiz(current_user, role):
     try:
         data = request.get_json()
     except Exception:
@@ -2335,7 +2335,7 @@ def delete_quiz():
         "message": f"Quiz with ID {quiz_id} has been deleted successfully."
     }), 200
 
-def delete_lesson():
+def delete_lesson(current_user, role):
     try:
         data = request.get_json()
     except Exception:
