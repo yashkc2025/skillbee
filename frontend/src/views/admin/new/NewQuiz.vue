@@ -1,58 +1,79 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import CardV2 from '@/components/CardV2.vue'
-import InputComponent from '@/components/InputComponent.vue'
-import AdminAppLayout from '@/layouts/AdminAppLayout.vue'
-import SelectComponent from '@/components/SelectComponent.vue'
+import { ref, reactive, onMounted } from "vue";
+import CardV2 from "@/components/CardV2.vue";
+import InputComponent from "@/components/InputComponent.vue";
+import AdminAppLayout from "@/layouts/AdminAppLayout.vue";
+import SelectComponent from "@/components/SelectComponent.vue";
+import { postData } from "@/fx/api";
+import { getBackendURL } from "@/fx/utils";
 
 // Metadata Fields
-const lesson = ref("")
-const image = ref("")
-const title = ref("")
-const description = ref("")
-const difficulty = ref("")
-const point = ref()
+const lesson = ref("");
+const image = ref("");
+const title = ref("");
+const description = ref("");
+const difficulty = ref("");
+const point = ref();
 
-// Dummy lesson list (replace with actual data or API call)
-const lessonDetails = ref([
-  { label: 'Lesson 1', value: 'lesson-1' },
-  { label: 'Lesson 2', value: 'lesson-2' }
-])
+type LessonDetailsType = {
+  value: number;
+  label: string;
+}[];
+
+const lessonDetails = ref<LessonDetailsType>([]);
+
+onMounted(async () => {
+  // const data = fetchData(getBackendURL(""))
+  const data = [
+    {
+      title: "Build a ship",
+      id: 1,
+    },
+    {
+      title: "How to swim!",
+      id: 2,
+    },
+  ];
+
+  lessonDetails.value = data.map((d) => ({ value: d.id, label: d.title }));
+});
 
 // Quiz Form State
-const questions = reactive<Array<{
-  question: string
-  options: Array<{ text: string; isCorrect: boolean }>
-}>>([])
+const questions = reactive<
+  Array<{
+    question: string;
+    options: Array<{ text: string; isCorrect: boolean }>;
+  }>
+>([]);
 
 function addQuestion() {
   questions.push({
-    question: '',
-    options: [{ text: '', isCorrect: true }]
-  })
+    question: "",
+    options: [{ text: "", isCorrect: true }],
+  });
 }
 
 function addOption(qIndex: number) {
-  questions[qIndex].options.push({ text: '', isCorrect: false })
+  questions[qIndex].options.push({ text: "", isCorrect: false });
 }
 
 function removeOption(qIndex: number, oIndex: number) {
-  const opts = questions[qIndex].options
-  const removed = opts[oIndex]
-  opts.splice(oIndex, 1)
+  const opts = questions[qIndex].options;
+  const removed = opts[oIndex];
+  opts.splice(oIndex, 1);
   if (removed.isCorrect && opts.length > 0) {
-    opts[0].isCorrect = true
+    opts[0].isCorrect = true;
   }
 }
 
 function markCorrect(qIndex: number, oIndex: number) {
   questions[qIndex].options.forEach((opt, i) => {
-    opt.isCorrect = i === oIndex
-  })
+    opt.isCorrect = i === oIndex;
+  });
 }
 
 // Final payload preparation (on submit)
-function createActivity() {
+async function createQuiz() {
   const payload = {
     title: title.value,
     image: image.value,
@@ -60,17 +81,17 @@ function createActivity() {
     difficulty: difficulty.value,
     point: point.value,
     lessonId: lesson.value,
-    questions: questions
-  }
+    questions: questions,
+  };
 
-  console.log("Submitting Activity:", payload)
-
+  console.log("Submitting Activity:", payload);
+  postData(getBackendURL(""), payload);
 }
 </script>
 
 <template>
   <AdminAppLayout>
-    <div class="outer">
+    <form class="outer" @submit.prevent="createQuiz">
       <p class="intro">
         <span class="darken">New Quiz</span>
       </p>
@@ -79,10 +100,26 @@ function createActivity() {
       <CardV2 label-title="Metadata" label-image="bi bi-book">
         <template #content class="form">
           <div class="form">
-            <InputComponent icon="bi bi-journal" name="title" placeholder="Title" v-model="title" />
-            <InputComponent icon="bi bi-image" name="image" placeholder="Image" v-model="image" field-type="file" />
-            <InputComponent icon="bi bi-body-text" name="description" placeholder="Description" v-model="description"
-              input-type="TextArea" />
+            <InputComponent
+              icon="bi bi-journal"
+              name="title"
+              placeholder="Title"
+              v-model="title"
+            />
+            <InputComponent
+              icon="bi bi-image"
+              name="image"
+              placeholder="Image"
+              v-model="image"
+              field-type="file"
+            />
+            <InputComponent
+              icon="bi bi-body-text"
+              name="description"
+              placeholder="Description"
+              v-model="description"
+              input-type="TextArea"
+            />
           </div>
         </template>
       </CardV2>
@@ -91,9 +128,19 @@ function createActivity() {
       <CardV2 label-title="Scoring" label-image="bi bi-arrow-up">
         <template #content class="form">
           <div class="form">
-            <InputComponent icon="bi bi-journal" name="difficulty" placeholder="Difficulty" v-model="difficulty" />
-            <InputComponent icon="bi bi-arrow-up" name="point" placeholder="Points" v-model="point"
-              field-type="number" />
+            <InputComponent
+              icon="bi bi-journal"
+              name="difficulty"
+              placeholder="Difficulty"
+              v-model="difficulty"
+            />
+            <InputComponent
+              icon="bi bi-arrow-up"
+              name="point"
+              placeholder="Points"
+              v-model="point"
+              field-type="number"
+            />
           </div>
         </template>
       </CardV2>
@@ -102,8 +149,14 @@ function createActivity() {
       <CardV2 label-title="Lesson" label-image="bi bi-book">
         <template #content class="form">
           <div class="form">
-            <SelectComponent v-model="lesson" name="lesson" icon="bi bi-book" placeholder="Select a Lesson"
-              :options="lessonDetails" />
+            <SelectComponent
+              v-model="lesson"
+              name="lesson"
+              icon="bi bi-book"
+              placeholder="Select a Lesson"
+              :options="lessonDetails"
+              :required="true"
+            />
           </div>
         </template>
       </CardV2>
@@ -112,35 +165,67 @@ function createActivity() {
       <CardV2 label-title="Quiz Builder" label-image="bi bi-question-circle">
         <template #content class="form">
           <div class="form">
-            <div v-for="(questionBlock, qIndex) in questions" :key="qIndex" class="question-block">
-              <InputComponent icon="bi bi-question-circle" :name="`question-${qIndex}`" placeholder="Enter question"
-                v-model="questionBlock.question" />
+            <div
+              v-for="(questionBlock, qIndex) in questions"
+              :key="qIndex"
+              class="question-block"
+            >
+              <InputComponent
+                icon="bi bi-question-circle"
+                :name="`question-${qIndex}`"
+                placeholder="Enter question"
+                v-model="questionBlock.question"
+              />
 
-              <div v-for="(option, oIndex) in questionBlock.options" :key="oIndex" class="option-item">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <input type="radio" :name="'correct-option-' + qIndex" :checked="option.isCorrect"
-                    @change="markCorrect(qIndex, oIndex)" />
-                  <InputComponent icon="bi " :name="`option-${qIndex}-${oIndex}`" placeholder="Enter option"
-                    v-model="option.text" />
-                  <button type="button" class="button-admin minimal-button" @click="removeOption(qIndex, oIndex)"
-                    v-if="questionBlock.options.length > 1">Remove</button>
+              <div
+                v-for="(option, oIndex) in questionBlock.options"
+                :key="oIndex"
+                class="option-item"
+              >
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <input
+                    type="radio"
+                    :name="'correct-option-' + qIndex"
+                    :checked="option.isCorrect"
+                    @change="markCorrect(qIndex, oIndex)"
+                  />
+                  <InputComponent
+                    icon="bi "
+                    :name="`option-${qIndex}-${oIndex}`"
+                    placeholder="Enter option"
+                    v-model="option.text"
+                  />
+                  <button
+                    type="button"
+                    class="button-admin minimal-button"
+                    @click="removeOption(qIndex, oIndex)"
+                    v-if="questionBlock.options.length > 1"
+                  >
+                    Remove
+                  </button>
                 </div>
               </div>
 
-              <button type="button" class="button-admin" @click="addOption(qIndex)">Add Option</button>
+              <button type="button" class="button-admin" @click="addOption(qIndex)">
+                Add Option
+              </button>
               <hr />
             </div>
 
-            <button type="button" class="button-admin" @click="addQuestion">Add Question</button>
+            <button type="button" class="button-admin" @click="addQuestion">
+              Add Question
+            </button>
           </div>
         </template>
       </CardV2>
 
       <!-- Submit Button -->
-      <div style="display: flex; justify-content: flex-end;">
-        <button type="button" class="button-admin" @click="createActivity">Create Activity</button>
+      <div style="display: flex; justify-content: flex-end">
+        <button type="button" class="button-admin" @click="createQuiz">
+          Create Quiz
+        </button>
       </div>
-    </div>
+    </form>
   </AdminAppLayout>
 </template>
 

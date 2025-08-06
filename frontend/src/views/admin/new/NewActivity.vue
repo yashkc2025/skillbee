@@ -1,74 +1,145 @@
 <script setup lang="ts">
-import CardV2 from '@/components/CardV2.vue';
-import InputComponent from '@/components/InputComponent.vue';
-import AdminAppLayout from '@/layouts/AdminAppLayout.vue';
-import SelectComponent from "@/components/SelectComponent.vue"
-import { ref } from 'vue';
+import CardV2 from "@/components/CardV2.vue";
+import InputComponent from "@/components/InputComponent.vue";
+import AdminAppLayout from "@/layouts/AdminAppLayout.vue";
+import SelectComponent from "@/components/SelectComponent.vue";
+import { ref } from "vue";
+import { onMounted } from "vue";
+import { postData } from "@/fx/api";
+import { getBackendURL } from "@/fx/utils";
 
-const lesson = ref("")
-const image = ref("")
-const title = ref("")
-const description = ref("")
-const instructions = ref("")
-const difficulty = ref("")
-const point = ref()
+const lesson = ref("");
+const image = ref("");
+const title = ref("");
+const description = ref("");
+const instructions = ref("");
+const difficulty = ref("");
+const point = ref();
 
-const curriculumDetails = [
-  { label: "Critical Thinking", value: "c-t" },
-  { label: "Communication Skills", value: 'c-s' },
-  { label: "Time Management", value: 't-m' },
-  { label: "Extracurricular Activities", value: 'e-a' },
-  { label: "Financial Literacy", value: 'f-l' },
-]
+// const curriculumDetails = [
+//   { label: "Critical Thinking", value: "c-t" },
+//   { label: "Communication Skills", value: 'c-s' },
+//   { label: "Time Management", value: 't-m' },
+//   { label: "Extracurricular Activities", value: 'e-a' },
+//   { label: "Financial Literacy", value: 'f-l' },
+// ]
 
-const lessonDetails = [
-  {
-    label: 'Build a ship', value: 'build-ship'
-  },
-  {
-    label: 'How to swim!', value: 'how-to-swim'
-  }
-]
+type LessonDetailsType = {
+  value: number;
+  label: string;
+}[];
 
+const lessonDetails = ref<LessonDetailsType>([]);
+
+onMounted(async () => {
+  // const data = fetchData(getBackendURL(""))
+  const data = [
+    {
+      title: "Build a ship",
+      id: 1,
+    },
+    {
+      title: "How to swim!",
+      id: 2,
+    },
+  ];
+
+  lessonDetails.value = data.map((d) => ({ value: d.id, label: d.title }));
+});
+
+async function newActivity() {
+  postData(getBackendURL(""), {
+    title: title.value,
+    image: image.value,
+    instructions: instructions.value,
+    description: description.value,
+    difficulty: difficulty.value,
+    point: point.value,
+    lesson: lesson.value,
+  });
+}
 </script>
 
 <template>
   <AdminAppLayout>
-    <div class="outer">
+    <form class="outer" @submit.prevent="newActivity">
       <p class="intro">
         <span class="darken">New Activity</span>
       </p>
       <CardV2 label-title="Metadata" label-image="bi bi-book">
         <template #content class="form">
           <div class="form">
-            <InputComponent icon="bi bi-journal" name="title" placeholder="Title" v-model="title" />
-            <InputComponent icon="bi bi-image" name="image" placeholder="Image" v-model="image" field-type="file" />
-            <InputComponent icon="bi bi-book" name="instructions" placeholder="Instructions" v-model="instructions"
-              input-type="TextArea" />
-            <InputComponent icon="bi bi-body-text" name="description" placeholder="Description" v-model="description"
-              input-type="TextArea" />
+            <InputComponent
+              icon="bi bi-journal"
+              name="title"
+              placeholder="Title"
+              v-model="title"
+              :required="true"
+            />
+            <InputComponent
+              icon="bi bi-image"
+              name="image"
+              placeholder="Image"
+              v-model="image"
+              field-type="file"
+              :required="true"
+            />
+            <InputComponent
+              icon="bi bi-book"
+              name="instructions"
+              placeholder="Instructions"
+              v-model="instructions"
+              input-type="TextArea"
+              :required="true"
+            />
+            <InputComponent
+              icon="bi bi-body-text"
+              name="description"
+              placeholder="Description"
+              v-model="description"
+              input-type="TextArea"
+              :required="true"
+            />
           </div>
         </template>
       </CardV2>
       <CardV2 label-title="Scoring" label-image="bi bi-arrow-up">
         <template #content class="form">
           <div class="form">
-            <InputComponent icon="bi bi-journal" name="difficulty" placeholder="Difficulty" v-model="difficulty" />
-            <InputComponent icon="bi bi-arrow-up" name="point" placeholder="Points" v-model="point"
-              field-type="number" />
+            <InputComponent
+              icon="bi bi-journal"
+              name="difficulty"
+              placeholder="Difficulty"
+              v-model="difficulty"
+              :required="true"
+            />
+            <InputComponent
+              icon="bi bi-arrow-up"
+              name="point"
+              placeholder="Points"
+              v-model="point"
+              field-type="number"
+              :required="true"
+            />
           </div>
         </template>
       </CardV2>
       <CardV2 label-title="Lesson" label-image="bi bi-book">
         <template #content class="form">
           <div class="form">
-            <SelectComponent v-model="lesson" name="badge" icon="bi bi-book" placeholder="Select a Lesson"
-              :options="lessonDetails" />
-            <button type="button" class="button-admin">Create</button>
+            <SelectComponent
+              v-model="lesson"
+              name="badge"
+              icon="bi bi-book"
+              placeholder="Select a Lesson"
+              :options="lessonDetails"
+              :required="true"
+            />
+            <button type="submit" class="button-admin">Create</button>
           </div>
         </template>
       </CardV2>
-    </div>
+    </form>
   </AdminAppLayout>
 </template>
 
@@ -80,7 +151,7 @@ const lessonDetails = [
 .form {
   display: flex;
   flex-direction: column;
-  gap: var(--size-xs)
+  gap: var(--size-xs);
 }
 
 .outer {
