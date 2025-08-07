@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import sitemap from "../../router/sitemap.json";
 import { useRouter } from "vue-router";
+import { logout } from "../../fx/utils";
 
 const router = useRouter()
 
@@ -24,8 +25,8 @@ const navOptions = [
     <section class="items-parent">
       <a :href="n.link" class="nav-items" v-for="n in navOptions" :key="n.label">{{
         n.label
-      }}</a>
-      <a class="danger" href="/">Logout</a>
+        }}</a>
+      <a class="danger" href="/" @click="logout">Logout</a>
     </section>
     <!-- <section class="third-parent">
     </section> -->

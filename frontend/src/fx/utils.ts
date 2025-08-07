@@ -50,3 +50,8 @@ export function flattenObject(obj: AnyObject, parentKey = '', result: AnyObject 
 
   return result;
 }
+
+
+export function logout() {
+  localStorage.removeItem('authToken');
+}

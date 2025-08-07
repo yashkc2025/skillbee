@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import sitemap from "@/router/sitemap.json";
+import { logout } from "@/fx/utils";
 
 const navOptions = [
   {
@@ -64,6 +65,7 @@ const navOptions = [
         label: "Logout",
         icon: "bi bi-box-arrow-right",
         link: '/',
+        action: logout
       }
     ],
   },
@@ -83,7 +85,8 @@ const navOptions = [
       </a> -->
       <div class="navbar-section" v-for="section in navOptions" :key="section.heading">
         <p v-if="section.heading !== ''">{{ section.heading }}</p>
-        <a :href="item.link" v-for="item in section.items" :key="item.label" class="navbar-item">
+        <a v-for="item in section.items" :key="item.label" class="navbar-item" :href="item.link"
+          @click="item.label === 'Logout' ? item.action() : null">
           <i :class="item.icon" class="nav-icon chip"></i>
           <span>{{ item.label }}</span>
         </a>
