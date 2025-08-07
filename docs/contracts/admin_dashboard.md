@@ -305,16 +305,11 @@
 
 #### 🧾 Query Params
 
-```ts
-{
-  skill_id?: number
-}
-```
 
 #### 🧾 Body
 
 ```ts
-{
+{ skill_id: number
   title: string;
   content: JSON;
   description: string;
@@ -346,16 +341,11 @@
 
 #### 🧾 Query Params
 
-```ts
-{
-  skill_id?: number
-}
-```
 
 #### 🧾 Body
 
 ```ts
-{
+{ lesson_id : number
   image: string; // Base64
   title: string;
   description: string;
