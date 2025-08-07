@@ -28,6 +28,7 @@ from .controllers import (
     get_badge_by_age_group_chart,
     get_learning_funnel_chart,
     get_skill_engagment_chart,
+    get_skills,
     parent_regisc,
     child_regisc,
     admin_loginc,
@@ -558,3 +559,9 @@ def user_badges(current_user, role):
 @token_required(allowed_roles=["child"])
 def get_curr(current_user=None, role=None):
     return get_curriculums_for_child()
+
+
+@api.route("/skills", methods=["GET"])
+@token_required(allowed_roles=["admin", "parent"])
+def get_sklills_route(current_user, role):
+    return get_skills()
