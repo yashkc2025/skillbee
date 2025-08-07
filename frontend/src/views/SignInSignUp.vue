@@ -426,6 +426,7 @@ const handleLogin = async () => {
             return;
         }
 
+        localStorage.setItem("authToken", token);
 
         switch (selectedUserType.value) {
             case "Admin":
