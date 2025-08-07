@@ -82,6 +82,10 @@ from .controllers import (
     delete_badge,
     delete_lesson,
     delete_quiz,
+    get_children_by_age_groups,
+    get_lesson_details_by_id,
+    get_activity_details_by_id,
+    get_quiz_details_by_id,
 )
 
 scheduler = APScheduler()
@@ -283,8 +287,8 @@ def get_badge(current_user, role):
 
 @api.route("/parent/children", methods=["POST"])
 @token_required(allowed_roles=["parent"])
-def parent_children():
-    return create_child(request)
+def parent_children(current_user, role):
+    return create_child(current_user, role)
 
 
 @api.route("/admin/badge", methods=["POST"])
@@ -565,3 +569,27 @@ def get_curr(current_user=None, role=None):
 @token_required(allowed_roles=["admin", "parent"])
 def get_sklills_route(current_user, role):
     return get_skills()
+
+
+@api.route("/age_group_chart", methods=["GET"])
+@token_required(allowed_roles=["admin", "parent"])
+def age_group_chart(current_user, role):
+    return get_children_by_age_groups()
+
+
+@api.route("/admin/lesson/<int:lesson_id>", methods=["GET"])
+@token_required(allowed_roles=["admin"])
+def get_lesson_by_id(lesson_id, current_user, role):
+    return get_lesson_details_by_id(lesson_id)
+
+
+@api.route("/admin/activity/<int:activity_id>", methods=["GET"])
+@token_required(allowed_roles=["admin"])
+def get_act_by_id(activity_id, current_user, role):
+    return get_activity_details_by_id(activity_id)
+
+
+@api.route("/admin/quiz/<int:quiz_id>", methods=["GET"])
+@token_required(allowed_roles=["admin"])
+def get_quiz_by_id(quiz_id, current_user, role):
+    return get_quiz_details_by_id(quiz_id)

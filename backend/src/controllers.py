@@ -1,6 +1,7 @@
 from io import BytesIO
 from functools import wraps
 import json
+from pydoc import describe
 from flask import request, jsonify, send_file
 from .db import db
 from .models import (
@@ -23,9 +24,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta
 import uuid
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy import and_, func, case, cast, Integer
 import time
 import base64
 from .decorators import only_admin, only_admin_or_parent, only_parent
+import imghdr
 
 
 def parent_regisc(request):
@@ -1584,9 +1587,15 @@ def get_children(current_user, role):
 
     response = []
     for child in children:
+        if child.profile_image:
+            image_base64 = base64.b64encode(child.profile_image).decode("utf-8")
+        else:
+            image_base64 = ""
+
         response.append(
             {
                 "id": child.child_id,
+                "image": image_base64,
                 "name": child.name,
                 "email": child.email_id,
                 "age": age_calc(child.dob),
@@ -1688,7 +1697,7 @@ def get_badges(current_user, role):
     return jsonify(response), 200
 
 
-def create_child(*args, current_user, role, **kwargs):
+def create_child(current_user, role):
     data = request.get_json()
 
     # Required fields as per contract
@@ -2206,12 +2215,18 @@ def admin_child_profile(current_user, role):
     badge_histories = (
         BadgeHistory.query.join(Badge).filter(BadgeHistory.child_id == child_id).all()
     )
+
     for bh in badge_histories:
         badge_img_base64 = ""
+
         if bh.badge and bh.badge.image:
-            badge_img_base64 = "data:image/png;base64," + base64.b64encode(
-                bh.badge.image
-            ).decode("utf-8")
+            try:
+                # Ensure image is in bytes, in case it's a memoryview
+                image_data = bytes(bh.badge.image)
+                badge_img_base64 = base64.b64encode(image_data).decode("utf-8")
+            except Exception as e:
+                print(f"[ERROR] Failed to encode image for badge_id={bh.badge_id}: {e}")
+
         badges.append(
             {
                 "badge_id": str(bh.badge_id),
@@ -2399,7 +2414,9 @@ def update_activity(current_user, role):
     description = data.get("description")
     instructions = data.get("instructions")
     difficulty = data.get("difficulty")
-    point = data.get("point")
+    lesson_id = data.get("lesson_id")
+
+    # point = data.get("point")
     answer_format = data.get("answer_format")
 
     if image is not None:
@@ -2416,8 +2433,11 @@ def update_activity(current_user, role):
         activity.instructions = instructions
     if difficulty is not None:
         activity.difficulty = difficulty
-    if point is not None:
-        activity.points = point
+    if lesson_id is not None:
+        activity.lesson_id = lesson_id
+
+    # if point is not None:
+    #     activity.points = point
     if answer_format is not None:
         allowed_formats = ["text", "image", "pdf"]
         if answer_format not in allowed_formats:
@@ -2440,7 +2460,7 @@ def update_activity(current_user, role):
                 "id": activity.activity_id,
                 "title": activity.name,
                 "difficulty": activity.difficulty,
-                "points": activity.points,
+                # "points": activity.points,
                 "answer_format": activity.answer_format,
             }
         ),
@@ -2469,6 +2489,7 @@ def update_quiz(current_user, role):
     time_duration = data.get("time_duration")
     image_base64 = data.get("image")
     questions = data.get("questions")
+    lesson_id = data.get("lesson_id")
 
     if image_base64 is not None:
         try:
@@ -2486,6 +2507,8 @@ def update_quiz(current_user, role):
         quiz.points = points
     if time_duration is not None:
         quiz.time_duration = time_duration
+    if lesson_id is not None:
+        quiz.lesson_id = lesson_id
 
     if questions is not None:
         if not isinstance(questions, list) or not questions:
@@ -2745,7 +2768,7 @@ def get_active_users_chart(current_user, role):
 
             active_parents_count = Parent.query.filter(
                 Parent.children.any(
-                    Child.last_login >= day_start, Child.last_login <= day_end
+                    and_(Child.last_login >= day_start, Child.last_login <= day_end)
                 )
             ).count()
 
@@ -3144,3 +3167,99 @@ def get_skills():
         )
 
     return jsonify(response), 200
+
+
+def get_children_by_age_groups():
+    # Calculate age from DOB using SQLite-compatible SQL
+    age = cast(func.strftime("%Y", "now"), Integer) - cast(
+        func.strftime("%Y", Child.dob), Integer
+    )
+
+    age_8_10 = func.sum(case((age.between(8, 9), 1), else_=0)).label("age_8_10")
+
+    age_10_12 = func.sum(case((age.between(10, 11), 1), else_=0)).label("age_10_12")
+
+    age_12_14 = func.sum(case((age.between(12, 13), 1), else_=0)).label("age_12_14")
+
+    result = db.session.query(age_8_10, age_10_12, age_12_14).one()
+
+    return jsonify(
+        {
+            "age_8_10": int(result.age_8_10),
+            "age_10_12": int(result.age_10_12),
+            "age_12_14": int(result.age_12_14),
+        }
+    )
+
+
+def get_lesson_details_by_id(lesson_id: int):
+    """
+    get lesson details for a practicular lesson using id
+    """
+    if not lesson_id:
+        return jsonify({"message": "Lesson id missing"}), 400
+    lesson: Lesson = Lesson.query.filter(Lesson.lesson_id == lesson_id).first_or_404()
+
+    return (
+        jsonify(
+            {
+                "id": lesson.lesson_id,
+                "skill_id": lesson.skill_id,
+                "title": lesson.title,
+                "description": lesson.description,
+                "content": lesson.content,
+            }
+        ),
+        200,
+    )
+
+
+def get_activity_details_by_id(activity_id: int):
+    """
+    get lesson details for a practicular lesson using id
+    """
+    if not activity_id:
+        return jsonify({"message": "Activity id missing"}), 400
+    act: Activity = Activity.query.filter(
+        Activity.activity_id == activity_id
+    ).first_or_404()
+
+    return (
+        jsonify(
+            {
+                "id": act.activity_id,
+                "title": act.name,
+                "description": act.description,
+                "instructions": act.instructions,
+                "difficulty": act.difficulty,
+                "lesson_id": act.lesson_id,
+                "answer_format": act.answer_format,
+            }
+        ),
+        200,
+    )
+
+
+def get_quiz_details_by_id(quiz_id: int):
+    """
+    get lesson details for a practicular lesson using id
+    """
+    if not quiz_id:
+        return jsonify({"message": "quiz_id missing"}), 400
+    quiz: Quiz = Quiz.query.filter(Quiz.quiz_id == quiz_id).first_or_404()
+
+    return (
+        jsonify(
+            {
+                "id": quiz.quiz_id,
+                "title": quiz.quiz_name,
+                "description": quiz.description,
+                "difficulty": quiz.difficulty,
+                "lesson_id": quiz.lesson_id,
+                "points": quiz.points,
+                "questions": quiz.questions,
+                "time_duration": quiz.time_duration,
+            }
+        ),
+        200,
+    )
