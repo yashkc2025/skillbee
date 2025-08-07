@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import CardV2 from '@/components/CardV2.vue';
+import CardV2 from "@/components/CardV2.vue";
+import { fixImage } from "@/fx/utils";
 
 interface BadgeType {
-  label: string;
+  title: string;
   image: string;
 }
 
 const props = defineProps<{
   badges: BadgeType[];
 }>();
-
 </script>
 
 <template>
@@ -17,8 +17,8 @@ const props = defineProps<{
     <template #content>
       <div class="badge-group">
         <div v-for="(s, i) in props.badges" :key="i" class="badge-parent">
-          <img :src="s.image" :alt="s.label" />
-          <span class="skill-card">{{ s.label }}</span>
+          <img :src="fixImage(s.image)" :alt="s.title" />
+          <span class="skill-card">{{ s.title }}</span>
         </div>
       </div>
     </template>

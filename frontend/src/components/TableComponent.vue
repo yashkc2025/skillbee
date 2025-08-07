@@ -1,15 +1,16 @@
 <script lang="ts" setup>
-import { defineProps } from 'vue'
+import { defineProps } from "vue";
 
 // Define props and their types
 const props = defineProps<{
-  header: string[]
-  rows: unknown[]
-}>()
-
+  header: string[];
+  rows: unknown[];
+}>();
 
 function isComponent(val: unknown) {
-  return typeof val === 'object' && val !== null && ('__v_isVNode' in val || 'render' in val)
+  return (
+    typeof val === "object" && val !== null && ("__v_isVNode" in val || "render" in val)
+  );
 }
 </script>
 
@@ -31,8 +32,8 @@ function isComponent(val: unknown) {
       </tr>
     </tbody>
   </table>
+  <div class="empty" v-if="rows.length === 0">No such rows found</div>
 </template>
-
 
 <style scoped>
 .table {
@@ -84,5 +85,12 @@ function isComponent(val: unknown) {
 .table th:last-child {
   border-top-right-radius: var(--border-radius);
   border-bottom-right-radius: var(--border-radius);
+}
+
+.empty {
+  text-align: center;
+  font-weight: 500;
+  width: 100%;
+  margin: 50px 0;
 }
 </style>

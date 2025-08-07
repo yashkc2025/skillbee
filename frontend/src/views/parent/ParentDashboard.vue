@@ -1,42 +1,71 @@
 <script setup lang="ts">
-import AdminAppLayout from "@/layouts/AdminAppLayout.vue";
-import ChildrenTable from "@/components/admin/dashboard/ChildrenTable.vue"
-import ParentTable from "@/components/admin/dashboard/ParentTable.vue";
-import ActiveUserChart from "@/components/admin/charts/ActiveUserChart.vue";
-import CardV2 from "@/components/CardV2.vue";
-import SkillChart from "@/components/admin/charts/SkillChart.vue";
+import { fetchData } from "@/fx/api";
+import { getBackendURL } from "@/fx/utils";
 import ParentAppLayout from "@/layouts/ParentAppLayout.vue";
+import { ref } from "vue";
+import { onMounted } from "vue";
 import { useRouter } from "vue-router";
 
-const parent = {
-  'name': 'Mr. Kumar',
-  'child': [
-    {
-      'id': 1,
-      'name': 'Yash Kumar',
-      'profile_image': "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ09_SsUhus7pTrYp8oZpJp434QP-XFp_4F7Q&s"
-    }
-  ]
-}
+type ChildType = {
+  id: number;
+  name: string;
+  image: string;
+}[];
 
-const router = useRouter()
+const child = ref<ChildType>();
+
+onMounted(async () => {
+  const data = await fetchData(getBackendURL("children"));
+
+  if (data) {
+    child.value = data;
+  }
+});
+
+const router = useRouter();
 
 function navToProfile(id: number) {
-  router.push({ name: 'child_profile_parent', params: { id } })
+  router.push({ name: "child_profile_parent", params: { id } });
 }
 
 function newChild() {
-  router.push({ name: 'parent_new_children' })
+  router.push({ name: "parent_new_children" });
+}
+
+function fixMalformedBase64Image(input: string | null | undefined): string {
+  const fallbackImage = "/assets/default-user.jpg"; // ✅ your basic fallback image path
+
+  if (!input || input.trim() === "") {
+    return fallbackImage;
+  }
+
+  // Already valid
+  if (input.startsWith("data:image/") && input.includes(";base64,")) {
+    return input;
+  }
+
+  // Try to fix malformed known patterns
+  const fixed = input.replace(
+    /^dataimage\/(jpeg|png|webp|gif)base64[\/,]?/,
+    "data:image/$1;base64,"
+  );
+
+  // Still malformed? Assume JPEG
+  if (!fixed.startsWith("data:image/")) {
+    return "data:image/jpeg;base64," + input;
+  }
+
+  return fixed;
 }
 </script>
 
 <template>
   <ParentAppLayout>
-    <div class="dashboard">
+    <div class="dashboard" v-if="child">
       <h2>Select or Add a child get started</h2>
       <div class="child-group">
-        <div v-for="i in parent.child" class="child" @click="navToProfile(i.id)">
-          <img :src="i.profile_image" />
+        <div v-for="i in child" class="child" @click="navToProfile(i.id)" :key="i.id">
+          <img :src="fixMalformedBase64Image(i.image)" />
           <p>{{ i.name }}</p>
         </div>
         <div class="child" @click="newChild()">
@@ -83,10 +112,10 @@ h2 {
   cursor: pointer;
 }
 
-.child>img {
+.child > img {
   width: 120px;
   height: 120px;
-  border-radius: 100%
+  border-radius: 100%;
 }
 
 .child i {

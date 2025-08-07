@@ -302,7 +302,6 @@
 **POST** `/admin/lesson`
 **Access:** `@only admin`
 
-
 #### 🧾 Query Params
 
 ```ts
@@ -343,19 +342,11 @@
 **POST** `/admin/quiz`
 **Access:** `@only admin`
 
-
-#### 🧾 Query Params
-
-```ts
-{
-  skill_id?: number
-}
-```
-
 #### 🧾 Body
 
 ```ts
 {
+  lesson_id: number,
   image: string; // Base64
   title: string;
   description: string;
