@@ -5,6 +5,10 @@
 </template>
 
 <script setup lang="ts">
+const props = defineProps<{
+  childId: string;
+}>();
+
 import { use } from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { BarChart } from "echarts/charts";
@@ -21,6 +25,7 @@ import { ref, onMounted, nextTick } from "vue";
 import type { ECRef } from "vue-echarts";
 import { fetchData } from "@/fx/api";
 import { getBackendURL } from "@/fx/utils";
+import type { ProfileType } from "@/views/admin/ChildrenProfile.vue";
 
 use([
   CanvasRenderer,
@@ -32,18 +37,13 @@ use([
   DatasetComponent,
   ToolboxComponent,
 ]);
-type AgeGroupData = {
-  age_8_10: number;
-  age_10_12: number;
-  age_12_14: number;
-};
 
 type SkillData = {
   skill_id: string;
   skill_name: string;
-  lesson_completed_count: AgeGroupData;
-  lesson_started_count: AgeGroupData;
-  quiz_attempted_count: AgeGroupData;
+  lesson_completed_count: number;
+  lesson_started_count: number;
+  quiz_attempted_count: number;
 };
 
 type TransformedSkillData = {
@@ -54,23 +54,13 @@ type TransformedSkillData = {
 };
 
 function transformSkillData(data: SkillData[]): TransformedSkillData {
-  const joinedData = data.map((skill) => {
-    const sum = (group: AgeGroupData): number =>
-      group.age_8_10 + group.age_10_12 + group.age_12_14;
-
-    return {
-      skill_name: skill.skill_name,
-      total_lesson_completed_count: sum(skill.lesson_completed_count),
-      total_lesson_started_count: sum(skill.lesson_started_count),
-      total_quiz_attempted_count: sum(skill.quiz_attempted_count),
-    };
-  });
+  const joinedData = data;
 
   return {
     skill_name: joinedData.map((x) => x.skill_name),
-    total_lesson_completed_count: joinedData.map((x) => x.total_lesson_completed_count),
-    total_lesson_started_count: joinedData.map((x) => x.total_lesson_started_count),
-    total_quiz_attempted_count: joinedData.map((x) => x.total_quiz_attempted_count),
+    total_lesson_completed_count: joinedData.map((x) => x.lesson_completed_count),
+    total_lesson_started_count: joinedData.map((x) => x.lesson_started_count),
+    total_quiz_attempted_count: joinedData.map((x) => x.quiz_attempted_count),
   };
 }
 
@@ -79,9 +69,11 @@ const chartData = ref<TransformedSkillData>();
 const option = ref();
 
 onMounted(async () => {
-  const data = await fetchData(getBackendURL("admin/age_distribution_chart"));
+  const data: ProfileType = await fetchData(getBackendURL("children/profile"), {
+    id: props.childId,
+  });
   if (data) {
-    chartData.value = transformSkillData(data);
+    chartData.value = transformSkillData(data.skills_progress);
     option.value = {
       textStyle: {
         fontFamily: "DMSans",

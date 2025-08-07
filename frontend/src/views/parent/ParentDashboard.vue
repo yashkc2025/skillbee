@@ -1,34 +1,25 @@
 <script setup lang="ts">
+import { fetchData } from "@/fx/api";
+import { getBackendURL } from "@/fx/utils";
 import ParentAppLayout from "@/layouts/ParentAppLayout.vue";
 import { ref } from "vue";
 import { onMounted } from "vue";
 import { useRouter } from "vue-router";
 
-type ParentType = {
+type ChildType = {
+  id: number;
   name: string;
-  child: {
-    id: number;
-    name: string;
-    profile_image: string;
-  }[];
-};
+  image: string;
+}[];
 
-const parent = ref<ParentType>();
+const child = ref<ChildType>();
 
 onMounted(async () => {
-  const data = {
-    name: "Mr. Kumar",
-    child: [
-      {
-        id: 1,
-        name: "Yash Kumar",
-        profile_image:
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ09_SsUhus7pTrYp8oZpJp434QP-XFp_4F7Q&s",
-      },
-    ],
-  };
+  const data = await fetchData(getBackendURL("children"));
 
-  parent.value = data;
+  if (data) {
+    child.value = data;
+  }
 });
 
 const router = useRouter();
@@ -40,15 +31,41 @@ function navToProfile(id: number) {
 function newChild() {
   router.push({ name: "parent_new_children" });
 }
+
+function fixMalformedBase64Image(input: string | null | undefined): string {
+  const fallbackImage = "/assets/default-user.jpg"; // ✅ your basic fallback image path
+
+  if (!input || input.trim() === "") {
+    return fallbackImage;
+  }
+
+  // Already valid
+  if (input.startsWith("data:image/") && input.includes(";base64,")) {
+    return input;
+  }
+
+  // Try to fix malformed known patterns
+  const fixed = input.replace(
+    /^dataimage\/(jpeg|png|webp|gif)base64[\/,]?/,
+    "data:image/$1;base64,"
+  );
+
+  // Still malformed? Assume JPEG
+  if (!fixed.startsWith("data:image/")) {
+    return "data:image/jpeg;base64," + input;
+  }
+
+  return fixed;
+}
 </script>
 
 <template>
   <ParentAppLayout>
-    <div class="dashboard" v-if="parent">
+    <div class="dashboard" v-if="child">
       <h2>Select or Add a child get started</h2>
       <div class="child-group">
-        <div v-for="i in parent.child" class="child" @click="navToProfile(i.id)">
-          <img :src="i.profile_image" />
+        <div v-for="i in child" class="child" @click="navToProfile(i.id)" :key="i.id">
+          <img :src="fixMalformedBase64Image(i.image)" />
           <p>{{ i.name }}</p>
         </div>
         <div class="child" @click="newChild()">

@@ -1,11 +1,36 @@
 <script setup lang="ts">
+const props = defineProps({
+  id: {
+    type: Number,
+    required: true,
+  },
+});
+
 import { ref, reactive, onMounted } from "vue";
 import CardV2 from "@/components/CardV2.vue";
 import InputComponent from "@/components/InputComponent.vue";
 import AdminAppLayout from "@/layouts/AdminAppLayout.vue";
 import SelectComponent from "@/components/SelectComponent.vue";
-import { fetchData, postData } from "@/fx/api";
+import { fetchData, postData, updateData } from "@/fx/api";
 import { getBackendURL, type OptionsType } from "@/fx/utils";
+
+export interface QuizFormat {
+  description: string
+  difficulty: string
+  id: number
+  lesson_id: number
+  points: number
+  questions: {
+  options: {
+  isCorrect: boolean
+  text: string
+}[]
+  question: string
+}[]
+  time_duration: number
+  title: string
+}
+
 
 // Metadata Fields
 const lesson = ref("");
@@ -15,23 +40,35 @@ const description = ref("");
 const difficulty = ref("");
 const point = ref();
 const timeDuration = ref();
-
-const lessons = ref<OptionsType[]>([]);
-
-onMounted(async () => {
-  const data = await fetchData(getBackendURL("lessons"))
-
-  lessons.value = data.map((d) => ({ value: d.id, label: d.title }));
-});
-
-
-// Quiz Form State
 const questions = reactive<
   Array<{
     question: string;
     options: Array<{ text: string; isCorrect: boolean }>;
   }>
 >([]);
+
+const lessons = ref<OptionsType[]>([]);
+const quizData = ref<QuizFormat>()
+
+onMounted(async () => {
+  const lessonData = await fetchData(getBackendURL("lessons"))
+  quizData.value = await fetchData(getBackendURL(`admin/quiz/${props.id}`))
+
+  if(quizData.value){
+    lesson.value = quizData.value.lesson_id
+    title.value = quizData.value.title
+    description.value = quizData.value.description
+    difficulty.value = quizData.value.difficulty
+    point.value = quizData.value.points
+    timeDuration.value = quizData.value.time_duration
+
+    questions.length = 0;
+    questions.push(...quizData.value.questions);
+    }
+  lessons.value = lessonData.map((d) => ({ value: d.id, label: d.title }));
+});
+
+
 
 function addQuestion() {
   questions.push({
@@ -60,28 +97,33 @@ function markCorrect(qIndex: number, oIndex: number) {
 }
 
 // Final payload preparation (on submit)
-async function createQuiz() {
+async function updateQuiz() {
   const payload = {
+    id : props.id,
     title: title.value,
     image: image.value,
     description: description.value,
     difficulty: difficulty.value,
-    points: point.value,
+    point: point.value,
     lesson_id: lesson.value,
     questions: questions,
     time_duration: timeDuration.value,
   };
 
+  if (image.value && image.value.trim() !== "") {
+    payload.image = image.value;
+  }
+
   console.log("Submitting Quiz:", payload);
-  postData(getBackendURL("admin/quiz"), payload);
+  await updateData(getBackendURL("admin/quiz"), payload);
 }
 </script>
 
 <template>
   <AdminAppLayout>
-    <form class="outer" @submit.prevent="createQuiz">
+    <form class="outer" @submit.prevent="updateQuiz">
       <p class="intro">
-        <span class="darken">New Quiz</span>
+        <span class="darken">Update Quiz</span>
       </p>
 
       <!-- Metadata -->
@@ -216,8 +258,8 @@ async function createQuiz() {
 
       <!-- Submit Button -->
       <div style="display: flex; justify-content: flex-end">
-        <button type="button" class="button-admin" @click="createQuiz">
-          Create Quiz
+        <button type="button" class="button-admin" @click="updateQuiz">
+          Update Quiz
         </button>
       </div>
     </form>

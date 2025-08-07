@@ -9,6 +9,7 @@ import { ref } from "vue";
 const title = ref("");
 const points = ref();
 const image = ref();
+const description = ref("");
 
 async function newBadge() {
   if (!image.value) {
@@ -16,10 +17,11 @@ async function newBadge() {
     return;
   }
 
-  postData(getBackendURL(""), {
+  postData(getBackendURL("admin/badge"), {
     title: title.value,
     image: image.value,
     points: points.value,
+    description: description.value,
   });
 }
 </script>
@@ -37,6 +39,13 @@ async function newBadge() {
             name="title"
             placeholder="Title"
             v-model="title"
+            :required="true"
+          />
+          <InputComponent
+            icon="bi bi-justify"
+            name="description"
+            placeholder="Description"
+            v-model="description"
             :required="true"
           />
           <InputComponent

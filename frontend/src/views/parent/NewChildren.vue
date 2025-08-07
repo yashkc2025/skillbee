@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import CardV2 from "@/components/CardV2.vue";
 import InputComponent from "@/components/InputComponent.vue";
-import AdminAppLayout from "@/layouts/AdminAppLayout.vue";
-import SelectComponent from "@/components/SelectComponent.vue";
 import { ref } from "vue";
 import ParentAppLayout from "@/layouts/ParentAppLayout.vue";
 import { postData } from "@/fx/api";
+import { getBackendURL } from "@/fx/utils";
 
 const name = ref("");
 const username = ref("");
@@ -13,14 +12,16 @@ const confirmPass = ref("");
 const password = ref("");
 const dob = ref();
 const school = ref("");
+const image = ref("");
 
 async function newChildren() {
-  await postData("", {
+  await postData(getBackendURL("parent/children"), {
     name: name.value,
     username: username.value,
     confirmPass: confirmPass.value,
     password: password.value,
     dob: dob.value,
+    profile_image: image.value,
     school: school.value,
   });
 }
@@ -41,6 +42,13 @@ async function newChildren() {
               placeholder="Title"
               v-model="name"
               :required="true"
+            />
+            <InputComponent
+              icon="bi bi-image"
+              name="image"
+              placeholder="Image"
+              v-model="image"
+              field-type="file"
             />
             <InputComponent
               icon="bi bi-dot"

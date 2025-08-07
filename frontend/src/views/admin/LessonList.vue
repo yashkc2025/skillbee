@@ -7,6 +7,8 @@ import sitemap from "@/router/sitemap.json";
 import AdminAppLayout from "@/layouts/AdminAppLayout.vue";
 import { ref } from "vue";
 import { onMounted } from "vue";
+import { deleteData, fetchData } from "@/fx/api";
+import { getBackendURL } from "@/fx/utils";
 
 type LessonsType = {
   id: number;
@@ -17,63 +19,20 @@ type LessonsType = {
 const lessons = ref<LessonsType>([]);
 const searchText = ref("");
 
-const lessonLabels = ["ID", "Title", "Curriculum", "Activities", "Quiz", "Edit"];
+const lessonLabels = [
+  "ID",
+  "Title",
+  "Curriculum",
+  "Activities",
+  "Quiz",
+  "Edit",
+  "Delete",
+];
 
 const router = useRouter();
 
 onMounted(async () => {
-  const data = [
-    {
-      id: 1,
-      title: "Let's make a ship!",
-      curriculum: "Extracurricular Activities",
-    },
-    {
-      id: 2,
-      title: "Debate Club: Argue like a Pro",
-      curriculum: "Communication Skills",
-    },
-    {
-      id: 3,
-      title: "Budget Your Pocket Money",
-      curriculum: "Financial Literacy",
-    },
-    {
-      id: 4,
-      title: "Solve the Mystery! Logic Puzzle Day",
-      curriculum: "Critical Thinking",
-    },
-    {
-      id: 5,
-      title: "Plan a Perfect Study Week",
-      curriculum: "Time Management",
-    },
-    {
-      id: 6,
-      title: "Public Speaking Bootcamp",
-      curriculum: "Communication Skills",
-    },
-    {
-      id: 7,
-      title: "Escape Room Challenge",
-      curriculum: "Critical Thinking",
-    },
-    {
-      id: 8,
-      title: "Start Your Own Club",
-      curriculum: "Extracurricular Activities",
-    },
-    {
-      id: 9,
-      title: "Track Your Spending for a Month",
-      curriculum: "Financial Literacy",
-    },
-    {
-      id: 10,
-      title: "Beat the Clock: Productivity Games",
-      curriculum: "Time Management",
-    },
-  ];
+  const data = await fetchData(getBackendURL("lessons"));
 
   lessons.value = data;
 });
@@ -83,6 +42,10 @@ function addLesson() {
 
 function navToLink(name: string, id: number) {
   router.push({ name, params: { id } });
+}
+
+async function deleteItem(id) {
+  await deleteData(getBackendURL("/admin/lesson"), { id });
 }
 
 function tableEntries() {
@@ -95,7 +58,9 @@ function tableEntries() {
       )
     )
     .map((p) => ({
-      ...p,
+      id: p.id,
+      title: p.title,
+      curriculum: p.curriculum,
       activities: (
         <i
           class="bi bi-patch-plus pointer"
@@ -118,7 +83,10 @@ function tableEntries() {
           }
         ></i>
       ),
-      edit: <i class="bi bi-pen pointer" onClick={() => addLesson()}></i>,
+      edit: (
+        <i class="bi bi-pen pointer" onClick={() => navToLink("edit_lesson", p.id)}></i>
+      ),
+      delete: <i class="bi bi-trash3 pointer" onClick={() => deleteItem(p.id)}></i>,
     }));
 }
 </script>

@@ -5,18 +5,29 @@
 </template>
 
 <script setup lang="ts">
-import { use } from 'echarts/core';
-import { CanvasRenderer } from 'echarts/renderers';
-import { LineChart } from 'echarts/charts';
+import { use } from "echarts/core";
+import { CanvasRenderer } from "echarts/renderers";
+import { LineChart } from "echarts/charts";
 import {
   TitleComponent,
   TooltipComponent,
   LegendComponent,
   GridComponent,
-} from 'echarts/components';
-import VChart from 'vue-echarts';
-import { ref, onMounted, nextTick } from 'vue';
-import type { ECRef } from 'vue-echarts';
+} from "echarts/components";
+import VChart from "vue-echarts";
+import { ref, onMounted, nextTick } from "vue";
+import type { ECRef } from "vue-echarts";
+import { fetchData } from "@/fx/api";
+import { getBackendURL } from "@/fx/utils";
+
+interface DataFormat {
+  active_children: number[];
+  active_parents: number[];
+  dates: string[];
+  new_children_signups: number[];
+  new_parent_signups: number[];
+  total_active_users: number[];
+}
 
 use([
   CanvasRenderer,
@@ -28,76 +39,71 @@ use([
 ]);
 
 const chartRef = ref<ECRef>();
+const chartData = ref<DataFormat>();
+const option = ref(); // initialize empty
 
-onMounted(() => {
-  nextTick(() => {
-    chartRef.value?.resize();
-  });
-});
+onMounted(async () => {
+  chartData.value = await fetchData(getBackendURL("admin/active_users_chart"));
 
-const option = ref({
-  textStyle: {
-    fontFamily: 'DMSans',
-  },
-  tooltip: { trigger: 'axis' },
-  legend: {
-    // data: ['Direct', 'Email', 'Ad Networks', 'Video Ads', 'Search Engines'],
-    bottom: 0,
-    icon: 'circle',
-    itemGap: 20,
-  },
-  xAxis: {
-    type: 'category',
-    boundaryGap: false,
-    data: [
-      '2025-02-15', '2025-02-16', '2025-02-17', '2025-02-18', '2025-02-19',
-      '2025-02-20', '2025-02-21', '2025-02-22', '2025-02-23', '2025-02-24',
-      '2025-02-25', '2025-02-26', '2025-02-27', '2025-02-28', '2025-03-01',
-      '2025-03-02'
-    ]
-  },
-  yAxis: { type: 'value' },
-  series: [
-    {
-      name: 'Active Children',
-      type: 'line',
-      data: [42, 45, 40, 38, 43, 50, 48, 51, 47, 45, 49, 52, 50, 46, 48, 47],
-      smooth: true,
-      barGap: 0,
+  option.value = {
+    textStyle: {
+      fontFamily: "DMSans",
     },
-    {
-      name: 'Active Parents',
-      type: 'line',
-      data: [30, 32, 34, 33, 35, 38, 36, 39, 37, 36, 38, 40, 41, 39, 38, 37],
-      smooth: true
+    tooltip: { trigger: "axis" },
+    legend: {
+      bottom: 0,
+      icon: "circle",
+      itemGap: 20,
     },
-    {
-      name: 'New Children Signups',
-      type: 'line',
-      data: [5, 7, 6, 4, 8, 10, 9, 7, 6, 5, 7, 6, 8, 6, 5, 7],
-      smooth: true
+    xAxis: {
+      type: "category",
+      boundaryGap: false,
+      data: chartData.value?.dates,
     },
-    {
-      name: 'New Parents Signups',
-      type: 'line',
-      data: [3, 4, 4, 5, 6, 5, 4, 6, 5, 4, 5, 4, 6, 5, 4, 5],
-      smooth: true
+    yAxis: { type: "value" },
+    series: [
+      {
+        name: "Active Children",
+        type: "line",
+        data: chartData.value?.active_children,
+        smooth: true,
+      },
+      {
+        name: "Active Parents",
+        type: "line",
+        data: chartData.value?.active_parents,
+        smooth: true,
+      },
+      {
+        name: "New Children Signups",
+        type: "line",
+        data: chartData.value?.new_children_signups,
+        smooth: true,
+      },
+      {
+        name: "New Parents Signups",
+        type: "line",
+        data: chartData.value?.new_parent_signups,
+        smooth: true,
+      },
+      {
+        name: "Total Active Users",
+        type: "line",
+        data: chartData.value?.total_active_users,
+        smooth: true,
+      },
+    ],
+    grid: {
+      top: 10,
+      bottom: 30,
+      left: 10,
+      right: 35,
+      containLabel: true,
     },
-    {
-      name: 'Total Active Users',
-      type: 'line',
-      data: [72, 77, 74, 71, 78, 85, 82, 88, 84, 81, 87, 92, 91, 85, 86, 84],
-      smooth: true
-    }
-  ],
-  grid: {
-    top: 10,
-    bottom: 30, // increased for x-axis labels
-    left: 10,   // small padding
-    right: 35,  // allows space for last label
-    containLabel: true
-  }
+  };
 
+  await nextTick();
+  chartRef.value?.resize();
 });
 </script>
 

@@ -1,56 +1,68 @@
 <script setup lang="tsx">
-defineProps(["id"]);
+const props = defineProps({
+  id: {
+    type: Number,
+    required: true,
+  },
+});
 import AdminAppLayout from "@/layouts/AdminAppLayout.vue";
 import CardV2 from "@/components/CardV2.vue";
-import { generateLabel } from "@/fx/utils";
+import { generateLabel, getBackendURL } from "@/fx/utils";
 import SkillChart from "@/components/admin/charts/SkillChart.vue";
 import Badges from "@/components/admin/children/AdminBadgesComponent.vue";
 import TableComponent from "@/components/TableComponent.vue";
 import { ref } from "vue";
 import PointsChart from "@/components/admin/charts/PointsChart.vue";
-import { postData } from "@/fx/api";
+import { fetchData, postData } from "@/fx/api";
 import { onMounted } from "vue";
+import ChildSkillChart from "@/components/admin/charts/ChildSkillChart.vue";
 
-type ProfileType = {
+export type ProfileType = {
   info: {
     child_id: string;
     full_name: string;
     age: number;
-    grade: string;
-    enrollment_date: string;
-    status: "Active" | "Inactive" | string;
+    enrollment_date: string; // e.g., "2024-09-20"
+    status: string;
     parent: {
       id: number;
       name: string;
       email: string;
     };
   };
-  skills_progress: {
+
+  skills_progress: Array<{
     skill_id: string;
     skill_name: string;
-    progress_percent: number;
-  }[];
-  assessments: {
+    lesson_started_count: number;
+    lesson_completed_count: number;
+    quiz_attempted_count: number;
+  }>;
+
+  point_earned: Array<{
+    point: number;
+    date: string; // YYYY-MM-DD
+  }>;
+
+  assessments: Array<{
     id: number;
     skill_id: string;
-    assessment_type: "Quiz" | "Activity" | string;
+    assessment_type: "Quiz" | "Activity";
     title: string;
-    date: string;
-    score: number | string;
+    date: string; // ISO or YYYY-MM-DD
+    score: number | "Pass";
     max_score: number | string;
-  }[];
+  }>;
+
   achievements: {
-    badges: {
+    badges: Array<{
       badge_id: string;
       title: string;
-      awarded_on: string;
-    }[];
+      image: string; // Base64
+      awarded_on: string; // ISO or date string
+    }>;
     streak: number;
   };
-  badges: {
-    label: string;
-    image: string;
-  }[];
 };
 
 type RowTypes = { [key: string]: string | number };
@@ -58,112 +70,30 @@ type RowTypes = { [key: string]: string | number };
 const profile = ref<ProfileType>();
 const infoRows = ref<RowTypes>();
 const parentRows = ref<RowTypes>();
+const points = ref({ point: [], dates: [] });
 const feedbackText = ref("");
 
 onMounted(async () => {
-  const data = {
-    info: {
-      child_id: "1",
-      full_name: "Yash Kumar",
-      age: 10,
-      grade: "5th",
-      enrollment_date: "20 September 2024",
-      status: "Active",
-      parent: {
-        id: 1,
-        name: "A Kumar",
-        email: "a.kumar@gmail.com",
-      },
-    },
-    skills_progress: [
-      {
-        skill_id: "drawing-basic",
-        skill_name: "Drawing Basics",
-        progress_percent: 85,
-      },
-      {
-        skill_id: "math-fractions",
-        skill_name: "Fractions",
-        progress_percent: 45,
-      },
-    ],
+  const data: ProfileType = await fetchData(getBackendURL("children/profile"), {
+    id: props.id,
+  });
+  if (data) {
+    profile.value = data;
 
-    assessments: [
-      {
-        id: 23,
-        skill_id: "Critical Thinking",
-        assessment_type: "Quiz",
-        title: "Fractions Quiz 1",
-        date: "2025-06-28",
-        score: 70,
-        max_score: 100,
-      },
-      {
-        id: 25,
-        skill_id: "Extracurricular",
-        assessment_type: "Project",
-        title: "Sketch a Fruit Bowl",
-        date: "2025-06-15",
-        max_score: "Pass",
-        score: "Pass",
-      },
-    ],
+    infoRows.value = {
+      ID: profile.value.info.child_id,
+      "Full Name": profile.value.info.full_name,
+      Age: profile.value.info.age,
+      Status: profile.value.info.status,
+      "Enrollment Date": profile.value.info.enrollment_date,
+    };
 
-    achievements: {
-      badges: [
-        {
-          badge_id: "art-beginner",
-          title: "Art Beginner",
-          awarded_on: "2025-06-10",
-        },
-        {
-          badge_id: "weekly-3day-streak",
-          title: "3-Day Learning Streak",
-          awarded_on: "2025-06-29",
-        },
-      ],
-      streak: 7,
-    },
-    badges: [
-      {
-        label: "Quick Thinker",
-        image:
-          "http://static.vecteezy.com/system/resources/previews/055/850/981/non_2x/cute-brain-cartoon-with-lightning-bolt-vector.jpg",
-      },
-      {
-        label: "Quick Thinker (alt)",
-        image:
-          "https://thumbs.dreamstime.com/b/brain-lightning-brainstorm-concept-like-cloud-power-mind-103281710.jpg",
-      },
-      {
-        label: "Math Magician",
-        image:
-          "https://play-lh.googleusercontent.com/_amVHhZZT0Jk3MAHEog0rZeCVMl2w6zQYoDH8Mo7ZjKUIQwRoUxg-FhgALctyKmAjoo",
-      },
-      {
-        label: "Math Magician (alt)",
-        image:
-          "https://is3-ssl.mzstatic.com/image/thumb/Purple122/v4/91/5c/c1/915cc1a2-0c75-4f6a-437b-68553220653e/source/512x512bb.jpg",
-      },
-    ],
-  };
-
-  profile.value = data;
-
-  infoRows.value = {
-    ID: profile.value.info.child_id,
-    "Full Name": profile.value.info.full_name,
-    Age: profile.value.info.age,
-    Grade: profile.value.info.grade,
-    Status: profile.value.info.status,
-    "Enrollment Date": profile.value.info.enrollment_date,
-  };
-
-  parentRows.value = {
-    ID: profile.value.info.parent.id,
-    Name: profile.value.info.parent.name,
-    Email: profile.value.info.parent.email,
-  };
+    parentRows.value = {
+      ID: profile.value.info.parent.id,
+      Name: profile.value.info.parent.name,
+      Email: profile.value.info.parent.email,
+    };
+  }
 });
 
 const assessmentLabels = [
@@ -181,7 +111,13 @@ function tableEntries() {
     return [];
   }
   return profile?.value.assessments.map((p) => ({
-    ...p,
+    id: p.id,
+    skill_id: p.skill_id,
+    a_type: p.assessment_type,
+    title: p.title,
+    dt: p.date,
+    score: p.score,
+    max_score: p.max_score,
   }));
 }
 
@@ -224,7 +160,10 @@ async function unBlockChild() {
             </div>
           </template>
         </CardV2>
-        <Badges :badges="profile?.badges" v-if="profile?.badges" />
+        <Badges
+          :badges="profile.achievements.badges"
+          v-if="profile?.achievements.badges"
+        />
         <button class="button-admin" v-if="profile?.info.status === 'Active'">
           Block User
         </button>
@@ -235,12 +174,12 @@ async function unBlockChild() {
       <div class="second">
         <CardV2 label-title="Skills" label-image="bi bi-bar-chart">
           <template #content>
-            <SkillChart />
+            <ChildSkillChart :child-id="props.id" />
           </template>
         </CardV2>
         <CardV2 label-title="Points Earned" label-image="bi bi-stars">
           <template #content>
-            <PointsChart />
+            <PointsChart :child-id="props.id" />
           </template>
         </CardV2>
       </div>

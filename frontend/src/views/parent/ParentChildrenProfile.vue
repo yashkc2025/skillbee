@@ -1,96 +1,198 @@
-<script setup lang="ts">
+<script setup lang="tsx">
+const props = defineProps({
+  id: {
+    type: Number,
+    required: true,
+  },
+});
 import CardV2 from "@/components/CardV2.vue";
-import InputComponent from "@/components/InputComponent.vue";
-import AdminAppLayout from "@/layouts/AdminAppLayout.vue";
-import SelectComponent from "@/components/SelectComponent.vue";
+import { generateLabel, getBackendURL } from "@/fx/utils";
+import SkillChart from "@/components/admin/charts/SkillChart.vue";
+import Badges from "@/components/admin/children/AdminBadgesComponent.vue";
+import TableComponent from "@/components/TableComponent.vue";
 import { ref } from "vue";
+import PointsChart from "@/components/admin/charts/PointsChart.vue";
+import { fetchData, postData } from "@/fx/api";
+import { onMounted } from "vue";
+import ChildSkillChart from "@/components/admin/charts/ChildSkillChart.vue";
 import ParentAppLayout from "@/layouts/ParentAppLayout.vue";
-import { postData } from "@/fx/api";
 
-const name = ref("");
-const username = ref("");
-const confirmPass = ref("");
-const password = ref("");
-const dob = ref();
-const school = ref("");
+export type ProfileType = {
+  info: {
+    child_id: string;
+    full_name: string;
+    age: number;
+    enrollment_date: string; // e.g., "2024-09-20"
+    status: string;
+    parent: {
+      id: number;
+      name: string;
+      email: string;
+    };
+  };
 
-async function newChildren() {
+  skills_progress: Array<{
+    skill_id: string;
+    skill_name: string;
+    lesson_started_count: number;
+    lesson_completed_count: number;
+    quiz_attempted_count: number;
+  }>;
+
+  point_earned: Array<{
+    point: number;
+    date: string; // YYYY-MM-DD
+  }>;
+
+  assessments: Array<{
+    id: number;
+    skill_id: string;
+    assessment_type: "Quiz" | "Activity";
+    title: string;
+    date: string; // ISO or YYYY-MM-DD
+    score: number | "Pass";
+    max_score: number | string;
+  }>;
+
+  achievements: {
+    badges: Array<{
+      badge_id: string;
+      title: string;
+      image: string; // Base64
+      awarded_on: string; // ISO or date string
+    }>;
+    streak: number;
+  };
+};
+
+type RowTypes = { [key: string]: string | number };
+
+const profile = ref<ProfileType>();
+const infoRows = ref<RowTypes>();
+const parentRows = ref<RowTypes>();
+const points = ref({ point: [], dates: [] });
+const feedbackText = ref("");
+
+onMounted(async () => {
+  const data: ProfileType = await fetchData(getBackendURL("children/profile"), {
+    id: props.id,
+  });
+  if (data) {
+    profile.value = data;
+
+    infoRows.value = {
+      ID: profile.value.info.child_id,
+      "Full Name": profile.value.info.full_name,
+      Age: profile.value.info.age,
+      Status: profile.value.info.status,
+      "Enrollment Date": profile.value.info.enrollment_date,
+    };
+
+    parentRows.value = {
+      ID: profile.value.info.parent.id,
+      Name: profile.value.info.parent.name,
+      Email: profile.value.info.parent.email,
+    };
+  }
+});
+
+const assessmentLabels = [
+  "ID",
+  "Skill ID",
+  "Type",
+  "Title",
+  "Date",
+  "Score",
+  "Max Score",
+];
+
+function tableEntries() {
+  if (!profile.value || !Array.isArray(profile.value.assessments)) {
+    return [];
+  }
+  return profile?.value.assessments.map((p) => ({
+    id: p.id,
+    skill_id: p.skill_id,
+    a_type: p.assessment_type,
+    title: p.title,
+    dt: p.date,
+    score: p.score,
+    max_score: p.max_score,
+  }));
+}
+
+async function blockChild() {
   await postData("", {
-    name: name.value,
-    username: username.value,
-    confirmPass: confirmPass.value,
-    password: password.value,
-    dob: dob.value,
-    school: school.value,
+    children_id: profile.value?.info.child_id,
+  });
+}
+
+async function unBlockChild() {
+  await postData("", {
+    children_id: profile.value?.info.child_id,
   });
 }
 </script>
 
 <template>
   <ParentAppLayout>
-    <form class="outer" @submit.prevent="newChildren">
-      <p class="intro">
-        <span class="darken">Add Children</span>
-      </p>
-      <CardV2 label-title="Personal Info" label-image="bi bi-person">
-        <template #content class="form">
-          <div class="form">
-            <InputComponent
-              icon="bi bi-emoji-smile"
-              name="name"
-              placeholder="Title"
-              v-model="name"
-              :required="true"
-            />
-            <InputComponent
-              icon="bi bi-dot"
-              name="username"
-              placeholder="Username"
-              v-model="username"
-              :required="true"
-            />
-            <InputComponent
-              icon="bi bi-calendar-date"
-              name="dob"
-              placeholder="Date of Birth"
-              v-model="dob"
-              field-type="date"
-              :required="true"
-            />
-            <InputComponent
-              icon="bi bi-buildings"
-              name="school"
-              placeholder="School"
-              v-model="school"
-              :required="true"
-            />
-          </div>
-        </template>
-      </CardV2>
-      <CardV2 label-title="Password" label-image="bi bi-asterisk">
-        <template #content class="form">
-          <div class="form">
-            <InputComponent
-              icon="bi bi-asterisk"
-              name="password"
-              placeholder="Password"
-              v-model="password"
-              field-type="password"
-              :required="true"
-            />
-            <InputComponent
-              icon="bi bi-asterisk"
-              name="conf-password"
-              placeholder="Confirm Password"
-              v-model="confirmPass"
-              field-type="password"
-              :required="true"
-            />
-            <button type="submit" class="button-admin">Create</button>
-          </div>
-        </template>
-      </CardV2>
-    </form>
+    <!-- Intro -->
+    <p class="intro">
+      <span class="darken">{{ profile?.info.full_name }}</span>
+    </p>
+
+    <!-- Info and Charts -->
+    <section class="child-info">
+      <div class="first">
+        <CardV2 label-title="Children Info" label-image="bi bi-emoji-smile">
+          <template #content>
+            <div v-for="(value, property) in infoRows" class="info-elem" :key="value">
+              <span>{{ generateLabel(property as string) }}</span>
+              <span>{{ value }}</span>
+            </div>
+          </template>
+        </CardV2>
+        <CardV2 label-title="Parent Info" label-image="bi bi-person">
+          <template #content>
+            <div v-for="(value, property) in parentRows" class="info-elem" :key="value">
+              <span>{{ generateLabel(property as string) }}</span>
+              <span>{{ value }}</span>
+            </div>
+          </template>
+        </CardV2>
+        <Badges
+          :badges="profile.achievements.badges"
+          v-if="profile?.achievements.badges"
+        />
+        <button class="button-admin" v-if="profile?.info.status === 'Active'">
+          Block User
+        </button>
+        <button class="button-admin" v-if="profile?.info.status !== 'Active'">
+          Unblock User
+        </button>
+      </div>
+      <div class="second">
+        <CardV2 label-title="Skills" label-image="bi bi-bar-chart">
+          <template #content>
+            <ChildSkillChart :child-id="props.id" />
+          </template>
+        </CardV2>
+        <CardV2 label-title="Points Earned" label-image="bi bi-stars">
+          <template #content>
+            <PointsChart :child-id="props.id" />
+          </template>
+        </CardV2>
+      </div>
+    </section>
+    <CardV2
+      label-image="bi bi-patch-question"
+      label-title="Assessment Scores"
+      class="scores"
+    >
+      <template #content>
+        <TableComponent :rows="tableEntries()" :header="assessmentLabels" />
+      </template>
+    </CardV2>
   </ParentAppLayout>
 </template>
 
@@ -99,15 +201,43 @@ async function newChildren() {
   margin-bottom: 20px;
 }
 
-.form {
+.child-info {
   display: flex;
-  flex-direction: column;
-  gap: var(--size-xs);
+  flex-direction: row;
+  gap: var(--size-sm);
 }
 
-.outer {
+.info-elem {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-sm);
+  margin-bottom: 5px;
+}
+
+.first {
+  flex: 40%;
   display: flex;
   flex-direction: column;
   gap: var(--size-sm);
+}
+
+.second {
+  flex: 60%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-sm);
+}
+
+.scores {
+  margin-top: 20px;
+}
+
+.feedback-form {
+  /* display: none; */
+  width: 500px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 </style>
