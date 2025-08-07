@@ -1,0 +1,709 @@
+openapi: 3.0.3
+info:
+  title: Child Settings API
+  description: API for managing child profile settings, password changes, and profile images
+  version: 1.0.0
+
+paths:
+  /api/child/setting:
+    get:
+      summary: Get Child Profile
+      description: |
+        Fetch the authenticated child's profile details including profile image, name, date of birth, email, and school.
+        
+        Note: Child identification is handled through the authentication token.
+      security:
+        - BearerAuth: []
+      
+      responses:
+        "200":
+          description: Child profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile_image_url:
+                    type: string
+                    description: URL or binary data for profile image (empty string if no image)
+                    example: ""
+                  name:
+                    type: string
+                    description: Child's full name
+                    example: "John Doe"
+                  dob:
+                    type: string
+                    nullable: true
+                    format: date
+                    description: Date of birth in ISO format (null if not set)
+                    example: "2010-05-15"
+                  email:
+                    type: string
+                    nullable: true
+                    format: email
+                    description: Child's email address (null if not set)
+                    example: "john.doe@example.com"
+                  school:
+                    type: string
+                    nullable: true
+                    description: Child's school name (null if not set)
+                    example: "Elementary School"
+                required:
+                  - profile_image_url
+                  - name
+                  - dob
+                  - email
+                  - school
+              
+              examples:
+                complete_profile:
+                  summary: Child with complete profile
+                  value:
+                    profile_image_url: ""
+                    name: "John Doe"
+                    dob: "2010-05-15"
+                    email: "john.doe@example.com"
+                    school: "Elementary School"
+                minimal_profile:
+                  summary: Child with minimal profile
+                  value:
+                    profile_image_url: ""
+                    name: "Jane Smith"
+                    dob: "2012-03-20"
+                    email: null
+                    school: null
+        
+        "401":
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+                required:
+                  - error
+        
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+                required:
+                  - error
+        
+        "404":
+          description: Not Found - Child not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Child not found"
+                required:
+                  - error
+        
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Database error occurred"
+                  details:
+                    type: string
+                    example: "Connection timeout"
+                required:
+                  - error
+
+  /api/child/update_profile:
+    put:
+      summary: Update Child Profile Details
+      description: |
+        Update the authenticated child's name, date of birth, email, or school.
+        
+        Validation Rules:
+        - All fields are optional but at least one must be present
+        - Name cannot be empty if provided
+        - Email must be unique across all children if provided (can be null)
+        - Date of birth must be in YYYY-MM-DD format, child must be 8-14 years old
+        - School can be empty/null
+        
+        Note: Child identification is handled through the authentication token.
+      security:
+        - BearerAuth: []
+      
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Child's full name (cannot be empty)
+                  example: "John Smith"
+                email:
+                  type: string
+                  format: email
+                  nullable: true
+                  description: Child's email address (must be unique)
+                  example: "john.smith@example.com"
+                dob:
+                  type: string
+                  format: date
+                  description: Date of birth in YYYY-MM-DD format (age 8-14)
+                  example: "2010-05-15"
+                school:
+                  type: string
+                  nullable: true
+                  description: Child's school name
+                  example: "New Elementary School"
+              minProperties: 1
+            examples:
+              update_name_email:
+                summary: Update name and email
+                value:
+                  name: "John Smith"
+                  email: "john.smith@example.com"
+              update_school:
+                summary: Update school only
+                value:
+                  school: "New Elementary School"
+              clear_email:
+                summary: Clear email (set to null)
+                value:
+                  email: null
+      
+      responses:
+        "200":
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Profile details updated"
+                required:
+                  - status
+                  - message
+        
+        "400":
+          description: Bad Request - Invalid data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - "No data provided"
+                      - "At least one field must be provided"
+                      - "Name cannot be empty"
+                      - "Invalid date format. Use YYYY-MM-DD"
+                      - "Child must be between 8 and 14 years old"
+                      - "Date of birth cannot be empty"
+                required:
+                  - error
+              examples:
+                no_data:
+                  summary: No data provided
+                  value:
+                    error: "No data provided"
+                no_fields:
+                  summary: No fields to update
+                  value:
+                    error: "At least one field must be provided"
+                empty_name:
+                  summary: Empty name
+                  value:
+                    error: "Name cannot be empty"
+                invalid_date:
+                  summary: Invalid date format
+                  value:
+                    error: "Invalid date format. Use YYYY-MM-DD"
+                invalid_age:
+                  summary: Invalid age
+                  value:
+                    error: "Child must be between 8 and 14 years old"
+        
+        "401":
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+                required:
+                  - error
+        
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+                required:
+                  - error
+        
+        "404":
+          description: Not Found - Child not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Child not found"
+                required:
+                  - error
+        
+        "409":
+          description: Conflict - Email already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Email already registered by another child"
+                required:
+                  - error
+        
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Database error occurred"
+                  details:
+                    type: string
+                    example: "Connection timeout"
+                required:
+                  - error
+
+  /api/child/change_password:
+    put:
+      summary: Change Child Password
+      description: |
+        Change the authenticated child's password by providing current and new passwords.
+        
+        Password Requirements:
+        - Current password must match child's existing password
+        - New password must be at least 4 characters long
+        - New password must be different from current password
+        - Confirm password must match new password
+        
+        Note: Child identification is handled through the authentication token.
+      security:
+        - BearerAuth: []
+      
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                current_password:
+                  type: string
+                  description: Child's current password
+                  example: "oldpass123"
+                new_password:
+                  type: string
+                  minLength: 4
+                  description: New password (at least 4 characters)
+                  example: "newpass456"
+                confirm_password:
+                  type: string
+                  description: Confirmation of new password
+                  example: "newpass456"
+              required:
+                - current_password
+                - new_password
+                - confirm_password
+            example:
+              current_password: "oldpass123"
+              new_password: "newpass456"
+              confirm_password: "newpass456"
+      
+      responses:
+        "200":
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Password changed successfully"
+                required:
+                  - status
+                  - message
+        
+        "400":
+          description: Bad Request - Invalid password data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    enum:
+                      - "No data provided"
+                      - "Current password, new password, and confirm password are required"
+                      - "Current password is incorrect"
+                      - "New password and confirm password do not match"
+                      - "New password must be at least 4 characters long"
+                      - "New password must be different from current password"
+                required:
+                  - status
+                  - message
+              examples:
+                no_data:
+                  summary: No data provided
+                  value:
+                    status: "error"
+                    message: "No data provided"
+                missing_fields:
+                  summary: Missing required fields
+                  value:
+                    status: "error"
+                    message: "Current password, new password, and confirm password are required"
+                wrong_current:
+                  summary: Wrong current password
+                  value:
+                    status: "error"
+                    message: "Current password is incorrect"
+                password_mismatch:
+                  summary: Password confirmation mismatch
+                  value:
+                    status: "error"
+                    message: "New password and confirm password do not match"
+                too_short:
+                  summary: Password too short
+                  value:
+                    status: "error"
+                    message: "New password must be at least 4 characters long"
+                same_password:
+                  summary: Same as current password
+                  value:
+                    status: "error"
+                    message: "New password must be different from current password"
+        
+        "401":
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+                required:
+                  - error
+        
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+                required:
+                  - error
+        
+        "404":
+          description: Not Found - Child not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Child not found"
+                required:
+                  - status
+                  - message
+        
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Database error occurred"
+                required:
+                  - status
+                  - message
+
+  /api/child/profile_image:
+    get:
+      summary: Get Profile Image
+      description: |
+        Retrieve the authenticated child's profile image.
+        
+        Returns the current profile image data or empty string if no image is set.
+        
+        Note: Child identification is handled through the authentication token.
+      security:
+        - BearerAuth: []
+      
+      responses:
+        "200":
+          description: Profile image retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile_image:
+                    type: string
+                    nullable: true
+                    description: Profile image data (empty string if no image set, null if none)
+                    example: ""
+                required:
+                  - profile_image
+              examples:
+                no_image:
+                  summary: No profile image set
+                  value:
+                    profile_image: ""
+                with_image:
+                  summary: Profile image exists
+                  value:
+                    profile_image: "base64_encoded_image_data"
+        
+        "401":
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+                required:
+                  - error
+        
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+                required:
+                  - error
+        
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Database error occurred"
+                required:
+                  - status
+                  - message
+    
+    post:
+      summary: Upload Profile Image
+      description: |
+        Upload or update the authenticated child's profile image.
+        
+        The operation returns a JSON response indicating success or failure.
+        
+        Note: Child identification is handled through the authentication token.
+      security:
+        - BearerAuth: []
+      
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                profile_image:
+                  type: string
+                  description: Image data (empty string to clear image, or image data to set)
+                  example: "base64_encoded_image_data"
+              required:
+                - profile_image
+            examples:
+              set_image:
+                summary: Set profile image
+                value:
+                  profile_image: "base64_encoded_image_data"
+              clear_image:
+                summary: Clear profile image
+                value:
+                  profile_image: ""
+      
+      responses:
+        "200":
+          description: Profile image updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Profile image updated successfully"
+                required:
+                  - status
+                  - message
+        
+        "400":
+          description: Bad Request - No data provided
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "No data provided"
+                required:
+                  - status
+                  - message
+        
+        "401":
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+                required:
+                  - error
+        
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+                required:
+                  - error
+        
+        "404":
+          description: Not Found - Child not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Child not found"
+                required:
+                  - status
+                  - message
+        
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Database error occurred"
+                required:
+                  - status
+                  - message
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for child authentication

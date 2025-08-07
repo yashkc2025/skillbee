@@ -493,8 +493,8 @@ def get_lesson_quizzes(current_user, role, curriculum_id, lesson_id):
         "quizzes": quiz_list
     }), 200
 
-# @token_required(allowed_roles=["child"])
-def get_curriculums_for_child(current_user, role):
+
+def get_curriculums_for_child(current_user):
     child_id = current_user.child_id
     child = current_user
     age = age_calc(child.dob)
@@ -1345,13 +1345,23 @@ def child_profile_image(child_id):
     try:
         # Find the child
         child = Child.query.get(child_id)
+        if not child:
+            return jsonify({'status': 'error', 'message': 'Child not found'}), 404
         
         if request.method == 'POST':
-            data=request.get_json()
-            pic= data.get('profile_image') if (data.get('profile_image') != '') else None
+            data = request.get_json()
+            if not data:
+                return jsonify({'status': 'error', 'message': 'No data provided'}), 400
+            
+            pic = data.get('profile_image') if (data.get('profile_image') != '') else None
             
             child.profile_image = pic
             db.session.commit()
+            
+            return jsonify({
+                'status': 'success',
+                'message': 'Profile image updated successfully'
+            }), 200
 
         elif request.method == 'GET':
             return jsonify({

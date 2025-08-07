@@ -5,17 +5,13 @@ info:
   description: API for managing lesson information and progress.
 
 paths:
-  /api/child/{child_id}/curriculum/{curriculum_id}/lessons:
+  /api/child/curriculum/{curriculum_id}/lessons:
     get:
       summary: Get Curriculum Lessons
-      description: Returns curriculum details and lessons with progress status.
+      description: Returns curriculum details and lessons with progress status for the authenticated child.
+      security:
+        - BearerAuth: []
       parameters:
-        - in: path
-          name: child_id
-          schema:
-            type: integer
-          required: true
-          description: Unique identifier for the child
         - in: path
           name: curriculum_id
           schema:
@@ -49,6 +45,8 @@ paths:
                         image:
                           type: string
                           format: url
+                          nullable: true
+                          description: URL to the lesson's image. Can be null.
                         description:
                           type: string
                         progress_status:
@@ -70,22 +68,70 @@ paths:
                         progress_status: 80.0
                       - lesson_id: 102
                         title: "Basic Addition"
-                        image: "http://example.com/addition.png"
+                        image: null
                         description: "Adding single-digit numbers."
                         progress_status: 45.0
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+        "404":
+          description: Skill not found or no lessons found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    examples:
+                      skill_not_found:
+                        value: "Skill not found"
+                      no_lessons:
+                        value: "No lessons found for this skill"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Database error occurred"
+                  details:
+                    type: string
+                    example: "Connection timeout"
       x-progress-calculation:
-        - formula: "progress_status = (completed_activities + completed_quizzes) / (total_activities + total_quizzes) * 100"
+        - formula: "progress_status = (attempted_activities + attempted_quizzes) / (total_activities + total_quizzes) * 100"
         - notes:
-            - Only includes activities/quizzes for this lesson
-            - "`completed_activities`: Activities with submissions"
-            - "`completed_quizzes`: Quizzes with submissions"
+            - Only includes activities/quizzes for this lesson and the authenticated child
+            - "`attempted_activities`: Activities that have been attempted (with submissions in history)"
+            - "`attempted_quizzes`: Quizzes that have been attempted (regardless of score)"
+            - If no activities or quizzes exist for a lesson, progress_status defaults to 100%
 
-  /api/lesson/{lesson_id}:
+  /api/child/lesson/{lesson_id}:
     get:
       summary: Get Lesson Details
-      description: Returns lesson content and completed_at.
+      description: Returns lesson content and completion status for the authenticated child.
       security:
-        - ChildToken: [] # Indicates authentication is required with a Child token
+        - BearerAuth: []
       parameters:
         - in: path
           name: lesson_id
@@ -101,39 +147,97 @@ paths:
               schema:
                 type: object
                 properties:
-                  selected_lesson:
-                    type: object
-                    properties:
-                      lesson_id:
-                        type: integer
-                      title:
-                        type: string
-                      content:
-                        type: string
-                        description: HTML formatted content of the lesson.
-                      url_details:
-                        type: object
-                        properties:
-                          index:
-                            type: string
-                            format: url
-                      completed_at:
-                        type: string
-                        format: date-time
-                        nullable: true
-                        description: ISO format datetime or null if not completed.
+                  lesson_id:
+                    type: integer
+                    description: Unique identifier for the lesson
+                  title:
+                    type: string
+                    description: Title of the lesson
+                  content:
+                    type: string
+                    description: Content of the lesson
+                  image:
+                    type: string
+                    format: url
+                    nullable: true
+                    description: URL to the lesson's image. Can be null.
+                  completed_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: ISO format datetime when lesson was completed, null if not completed.
+              examples:
+                completed_lesson:
+                  value:
+                    lesson_id: 101
+                    title: "Introduction to Addition"
+                    content: "Learn the basics of adding numbers together..."
+                    image: "https://example.com/lesson101.jpg"
+                    completed_at: "2024-12-01T10:30:45.000Z"
+                incomplete_lesson:
+                  value:
+                    lesson_id: 102
+                    title: "Subtraction Basics"
+                    content: "Understanding how to subtract numbers..."
+                    image: null
+                    completed_at: null
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+        "404":
+          description: Lesson not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Lesson not found"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Database error occurred"
+                  details:
+                    type: string
+                    example: "Connection timeout"
 
-  /api/child/{child_id}/lesson/{lesson_id}/mark-read:
+  /api/child/lesson/{lesson_id}/mark-read:
     post:
       summary: Mark Lesson as Read
-      description: Records lesson completion timestamp.
+      description: |
+        Records lesson completion timestamp for the authenticated child.
+        
+        Behavior Notes:
+        - Idempotent operation: If lesson is already completed, returns 200
+        - Each child-lesson combination can only have one completion record
+        - Completion timestamp cannot be modified once set
+      security:
+        - BearerAuth: []
       parameters:
-        - in: path
-          name: child_id
-          schema:
-            type: integer
-          required: true
-          description: Child ID
         - in: path
           name: lesson_id
           schema:
@@ -141,7 +245,7 @@ paths:
           required: true
           description: Lesson ID
       requestBody:
-        required: false # As completed_at is optional
+        required: false
         content:
           application/json:
             schema:
@@ -151,30 +255,95 @@ paths:
                   type: string
                   format: date-time
                   nullable: true
-                  description: ISO format datetime. If not provided, uses current server time.
+                  description: "ISO 8601 datetime format. Supports 'Z' (UTC) or timezone offsets (+HH:MM). If not provided, uses current server time."
+            examples:
+              with_utc_timestamp:
+                value:
+                  completed_at: "2024-12-01T10:30:45.000Z"
+              with_timezone_timestamp:
+                value:
+                  completed_at: "2024-12-01T10:30:45+05:30"
+              without_timestamp:
+                value: {}
       responses:
         "201":
-          description: Created
+          description: Lesson marked as completed
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  status:
+                  message:
                     type: string
-                    enum: [success]
-                  completed_at:
+                    example: "Lesson marked as completed"
+        "200":
+          description: Lesson was already completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
                     type: string
-                    format: date-time
-              examples:
-                success:
-                  value:
-                    status: "success"
-                    completed_at: "2025-06-30T23:31:45.000Z"
+                    example: "Lesson already completed"
+        "400":
+          description: Bad request - Invalid date format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid date format"
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+        "404":
+          description: Lesson not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Lesson not found"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Database error occurred"
+                  details:
+                    type: string
+                    example: "Connection timeout"
 
 components:
   securitySchemes:
-    ChildToken:
+    BearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT # Assuming JWT for token-based authentication
+      bearerFormat: JWT
+      description: Authentication token required for child access

@@ -2,28 +2,77 @@
 
 ## 1. Get Child Profile
 
-**Endpoint**
+**Endpoint**: `GET /api/child/setting`  
+**Description**: Fetch the authenticated child's profile details including profile image, name, date of birth, email, and school  
+**Authentication**: Required (Child token)
 
-`GET /api/child/{child_id}/setting`
+**Note**: Child identification is handled through the authentication token.
 
-**Description**  
-Fetch the child's profile details including profile image, name, date of birth, email, and school.
-
-**Path Parameters**
-
-| Name     | Type | Description            |
-| -------- | ---- | ---------------------- |
-| child_id | int  | Unique ID of the child |
-
-### Response (200 OK)
+### Response Format (200 OK)
 
 ```json
 {
   "profile_image_url": "string",
-  "name": "string",
-  "dob": "string",
-  "email": "string",
-  "school": "string"
+  "name": "string", 
+  "dob": "string | null",
+  "email": "string | null",
+  "school": "string | null"
+}
+```
+
+### Field Descriptions
+
+- `profile_image_url`: URL or binary data for profile image (empty string if no image)
+- `name`: Child's full name
+- `dob`: Date of birth in ISO format (null if not set)
+- `email`: Child's email address (null if not set)
+- `school`: Child's school name (null if not set)
+
+### Error Responses
+
+#### 401 Unauthorized
+```json
+{
+  "error": "Token is missing"
+}
+```
+
+#### 403 Forbidden
+```json
+{
+  "error": "Insufficient permissions"
+}
+```
+
+#### 404 Not Found
+```json
+{
+  "error": "Child not found"
+}
+```
+
+#### 500 Internal Server Error
+```json
+{
+  "error": "Database error occurred",
+  "details": "string"
+}
+```
+
+### Example Request
+```bash
+curl -X GET "https://api.example.com/api/child/setting" \
+  -H "Authorization: Bearer your_token_here"
+```
+
+### Example Response
+```json
+{
+  "profile_image_url": "",
+  "name": "John Doe",
+  "dob": "2010-05-15",
+  "email": "john.doe@example.com",
+  "school": "Elementary School"
 }
 ```
 
@@ -31,33 +80,32 @@ Fetch the child's profile details including profile image, name, date of birth, 
 
 ## 2. Update Child Profile Details
 
-**Endpoint**
+**Endpoint**: `PUT /api/child/update_profile`  
+**Description**: Update the authenticated child's name, date of birth, email, or school  
+**Authentication**: Required (Child token)
 
-`PUT /api/child/{child_id}/update/profile`
+**Note**: Child identification is handled through the authentication token.
 
-**Description**  
-Update the child's name, date of birth, email, or school.
-
-**Path Parameters**
-
-| Name     | Type | Description            |
-| -------- | ---- | ---------------------- |
-| child_id | int  | Unique ID of the child |
-
-**Request Body** (`application/json`)
+### Request Body
 
 ```json
 {
   "name": "string",
   "email": "string",
-  "dob": "string",
+  "dob": "string", 
   "school": "string"
 }
 ```
 
-- All fields are optional but at least one must be present.
+### Request Body Rules
 
-**Response** (`application/json`)
+- All fields are optional but **at least one must be present**
+- `name`: Cannot be empty if provided
+- `email`: Must be unique across all children if provided (can be null)
+- `dob`: Must be in YYYY-MM-DD format, child must be 8-14 years old
+- `school`: Can be empty/null
+
+### Response Format (200 OK)
 
 ```json
 {
@@ -66,36 +114,115 @@ Update the child's name, date of birth, email, or school.
 }
 ```
 
+### Error Responses
+
+#### 400 Bad Request
+```json
+{
+  "error": "No data provided"
+}
+```
+or
+```json
+{
+  "error": "At least one field must be provided"
+}
+```
+or
+```json
+{
+  "error": "Name cannot be empty"
+}
+```
+or
+```json
+{
+  "error": "Invalid date format. Use YYYY-MM-DD"
+}
+```
+or
+```json
+{
+  "error": "Child must be between 8 and 14 years old"
+}
+```
+
+#### 401 Unauthorized
+```json
+{
+  "error": "Token is missing"
+}
+```
+
+#### 403 Forbidden
+```json
+{
+  "error": "Insufficient permissions"
+}
+```
+
+#### 404 Not Found
+```json
+{
+  "error": "Child not found"
+}
+```
+
+#### 409 Conflict
+```json
+{
+  "error": "Email already registered by another child"
+}
+```
+
+#### 500 Internal Server Error
+```json
+{
+  "error": "Database error occurred",
+  "details": "string"
+}
+```
+
+### Example Request
+```bash
+curl -X PUT "https://api.example.com/api/child/update_profile" \
+  -H "Authorization: Bearer your_token_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Smith",
+    "email": "john.smith@example.com",
+    "school": "New Elementary School"
+  }'
+```
+
 ---
 
 ## 3. Change Password
 
-**Endpoint**
+**Endpoint**: `PUT /api/child/change_password`  
+**Description**: Change the authenticated child's password by providing current and new passwords  
+**Authentication**: Required (Child token)
 
-`PUT /api/child/{child_id}/change/password`
+**Note**: Child identification is handled through the authentication token.
 
-**Description**  
-Change the child's password by providing the current password and the new password.
-
-**Path Parameters**
-
-| Name     | Type | Description            |
-| -------- | ---- | ---------------------- |
-| child_id | int  | Unique ID of the child |
-
-**Request Body** (`application/json`)
+### Request Body
 
 ```json
 {
   "current_password": "string",
-  "new_password": "string",
+  "new_password": "string", 
   "confirm_password": "string"
 }
 ```
 
-**Response** (`application/json`)
+### Request Body Rules
 
-- On Success:
+- All fields are **required**
+- `current_password`: Must match child's current password
+- `new_password`: Must be at least 4 characters long and different from current password
+- `confirm_password`: Must match `new_password`
+
+### Response Format (200 OK)
 
 ```json
 {
@@ -104,44 +231,212 @@ Change the child's password by providing the current password and the new passwo
 }
 ```
 
-- On Failure (e.g. current password incorrect):
+### Error Responses
 
+#### 400 Bad Request
+```json
+{
+  "status": "error",
+  "message": "No data provided"
+}
+```
+or
+```json
+{
+  "status": "error", 
+  "message": "Current password, new password, and confirm password are required"
+}
+```
+or
 ```json
 {
   "status": "error",
   "message": "Current password is incorrect"
 }
 ```
+or
+```json
+{
+  "status": "error",
+  "message": "New password and confirm password do not match"
+}
+```
+or
+```json
+{
+  "status": "error",
+  "message": "New password must be at least 4 characters long"
+}
+```
+or
+```json
+{
+  "status": "error",
+  "message": "New password must be different from current password"
+}
+```
+
+#### 401 Unauthorized
+```json
+{
+  "error": "Token is missing"
+}
+```
+
+#### 403 Forbidden
+```json
+{
+  "error": "Insufficient permissions"
+}
+```
+
+#### 404 Not Found
+```json
+{
+  "status": "error",
+  "message": "Child not found"
+}
+```
+
+#### 500 Internal Server Error
+```json
+{
+  "status": "error",
+  "message": "Database error occurred"
+}
+```
+
+### Example Request
+```bash
+curl -X PUT "https://api.example.com/api/child/change_password" \
+  -H "Authorization: Bearer your_token_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "current_password": "oldpass123",
+    "new_password": "newpass456",
+    "confirm_password": "newpass456"
+  }'
+```
 
 ---
 
 ## 4. Update Profile Image
 
-**Endpoint**
+**Endpoint**: `GET/POST /api/child/profile_image`  
+**Description**: Retrieve or upload/update the authenticated child's profile image  
+**Authentication**: Required (Child token)
 
-`POST /api/child/{child_id}/profile/image`
+**Note**: Child identification is handled through the authentication token.
 
-**Description**  
-Upload and update the child's profile image.
+### GET Method - Retrieve Profile Image
 
-**Path Parameters**
+#### Response Format (200 OK)
+```json
+{
+  "profile_image": "string | null"
+}
+```
 
-| Name     | Type | Description            |
-| -------- | ---- | ---------------------- |
-| child_id | int  | Unique ID of the child |
+#### Field Descriptions
+- `profile_image`: Profile image data (empty string if no image set, null if none)
 
-**Request Body** (`multipart/form-data`)
+### POST Method - Upload Profile Image
 
-| Field | Type | Description                       |
-| ----- | ---- | --------------------------------- |
-| image | file | The new profile image (JPEG, PNG) |
+#### Request Body
+```json
+{
+  "profile_image": "string"
+}
+```
 
-**Response** (`application/json`)
+#### Request Body Fields
+- `profile_image`: Image data (empty string to clear image, or image data to set)
 
+#### Response Format (200 OK)
 ```json
 {
   "status": "success",
-  "message": "Profile image updated",
-  "profile_image_url": "/files/new-profile.jpg"
+  "message": "Profile image updated successfully"
 }
 ```
+
+### Error Responses
+
+#### 400 Bad Request
+```json
+{
+  "status": "error",
+  "message": "No data provided"
+}
+```
+
+#### 401 Unauthorized
+```json
+{
+  "error": "Token is missing"
+}
+```
+
+#### 403 Forbidden
+```json
+{
+  "error": "Insufficient permissions"
+}
+```
+
+#### 404 Not Found
+```json
+{
+  "status": "error",
+  "message": "Child not found"
+}
+```
+
+#### 500 Internal Server Error
+```json
+{
+  "status": "error",
+  "message": "Database error occurred"
+}
+```
+
+### Example Requests
+
+**GET Profile Image:**
+```bash
+curl -X GET "https://api.example.com/api/child/profile_image" \
+  -H "Authorization: Bearer your_token_here"
+```
+
+**POST Profile Image:**
+```bash
+curl -X POST "https://api.example.com/api/child/profile_image" \
+  -H "Authorization: Bearer your_token_here" \
+  -H "Content-Type: application/json" \
+  -d '{"profile_image": "base64_encoded_image_data"}'
+```
+
+### Example Responses
+
+**GET Response:**
+```json
+{
+  "profile_image": ""
+}
+```
+
+**Clear Image (POST with empty string):**
+```bash
+curl -X POST "https://api.example.com/api/child/profile_image" \
+  -H "Authorization: Bearer your_token_here" \
+  -H "Content-Type: application/json" \
+  -d '{"profile_image": ""}'
+```
+
+### Implementation Notes
+- The controller stores image data directly in the `profile_image` field of the Child model
+- Empty string sets the field to null (clears the image)
+- GET method always returns 200 OK with the current image data
+- POST method now returns proper JSON responses with status and message
+- Controller includes proper child validation and error handling
+- All database operations are wrapped in try-catch blocks with rollback on errors

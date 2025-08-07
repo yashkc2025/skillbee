@@ -335,6 +335,11 @@ def update_parent_details():
 def parent_password():
     return update_parent_password()
 
+@api.route('/api/child/curriculums', methods=['GET'])
+@token_required(allowed_roles=["child"])
+def get_curr(current_user, role):
+    return get_curriculums_for_child(current_user)
+
 @api.route('/api/child/curriculum/<int:curriculum_id>/lessons', methods=['GET'])
 @token_required(allowed_roles=['child'])
 def get_skill_lessons_route(curriculum_id, current_user, role):
@@ -426,8 +431,5 @@ def get_skill_categories(current_user=None, role=None):
 def user_badges(current_user, role):
     return get_user_badges()
 
-@api.route('/api/child/<int:child_id>/curriculums', methods=['GET'])
-@token_required(allowed_roles=["child"])
-def get_curr(current_user=None, role=None):
-    return get_curriculums_for_child()
+
 

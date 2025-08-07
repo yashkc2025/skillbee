@@ -5,17 +5,12 @@ info:
   description: API for managing curriculum information.
 
 paths:
-  /api/child/{child_id}/curriculums:
+  /api/child/curriculums:
     get:
       summary: Get Child's Curriculums
-      description: Returns a list of curriculums for a specific child, filtered by age group and including progress status.
-      parameters:
-        - in: path
-          name: child_id
-          schema:
-            type: integer
-          required: true
-          description: Unique identifier for the child
+      description: Returns a list of curriculums for the authenticated child, filtered by age group and including progress status.
+      security:
+        - BearerAuth: []
       responses:
         "200":
           description: Successful response
@@ -38,7 +33,8 @@ paths:
                         image:
                           type: string
                           format: url
-                          description: URL to the curriculum's image.
+                          nullable: true
+                          description: URL to the curriculum's image. Currently always null.
                         description:
                           type: string
                           description: A brief description of the curriculum.
@@ -54,25 +50,63 @@ paths:
                     curriculums:
                       - curriculum_id: 101
                         name: "Early Math"
-                        image: "https://example.com/math.png"
+                        image: null
                         description: "Basic mathematical concepts for young learners."
                         progress_status: 75.5
                       - curriculum_id: 102
                         name: "Creative Writing"
-                        image: "https://example.com/writing.png"
+                        image: null
                         description: "Develops storytelling and imaginative writing skills."
                         progress_status: 30.0
                       - curriculum_id: 103
                         name: "Introduction to Coding"
-                        image: "https://example.com/coding.png"
+                        image: null
                         description: "Fundamentals of programming for beginners."
                         progress_status: 90.2
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Database error occurred"
       x-data-requirements:
         - Child Age Group Filtering:
-            - Fetch child's age from `child_id`
+            - Fetch child's age from authenticated child's profile
             - Only return curriculums matching the child's age group
         - Progress Calculation:
             Formula: "`progress_status = (completed_items / total_items) * 100`"
             Where:
               - completed_items: "Lessons marked complete, Activities with submissions, Quizzes with passing scores"
               - total_items: "Total lessons, Total activities, Total quizzes (All counts specific to the curriculum)"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Authentication token required for child access

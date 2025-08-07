@@ -1,5 +1,3 @@
-# According to User Story 1, the child will be able to access the activities from these particular APIs and then moving forward to lessons,skills and quizzes.
-
 openapi: 3.0.3
 
 info:
@@ -8,23 +6,19 @@ info:
   description: API contract for managing activities.
 
 paths:
-  /api/child/{child_id}/curriculum/{curriculum_id}/lesson/{lesson_id}/activities:
+  /api/child/lesson/{lesson_id}/activities:
     get:
       summary: Get Lesson Activities
-      description: Returns curriculum, lesson, and activities which are created by admin and parent to their child.
+      description: |
+        Returns curriculum, lesson, and activities for the authenticated child.
+        
+        Behavior Notes:
+        - Only returns activities specifically assigned to the authenticated child
+        - Activities are filtered by both lesson and child
+        - Progress is calculated based on submission history for this specific child
+      security:
+        - BearerAuth: []
       parameters:
-        - in: path
-          name: child_id
-          schema:
-            type: integer
-          required: true
-          description: Child ID
-        - in: path
-          name: curriculum_id
-          schema:
-            type: integer
-          required: true
-          description: Curriculum ID
         - in: path
           name: lesson_id
           schema:
@@ -66,15 +60,13 @@ paths:
                           type: string
                         image:
                           type: string
-                          format: url
-                        difficulty:
-                          type: string
-                          enum: [Easy, Medium, Hard]
+                          format: binary
+                          nullable: true
+                          description: Binary image data. Can be null.
                         progress_status:
                           type: number
-                          format: float
-                          minimum: 0
-                          maximum: 100
+                          enum: [0, 100]
+                          description: 100 if any submission exists, 0 if no submission exists
               examples:
                 example1:
                   value:
@@ -88,24 +80,76 @@ paths:
                       - activity_id: 201
                         name: "Build a Simple Circuit"
                         description: "Hands-on activity to understand basic circuits."
-                        image: "http://example.com/circuit.jpg"
-                        difficulty: "Easy"
+                        image: null
                         progress_status: 100
                       - activity_id: 202
                         name: "Measure Gravity"
                         description: "Experiment to measure the acceleration due to gravity."
-                        image: "http://example.com/gravity.png"
-                        difficulty: "Medium"
+                        image: null
                         progress_status: 0
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+        "404":
+          description: Lesson or curriculum not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    examples:
+                      lesson_not_found:
+                        value: "Lesson not found"
+                      curriculum_not_found:
+                        value: "Curriculum not found"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Database error occurred"
+                  details:
+                    type: string
+                    example: "Connection timeout"
       x-notes:
-        - Includes activities from both admin and parents
-        - "`progress_status` = 100 if any submission exists"
-        - "`progress_status` = 0 if not any submission exists"
+        - Returns only activities specifically assigned to the authenticated child
+        - Activities are filtered by both lesson_id and child_id
+        - "`progress_status` = 100 if any submission exists for the activity"
+        - "`progress_status` = 0 if no submission exists for the activity"
+        - Image field contains binary data, not URLs
 
-  /api/activity/{activity_id}:
+  /api/child/activity/{activity_id}:
     get:
       summary: Get Activity Details
-      description: Returns activity details
+      description: |
+        Returns detailed information about a specific activity for the authenticated child.
+        
+        Note: Child identification is handled through the authentication token. Only activities assigned to the authenticated child can be accessed.
+      security:
+        - BearerAuth: []
       parameters:
         - in: path
           name: activity_id
@@ -121,36 +165,106 @@ paths:
               schema:
                 type: object
                 properties:
-                  selected_activity:
-                    type: object
-                    properties:
-                      activity_id:
-                        type: integer
-                      name:
-                        type: string
-                      description:
-                        type: string
-                      instruction:
-                        type: string
-                      difficulty:
-                        type: string
-                      progress_status:
-                        type: number
-                        format: float
-                        minimum: 0
-                        maximum: 100
+                  activity_id:
+                    type: integer
+                    description: Unique identifier for the activity
+                  name:
+                    type: string
+                    description: Display name of the activity
+                  description:
+                    type: string
+                    description: Detailed description of what the activity involves
+                  image:
+                    type: string
+                    format: binary
+                    nullable: true
+                    description: Binary image data associated with the activity (can be null)
+                  answer_format:
+                    type: string
+                    nullable: true
+                    enum: ['text', 'image', 'pdf']
+                    description: Expected format for activity submission (can be null)
+                  completed_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: ISO datetime of most recent completion (null if never completed)
+              examples:
+                completed_activity:
+                  value:
+                    activity_id: 201
+                    name: "Build a Simple Circuit"
+                    description: "Hands-on activity to understand basic circuits using LED and battery."
+                    image: null
+                    answer_format: "image"
+                    completed_at: "2025-08-06T14:30:00Z"
+                uncompleted_activity:
+                  value:
+                    activity_id: 202
+                    name: "Measure Gravity"
+                    description: "Experiment to measure the acceleration due to gravity using simple materials."
+                    image: null
+                    answer_format: "text"
+                    completed_at: null
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+        "404":
+          description: Activity not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Activity not found"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Database error occurred"
+                  details:
+                    type: string
+                    description: Detailed error message
 
-  /api/child/{child_id}/activity/{activity_id}/submit:
+  /api/child/activity/{activity_id}/submit:
     post:
       summary: Submit Activity Work
-      description: Stores activity submission
+      description: |
+        Submits a file (image or PDF) as an activity solution for the authenticated child.
+        
+        Supports both multipart/form-data uploads and raw binary uploads.
+        
+        File Requirements:
+        - Supported formats: JPG, JPEG, PNG, PDF
+        - Maximum file size: 10MB
+        - Format and size validation performed server-side
+      security:
+        - BearerAuth: []
       parameters:
-        - in: path
-          name: child_id
-          schema:
-            type: integer
-          required: true
-          description: Child ID
         - in: path
           name: activity_id
           schema:
@@ -167,10 +281,27 @@ paths:
                 file:
                   type: string
                   format: binary
-                  description: JPG, JPEG, PNG, or PDF
+                  description: JPG, JPEG, PNG, or PDF file (max 10MB)
+              required:
+                - file
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+              description: Raw JPEG image data (max 10MB)
+          image/png:
+            schema:
+              type: string
+              format: binary
+              description: Raw PNG image data (max 10MB)
+          application/pdf:
+            schema:
+              type: string
+              format: binary
+              description: Raw PDF file data (max 10MB)
       responses:
         "201":
-          description: Created
+          description: Successfully submitted activity
           content:
             application/json:
               schema:
@@ -178,22 +309,95 @@ paths:
                 properties:
                   activity_history_id:
                     type: integer
+                    description: Unique identifier for this submission
                   submitted_at:
                     type: string
                     format: date-time
-                    description: ISO format
+                    description: ISO datetime when submission was created
+              examples:
+                successful_submission:
+                  value:
+                    activity_history_id: 12345
+                    submitted_at: "2025-08-07T10:30:00Z"
+        "400":
+          description: Bad request - Invalid file or missing data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - "No file selected"
+                      - "No file uploaded or unsupported content type"
+                      - "No file data received"
+                      - "File size too large. Maximum allowed size is 10MB"
+                      - "Invalid file format. Only JPG, JPEG, PNG, or PDF allowed"
+              examples:
+                file_too_large:
+                  value:
+                    error: "File size too large. Maximum allowed size is 10MB"
+                invalid_format:
+                  value:
+                    error: "Invalid file format. Only JPG, JPEG, PNG, or PDF allowed"
+                no_file:
+                  value:
+                    error: "No file selected"
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+        "404":
+          description: Activity not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Activity not found"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Database error occurred"
+                  details:
+                    type: string
+                    description: Detailed error message
 
-  /api/child/{child_id}/activity/{activity_id}/history:
+  /api/child/activity/{activity_id}/history:
     get:
       summary: Get Activity History
-      description: Returns submission history
+      description: |
+        Returns submission history for a specific activity for the authenticated child.
+        
+        Note: Child identification is handled through the authentication token.
+      security:
+        - BearerAuth: []
       parameters:
-        - in: path
-          name: child_id
-          schema:
-            type: integer
-          required: true
-          description: Child ID
         - in: path
           name: activity_id
           schema:
@@ -222,17 +426,84 @@ paths:
                           format: date-time
                           description: ISO format
                         feedback:
-                          type: object
-                          properties:
-                            admin:
-                              type: string
-                            parent:
-                              type: string
+                          type: string
+                          nullable: true
+                          description: Feedback provided for the submission (can be null)
+              examples:
+                with_submissions:
+                  value:
+                    activities_submission:
+                      - activity_history_id: 12345
+                        activity_id: 201
+                        submitted_at: "2025-08-07T10:30:00Z"
+                        feedback: "Great work on the circuit design!"
+                      - activity_history_id: 12346
+                        activity_id: 201
+                        submitted_at: "2025-08-07T15:45:00Z"
+                        feedback: null
+                empty_history:
+                  value:
+                    activities_submission: []
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+        "404":
+          description: Activity not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Activity not found"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Database error occurred"
+                  details:
+                    type: string
+                    description: Detailed error message
 
-  /api/activity/history/{activity_history_id}:
+  /api/child/activity/history/{activity_history_id}:
     get:
       summary: Get Activity Submission
-      description: Returns submission file
+      description: |
+        Returns the submitted file for a specific activity submission for the authenticated child.
+        
+        The system automatically detects file types using:
+        1. Magic number analysis - Examines file headers for accurate type detection
+        2. Activity format fallback - Uses activity.answer_format if magic numbers don't match  
+        3. Default handling - Falls back to application/octet-stream for unknown types
+        
+        File is returned as an attachment with descriptive filename.
+        
+        Note: Child identification is handled through the authentication token.
+      security:
+        - BearerAuth: []
       parameters:
         - in: path
           name: activity_history_id
@@ -242,12 +513,84 @@ paths:
           description: History record ID
       responses:
         "200":
-          description: Successful response - File stream
+          description: Successful response - File stream with appropriate Content-Type
           content:
-            "*/*":
+            image/jpeg:
               schema:
                 type: string
                 format: binary
-              encoding:
-                "*":
-                  contentType: application/octet-stream
+                description: JPEG image file
+            image/png:
+              schema:
+                type: string
+                format: binary
+                description: PNG image file
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+                description: PDF document
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+        "404":
+          description: Submission not found or access denied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - "Submission not found"
+                      - "Associated activity not found"
+                      - "No file found for this submission"
+              examples:
+                submission_not_found:
+                  value:
+                    error: "Submission not found"
+                activity_not_found:
+                  value:
+                    error: "Associated activity not found"
+                no_file:
+                  value:
+                    error: "No file found for this submission"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Database error occurred"
+                  details:
+                    type: string
+                    description: Detailed error message
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Authentication token required for child access

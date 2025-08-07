@@ -1,29 +1,22 @@
-# According to User Story 2, a child should be able to take quizzes after completing a few lessons and after ompleting said quiz their score will be visible to them.The APIs desinged here are based in accordance to that.
-
 openapi: 3.0.3
 info:
   title: Quiz API Contract
   version: 1.0.0
-  description: API for managing quiz information and history.
+  description: API for managing quiz information and history for child users.
 
 paths:
-  /api/child/{child_id}/curriculum/{curriculum_id}/lesson/{lesson_id}/quizzes:
+  /api/child/lesson/{lesson_id}/quizzes:
     get:
       summary: Get Lesson Quizzes
-      description: Returns curriculum, lesson, and quizzes associated with them.
+      description: |
+        Returns curriculum, lesson, and quizzes associated with a specific lesson for the authenticated child.
+        
+        Progress status is calculated based on whether the child has attempted each quiz.
+        
+        Note: Child identification is handled through the authentication token.
+      security:
+        - BearerAuth: []
       parameters:
-        - in: path
-          name: child_id
-          schema:
-            type: integer
-          required: true
-          description: Child ID
-        - in: path
-          name: curriculum_id
-          schema:
-            type: integer
-          required: true
-          description: Curriculum ID
         - in: path
           name: lesson_id
           schema:
@@ -43,15 +36,19 @@ paths:
                     properties:
                       curriculum_id:
                         type: integer
+                        description: Unique identifier for the curriculum
                       name:
                         type: string
+                        description: Name of the curriculum
                   lesson:
                     type: object
                     properties:
                       lesson_id:
                         type: integer
+                        description: Unique identifier for the lesson
                       title:
                         type: string
+                        description: Title of the lesson
                   quizzes:
                     type: array
                     items:
@@ -59,25 +56,109 @@ paths:
                       properties:
                         quiz_id:
                           type: integer
+                          description: Unique identifier for the quiz
                         name:
                           type: string
+                          description: Name of the quiz
                         description:
                           type: string
+                          description: Description of the quiz
                         time_duration:
-                          type: string
-                          example: "5 mins"
-                        difficulty:
-                          type: string
-                          enum: [Easy, Medium, Hard]
+                          type: integer
+                          nullable: true
+                          description: Duration in minutes (null if not set)
                         progress_status:
                           type: number
                           enum: [0, 100]
-                          description: 0 if no attempts, 100 if at least one attempt.
+                          description: 100 if child has attempted quiz at least once, 0 otherwise
                         image:
                           type: string
-                          format: url
+                          format: binary
+                          nullable: true
+                          description: Binary image data associated with the quiz (null if no image)
               examples:
-                example1:
+                with_quizzes:
+                  value:
+                    curriculum:
+                      curriculum_id: 1
+                      name: "Mathematics Basics"
+                    lesson:
+                      lesson_id: 101
+                      title: "Introduction to Addition"
+                    quizzes:
+                      - quiz_id: 201
+                        name: "Basic Addition Quiz"
+                        description: "Test your understanding of basic addition"
+                        time_duration: 10
+                        progress_status: 100
+                        image: null
+                      - quiz_id: 202
+                        name: "Advanced Addition"
+                        description: "More challenging addition problems"
+                        time_duration: 15
+                        progress_status: 0
+                        image: null
+                no_quizzes:
+                  value:
+                    curriculum:
+                      curriculum_id: 1
+                      name: "Mathematics Basics"
+                    lesson:
+                      lesson_id: 102
+                      title: "Introduction to Subtraction"
+                    quizzes: []
+        "401":
+          description: Unauthorized - Invalid or missing authentication token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+        "404":
+          description: Lesson or curriculum not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - "Lesson not found or does not belong to the curriculum"
+                      - "Curriculum not found"
+              examples:
+                lesson_not_found:
+                  value:
+                    error: "Lesson not found or does not belong to the curriculum"
+                curriculum_not_found:
+                  value:
+                    error: "Curriculum not found"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Database error occurred"
+                  details:
+                    type: string
+                    description: Detailed error message
                   value:
                     curriculum:
                       curriculum_id: 1
@@ -104,26 +185,211 @@ paths:
         - "`progress_status = 100` if child has attempted quiz at least once"
         - "`progress_status = 0` if no attempts exist"
 
-  /api/child/{child_id}/quiz/{quiz_id}/history:
-    get:
-      summary: Get Quiz History
-      description: Returns quiz attempt history for a specific child and quiz.
+  /api/child/quizzes/{quiz_id}/submit:
+    post:
+      summary: Submit Quiz Answers
+      description: |
+        Submit quiz answers and receive calculated score for the authenticated child.
+        
+        Scoring Logic:
+        - Each question has an associated marks value (default: 1 point)
+        - Points are awarded only for correct answers
+        - Selected option text must exactly match the correct answer
+        - Invalid question/option indices are skipped (no penalty)
+        - Quiz attempt is saved to history regardless of score
+        
+        Note: Child identification is handled through the authentication token.
+      security:
+        - BearerAuth: []
       parameters:
-        - in: path
-          name: child_id
-          schema:
-            type: integer
-          required: true
-          description: Child ID
         - in: path
           name: quiz_id
           schema:
             type: integer
           required: true
           description: Quiz ID
+          example: 201
+      
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answers:
+                  type: object
+                  description: Dictionary mapping question indices to selected option indices
+                  additionalProperties:
+                    type: string
+                    description: 0-based index of the selected option
+                  example:
+                    "1": "1"
+                    "2": "0"
+                    "3": "2"
+              required:
+                - answers
+            examples:
+              quiz_submission:
+                summary: Example quiz submission
+                value:
+                  answers:
+                    "1": "1"
+                    "2": "0"
+                    "3": "2"
+      
       responses:
         "200":
-          description: Successful response
+          description: Quiz submitted successfully with calculated score
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  score:
+                    type: integer
+                    description: Points earned by the child for correct answers
+                    example: 5
+                  total_score:
+                    type: integer
+                    description: Maximum possible points for this quiz
+                    example: 10
+                required:
+                  - score
+                  - total_score
+              examples:
+                successful_submission:
+                  value:
+                    score: 5
+                    total_score: 10
+        
+        "400":
+          description: Bad Request - Invalid data format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - "No data provided"
+                      - "Invalid answers format. Expected dictionary with question_index: option_index"
+                required:
+                  - error
+              examples:
+                no_data:
+                  summary: No data provided
+                  value:
+                    error: "No data provided"
+                invalid_format:
+                  summary: Invalid answers format
+                  value:
+                    error: "Invalid answers format. Expected dictionary with question_index: option_index"
+        
+        "401":
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+                required:
+                  - error
+        
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+                required:
+                  - error
+        
+        "404":
+          description: Not Found - Quiz not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Quiz not found"
+                required:
+                  - error
+        
+        "500":
+          description: Internal Server Error - Quiz data issues or database errors
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - "Quiz has no questions or answer key"
+                      - "Quiz data inconsistency: questions and answers count mismatch"
+                      - "Database error occurred"
+                  details:
+                    type: string
+                    description: Additional error details (for database errors)
+                required:
+                  - error
+              examples:
+                no_questions:
+                  summary: Quiz has no questions
+                  value:
+                    error: "Quiz has no questions or answer key"
+                data_mismatch:
+                  summary: Quiz data inconsistency
+                  value:
+                    error: "Quiz data inconsistency: questions and answers count mismatch"
+                database_error:
+                  summary: Database error
+                  value:
+                    error: "Database error occurred"
+                    details: "Connection timeout"
+      
+      x-scoring-rules:
+        - "1-based question indexing in request (question_index)"
+        - "0-based option indexing in request (option_index)"
+        - "Exact text matching for correct answers"
+        - "Invalid indices are silently skipped"
+        - "Multiple submissions allowed (creates new history entries)"
+
+  /api/child/quiz/{quiz_id}/history:
+    get:
+      summary: Get Quiz History
+      description: |
+        Returns quiz attempt history for the authenticated child for a specific quiz.
+        
+        Quiz attempts are returned in descending order by attempt date (most recent first).
+        Returns empty array if no attempts found.
+        
+        Note: Child identification is handled through the authentication token.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: quiz_id
+          schema:
+            type: integer
+          required: true
+          description: Quiz ID
+          example: 201
+      
+      responses:
+        "200":
+          description: Quiz history retrieved successfully
           content:
             application/json:
               schema:
@@ -131,41 +397,319 @@ paths:
                 properties:
                   quizzes_history:
                     type: array
+                    description: Array of quiz attempt records (ordered by date, newest first)
                     items:
                       type: object
                       properties:
                         quiz_history_id:
                           type: integer
+                          description: Unique identifier for the quiz attempt
                         quiz_id:
                           type: integer
+                          description: ID of the quiz that was attempted
                         attempted_at:
                           type: string
                           format: date-time
-                          description: ISO format datetime of the attempt.
+                          description: ISO format datetime when the quiz was attempted
                         score:
-                          type: number
+                          type: integer
+                          description: Points scored in the quiz attempt
                         feedback:
-                          type: object
-                          properties:
-                            admin:
-                              type: string
-                            parent:
-                              type: string
+                          type: string
+                          nullable: true
+                          description: Additional feedback text (null if no feedback provided)
+                      required:
+                        - quiz_history_id
+                        - quiz_id
+                        - attempted_at
+                        - score
+                        - feedback
+                required:
+                  - quizzes_history
               examples:
-                example1:
+                with_attempts:
+                  summary: Child has quiz attempts
                   value:
                     quizzes_history:
-                      - quiz_history_id: 1
+                      - quiz_history_id: 5
+                        quiz_id: 201
+                        attempted_at: "2024-07-20T14:30:00Z"
+                        score: 8
+                        feedback: "Great improvement!"
+                      - quiz_history_id: 3
                         quiz_id: 201
                         attempted_at: "2024-07-19T10:00:00Z"
-                        score: 85
-                        feedback:
-                          admin: "Great effort!"
-                          parent: "Keep up the good work!"
-                      - quiz_history_id: 2
-                        quiz_id: 201
-                        attempted_at: "2024-07-18T09:30:00Z"
-                        score: 70
-                        feedback:
-                          admin: "Good try."
-                          parent: ""
+                        score: 5
+                        feedback: null
+                no_attempts:
+                  summary: Child has no quiz attempts
+                  value:
+                    quizzes_history: []
+        
+        "401":
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+                required:
+                  - error
+        
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+                required:
+                  - error
+        
+        "404":
+          description: Not Found - Quiz not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Quiz not found"
+                required:
+                  - error
+        
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Database error occurred"
+                  details:
+                    type: string
+                    example: "Connection timeout"
+                required:
+                  - error
+
+  /api/child/curriculum/{curriculum_id}/lesson/{lesson_id}/quiz/{quiz_id}:
+    get:
+      summary: Get Quiz Questions
+      description: |
+        Returns curriculum, lesson, quiz details and questions with their options for the authenticated child.
+        
+        Validates that:
+        - Curriculum exists
+        - Lesson belongs to the specified curriculum
+        - Quiz belongs to the specified lesson
+        
+        Note: Child identification is handled through the authentication token.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: curriculum_id
+          schema:
+            type: integer
+          required: true
+          description: Curriculum ID
+          example: 1
+        - in: path
+          name: lesson_id
+          schema:
+            type: integer
+          required: true
+          description: Lesson ID
+          example: 101
+        - in: path
+          name: quiz_id
+          schema:
+            type: integer
+          required: true
+          description: Quiz ID
+          example: 201
+      responses:
+        "200":
+          description: Quiz questions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  curriculum:
+                    type: object
+                    properties:
+                      curriculum_id:
+                        type: integer
+                        description: Curriculum ID
+                      name:
+                        type: string
+                        description: Curriculum name
+                    required:
+                      - curriculum_id
+                      - name
+                  lesson:
+                    type: object
+                    properties:
+                      lesson_id:
+                        type: integer
+                        description: Lesson ID
+                      title:
+                        type: string
+                        description: Lesson title
+                    required:
+                      - lesson_id
+                      - title
+                  quizzes:
+                    type: object
+                    properties:
+                      quiz_id:
+                        type: integer
+                        description: Quiz ID
+                      name:
+                        type: string
+                        description: Quiz name
+                      time_duration:
+                        type: integer
+                        nullable: true
+                        description: Duration in minutes (null if not set)
+                    required:
+                      - quiz_id
+                      - name
+                      - time_duration
+                  questions:
+                    type: array
+                    description: Array of quiz questions
+                    items:
+                      type: object
+                      properties:
+                        question_index:
+                          type: integer
+                          description: 1-based index of the question
+                        question:
+                          type: string
+                          description: Question text
+                        options:
+                          type: array
+                          description: Array of answer choices
+                          items:
+                            type: string
+                        marks:
+                          type: integer
+                          description: Points awarded for correct answer
+                      required:
+                        - question_index
+                        - question
+                        - options
+                        - marks
+                required:
+                  - curriculum
+                  - lesson
+                  - quizzes
+                  - questions
+              examples:
+                quiz_questions_example:
+                  value:
+                    curriculum:
+                      curriculum_id: 1
+                      name: "Mathematics Basics"
+                    lesson:
+                      lesson_id: 101
+                      title: "Introduction to Addition"
+                    quizzes:
+                      quiz_id: 201
+                      name: "Basic Addition Quiz"
+                      time_duration: 10
+                    questions:
+                      - question_index: 1
+                        question: "What is 2 + 3?"
+                        options: ["4", "5", "6", "7"]
+                        marks: 1
+                      - question_index: 2
+                        question: "What is 10 + 15?"
+                        options: ["20", "25", "30", "35"]
+                        marks: 2
+        "401":
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token is missing"
+                required:
+                  - error
+        "403":
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Insufficient permissions"
+                required:
+                  - error
+        "404":
+          description: Not Found - Curriculum, lesson, or quiz not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - "Curriculum not found"
+                      - "Lesson not found or does not belong to the curriculum"
+                      - "Quiz not found or does not belong to the lesson"
+                required:
+                  - error
+              examples:
+                curriculum_not_found:
+                  summary: Curriculum not found
+                  value:
+                    error: "Curriculum not found"
+                lesson_not_found:
+                  summary: Lesson not found or doesn't belong to curriculum
+                  value:
+                    error: "Lesson not found or does not belong to the curriculum"
+                quiz_not_found:
+                  summary: Quiz not found or doesn't belong to lesson
+                  value:
+                    error: "Quiz not found or does not belong to the lesson"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Database error occurred"
+                  details:
+                    type: string
+                    example: "Connection timeout"
+                required:
+                  - error
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Authentication token required for child access
