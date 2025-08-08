@@ -2,6 +2,7 @@ from io import BytesIO
 from functools import wraps
 import json
 from pydoc import describe
+from typing import List
 from flask import request, jsonify, send_file
 from .db import db
 from .models import (
@@ -309,7 +310,7 @@ def child_loginc(request):
     Handle child login request by validating credentials and generating a session token.
     """
     data = request.get_json()
-    identifier = data.get("email_or_username")
+    identifier = data.get("username")
     password = data.get("password")
 
     if not identifier or not password:
@@ -430,6 +431,7 @@ def get_auser(current_user, role):
                         ),
                         "school": current_user.school,
                         "profile_image": None,
+                        "name": current_user.name,
                     }
                 }
             ),
@@ -507,7 +509,7 @@ def get_child_dashboard_stats(child_id):
 
 def get_user_skill_progress(child_id):
     # gets the child lesson progress
-    skills = Skill.query.all()
+    skills: List[Skill] = Skill.query.all()
     response = []
     for skill in skills:
         total_lessons = Lesson.query.filter_by(skill_id=skill.skill_id).count()
@@ -524,6 +526,7 @@ def get_user_skill_progress(child_id):
                 "name": skill.name,
                 "link": f"/skills/{skill.skill_id}",
                 "percentage_completed": percent,
+                "id": skill.skill_id,
             }
         )
 
@@ -663,7 +666,7 @@ def get_skill_lessons(child_id, skill_id):
             Lesson.query.filter_by(skill_id=skill_id).order_by(Lesson.position).all()
         )
         if not lessons:
-            return jsonify({"error": "No lessons found for this skill"}), 404
+            return []
 
         activities = Activity.query.filter(
             Activity.lesson_id.in_([lesson.lesson_id for lesson in lessons]),
@@ -719,11 +722,17 @@ def get_skill_lessons(child_id, skill_id):
             attempted_quizzes = len(
                 attempted_quizzes_by_lesson.get(lesson.lesson_id, set())
             )
+
+            if lesson.image:
+                image_base64 = base64.b64encode(lesson.image).decode("utf-8")
+            else:
+                image_base64 = ""
+
             lessons_data.append(
                 {
                     "lesson_id": lesson.lesson_id,
                     "title": lesson.title,
-                    "image": lesson.image,
+                    "image": image_base64,
                     "description": lesson.description,
                     "progress_status": (
                         (
@@ -825,15 +834,13 @@ def get_lesson_activities(child_id, lesson_id):
     try:
         lesson = Lesson.query.get(lesson_id)
         if not lesson:
-            return jsonify({"error": "Lesson not found"}), 404
+            return []
 
         skill = Skill.query.get(lesson.skill_id)
         if not skill:
             return jsonify({"error": "Curriculum not found"}), 404
 
-        activities = Activity.query.filter_by(
-            lesson_id=lesson_id, child_id=child_id
-        ).all()
+        activities = Activity.query.filter_by(lesson_id=lesson_id).all()
 
         activity_submissions = ActivityHistory.query.filter(
             ActivityHistory.activity_id.in_([a.activity_id for a in activities])
@@ -845,12 +852,17 @@ def get_lesson_activities(child_id, lesson_id):
 
         activities_data = []
         for activity in activities:
+            if activity.image:
+                image_base64 = base64.b64encode(activity.image).decode("utf-8")
+            else:
+                image_base64 = ""
+
             activities_data.append(
                 {
                     "activity_id": activity.activity_id,
                     "name": activity.name,
                     "description": activity.description,
-                    "image": activity.image,
+                    "image": image_base64,
                     "progress_status": (
                         100 if activity.activity_id in completed_activities else 0
                     ),
@@ -1217,7 +1229,7 @@ def get_quiz_questions(curriculum_id, lesson_id, quiz_id):
         # Format questions with index
         questions_data = []
         if quiz.questions:  # questions is stored as JSON
-            for idx, question in enumerate(quiz.questions.values()):
+            for idx, question in enumerate(quiz.questions):
                 question_data = {
                     "question_index": idx + 1,
                     "question": question.get("question", ""),
@@ -1294,6 +1306,7 @@ def submit_quiz(child_id, quiz_id):
         total_questions = len(quiz.questions)
         total_score = sum(q.get("marks", 1) for q in quiz.questions)
 
+        option_index = question_index = len(answers)
         # Process each submitted answer
         for q_idx_str, submitted_o_idx_str in answers.items():
             try:
@@ -1334,12 +1347,15 @@ def submit_quiz(child_id, quiz_id):
             # Check if selected option is correct (single correct answer)
             if selected_option_text == correct_answer:
                 score += question_marks
-
         # Save quiz attempt to history
+        print([child_id, quiz_id, score])
         quiz_history = QuizHistory(
-            child_id=child_id, quiz_id=quiz_id, score=score, created_at=datetime.now()
+            child_id=child_id,
+            quiz_id=quiz_id,
+            score=score,
+            created_at=datetime.now(),
+            responses=answers,
         )
-
         db.session.add(quiz_history)
         db.session.commit()
 
@@ -2940,7 +2956,7 @@ def get_learning_funnel_chart(current_user, role):
         )
 
 
-def get_age_group_distribution_chart(current_user, role):
+def get_age_group_distribution_chart():
     today = date.today()
     age_brackets = [
         ("age_8_10", 8, 10),

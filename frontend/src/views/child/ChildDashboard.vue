@@ -158,7 +158,7 @@ async function fetchDashboardData() {
     }
     const skillsData = await skillsResponse.json();
     skillTypes.value = skillsData.map((skill: any) => ({
-      skill_id: skill.skill_id,
+      skill_id: skill.id,
       label: skill.name,
       progress: skill.progress_status,
     }));
@@ -179,8 +179,7 @@ async function fetchDashboardData() {
       label: badge.name,
       image: badge.image,
     }));
-  }
-  catch (error) {
+  } catch (error) {
     console.error("Error fetching dashboard data:", error);
   }
 }
@@ -188,8 +187,6 @@ async function fetchDashboardData() {
 onMounted(() => {
   fetchDashboardData();
 });
-
-
 </script>
 
 <template>

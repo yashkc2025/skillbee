@@ -394,15 +394,15 @@ def delete_quizzes(current_user, role):
 
 
 @api.route("/children/profile", methods=["GET"])
-@token_required(allowed_roles=["admin", "parent"])
+@token_required(allowed_roles=["admin", "parent", "child"])
 def children_profile(current_user, role):
     return admin_child_profile(current_user, role)
 
 
 @api.route("/admin/age_distribution_chart", methods=["GET"])
-@token_required(allowed_roles=["admin"])
+@token_required(allowed_roles=["admin", "child"])
 def get_age_distribution_chart(current_user, role):
-    return get_age_group_distribution_chart(current_user.admin_id, role)
+    return get_age_group_distribution_chart()
 
 
 @api.route("/admin/learning_funnel_chart", methods=["GET"])

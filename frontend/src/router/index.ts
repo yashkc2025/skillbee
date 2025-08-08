@@ -31,8 +31,6 @@ import EditLesson from '@/views/admin/edit/EditLesson.vue'
 import EditQuiz from '@/views/admin/edit/EditQuiz.vue'
 import EditActivity from '@/views/admin/edit/EditActivity.vue'
 
-export const base_url = 'http://127.0.0.1:5000'
-
 export const base_url = 'http://127.0.0.1:5000/'
 
 const router = createRouter({

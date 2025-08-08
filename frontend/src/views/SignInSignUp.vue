@@ -342,172 +342,25 @@ const resetForm = () => {
     password: "",
     dob: "",
     school: "",
-}}
-
-const signInUserTypes = computed(() => ["Admin", "Parent", "Child"]);
-const signUpUserTypes = computed(() => ["Parent", "Child"]);
-const alternativeUserTypes = computed(() => {
-    const allTypes = ["Admin", "Parent", "Child"];
-    return allTypes.filter((type) => type !== selectedUserType.value);
-});
-const loginFormFields = computed((): FormField[] => {
-    const fields: FormField[] = [];
-    if (selectedUserType.value === "Child") {
-        fields.push({
-            name: "username",
-            type: "text",
-            placeholder: "Username",
-            icon: "@",
-            required: true,
-        });
-    }
-    if (selectedUserType.value === "Parent" || selectedUserType.value === "Admin") {
-        fields.push({
-            name: "email",
-            type: "email",
-            placeholder: "Email",
-            icon: "envelope",
-            required: true,
-        });
-    }
-    fields.push({
-        name: "password",
-        type: "password",
-        placeholder: "Password",
-        icon: "lock",
-        required: true,
-    });
-    return fields;
-});
-const today = new Date();
-const yyyy = today.getFullYear();
-const mm = String(today.getMonth() + 1).padStart(2, '0');
-const dd = String(today.getDate()).padStart(2, '0');
-
-
-const maxDate = `${yyyy - 8}-${mm}-${dd}`;
-const minDate = `${yyyy - 14}-${mm}-${dd}`;
-
-const registerFormFields = computed((): FormField[] => {
-    const fields: FormField[] = [];
-    fields.push({
-        name: "name",
-        type: "text",
-        placeholder: "Name",
-        icon: "user",
-        required: true,
-    });
-    if (selectedUserType.value === "Child") {
-        fields.push({
-            name: "username",
-            type: "text",
-            placeholder: "Username",
-            icon: "@",
-            required: true,
-        });
-    }
-    fields.push({
-        name: "email",
-        type: "email",
-        placeholder: "Email",
-        icon: "envelope",
-        required: true,
-    });
-    fields.push({
-        name: "password",
-        type: "password",
-        placeholder: "Password",
-        icon: "lock",
-        required: true,
-    });
-    if (selectedUserType.value === "Child") {
-        fields.push(
-            {
-                name: "dob",
-                type: "date",
-                placeholder: "Date of Birth",
-                icon: "calendar",
-                required: true,
-                min: minDate,
-                max: maxDate
-            },
-            {
-                name: "school",
-                type: "text",
-                placeholder: "School",
-                icon: "graduation-cap",
-                required: true,
-            }
-        );
-    }
-    return fields;
-});
-const slideTitle = computed(() => {
-    return isSignUp.value ? "Create an account!" : "Hello, Welcome back!";
-});
-const slideText = computed(() => {
-    return isSignUp.value ? "Already have an account?" : "Don't have an account?";
-});
-const buttonText = computed(() => {
-    return isSignUp.value ? "Sign in" : "Sign up";
-});
-
-const getIconClass = (icon: string): string => {
-    const iconMap: Record<string, string> = {
-        user: "bi bi-person",
-        "@": "bi bi-at",
-        envelope: "bi bi-envelope",
-        lock: "bi bi-lock",
-        calendar: "bi bi-calendar",
-        "graduation-cap": "bi bi-mortarboard",
-    };
-    return iconMap[icon];
-};
-const toggleAuthMode = () => {
-    isSignUp.value = !isSignUp.value;
-    resetForm();
-};
-
-const togglePasswordVisibility = () => {
-    showPassword.value = !showPassword.value;
-};
-
-const resetForm = () => {
-    selectedUserType.value = "";
-    showAlternativeTypes.value = false;
-    errorMessage.value = '';
-    loginData.value = {
-        username: "",
-        email: "",
-        password: "",
-    };
-    registerData.value = {
-        name: "",
-        username: "",
-        email: "",
-        password: "",
-        dob: "",
-        school: "",
-    };
+  };
 };
 const handleUserTypeSelection = (userType: UserType) => {
-    selectedUserType.value = userType;
-    showAlternativeTypes.value = true;
-    errorMessage.value = '';
-    loginData.value = {
-        username: "",
-        email: "",
-        password: "",
-    };
-    registerData.value = {
-        name: "",
-        username: "",
-        email: "",
-        password: "",
-        dob: "",
-        school: "",
-    };
-
+  selectedUserType.value = userType;
+  showAlternativeTypes.value = true;
+  errorMessage.value = "";
+  loginData.value = {
+    username: "",
+    email: "",
+    password: "",
+  };
+  registerData.value = {
+    name: "",
+    username: "",
+    email: "",
+    password: "",
+    dob: "",
+    school: "",
+  };
 };
 const updateLoginData = (field: string, value: string) => {
   loginData.value = {
@@ -567,83 +420,64 @@ import { useRouter } from "vue-router";
 const router = useRouter();
 
 const handleLogin = async () => {
-    if (!validateLoginData()) {
-        showError("Please fill in all required fields.");
-        return;
+  if (!validateLoginData()) {
+    showError("Please fill in all required fields.");
+    return;
+  }
+  const { username, email, password } = loginData.value;
+  const identifier = selectedUserType.value === "Child" ? username : email;
+
+  let url = "";
+  let payload: Record<string, any> = {};
+
+  if (selectedUserType.value === "Parent") {
+    url = base_url + "auth/parent_login";
+    payload = {
+      email,
+      password,
+    };
+  } else if (selectedUserType.value === "Child") {
+    url = base_url + "auth/children_login";
+    payload = {
+      username: username,
+      password,
+    };
+  } else if (selectedUserType.value === "Admin") {
+    url = base_url + "auth/admin_login";
+    payload = {
+      email_id: email,
+      password,
+    };
+  } else {
+    showError("Invalid user type.");
+    return;
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      showError(`Login failed: ${result.error || "Unknown error"}`);
+      return;
     }
-    const { username, email, password } = loginData.value;
-    const identifier = selectedUserType.value === "Child" ? username : email;
 
-    let url = '';
-    let payload: Record<string, any> = {};
+    const token = result.session?.token;
+    const userId = result.user?.id;
 
-    if (selectedUserType.value === "Parent") {
-        url = base_url + 'auth/parent_login';
-        payload = {
-            email,
-            password,
-        };
-    } else if (selectedUserType.value === "Child") {
-        url = base_url + 'auth/children_login';
-        payload = {
-            username: username,
-            password,
-        };
-    } else if (selectedUserType.value === "Admin") {
-        url = base_url + 'auth/admin_login';
-        payload = {
-            email: email,
-            password,
-        };
-    } else {
-        showError("Invalid user type.");
-        return;
+    if (!token || !userId) {
+      showError("Invalid response from server");
+      return;
     }
 
-    try {
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-            showError(`Login failed: ${result.error || "Unknown error"}`);
-            return;
-        }
-
-        const token = result.session?.token;
-        const userId = result.user?.id;
-
-        if (!token || !userId) {
-            showError("Invalid response from server");
-            return;
-        }
-
-        localStorage.setItem("authToken", token);
-
-        switch (selectedUserType.value) {
-            case "Admin":
-                router.push({ name: 'admin_dashboard' });
-                break;
-            case "Parent":
-                router.push({ name: 'parent_dashboard' });
-                break;
-            case "Child":
-                router.push({ name: 'child_dashboard' });
-                break;
-            default:
-                showError("Unknown user type");
-        }
-        resetForm();
-    } catch (error) {
-        console.error("Login Error:", error);
-        showError("Something went wrong. Please try again.");
-    }
+    localStorage.setItem("authToken", token);
 
     switch (selectedUserType.value) {
       case "Admin":
@@ -709,7 +543,6 @@ const handleRegister = async () => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
-      credentials: "include",
     });
 
     const result = await response.json();
@@ -718,67 +551,13 @@ const handleRegister = async () => {
       showError(`Error: ${result.error || "Registration failed"}`);
       return;
     }
-    const data = registerData.value;
-    // let message = `Registering ${selectedUserType.value}: Name=${data.name}`;
-    // if (selectedUserType.value === "Child") {
-    //     message += `, Username=${data.username}, Email=${data.email}, DOB=${data.dob}, School=${data.school}`;
-    // } else {
-    //     message += `, Email=${data.email}`;
-    // }
 
-    let url = '';
-    let payload = {};
-
-    if (selectedUserType.value === "Parent") {
-        url = base_url + '/auth/parent_register';
-        payload = {
-            name: data.name,
-            email: data.email,
-            password: data.password,
-        };
-    } else if (selectedUserType.value === "Child") {
-        url = base_url + '/auth/children_register';
-        payload = {
-            name: data.name,
-            email: data.email,
-            username: data.username,
-            password: data.password,
-            dob: data.dob,
-            school: data.school,
-        };
+    if (selectedUserType.value === "Child") {
+      loginData.value.username = data.username!;
     } else {
-        showError("Invalid user type selected.");
-        return;
+      loginData.value.email = data.email!;
     }
-
-    try {
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-            showError(`Error: ${result.error || "Registration failed"}`);
-            return;
-        }
-
-        if (selectedUserType.value === "Child") {
-            loginData.value.username = data.username!;
-        } else {
-            loginData.value.email = data.email!;
-        }
-        loginData.value.password = data.password!;
-
-        await handleLogin();
-    } catch (error) {
-        console.error("Registration Error:", error);
-        showError("Something went wrong. Please try again.");
-    }
+    loginData.value.password = data.password!;
 
     await handleLogin();
   } catch (error) {
