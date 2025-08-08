@@ -379,19 +379,19 @@ const handleLogin = async () => {
     let payload: Record<string, any> = {};
 
     if (selectedUserType.value === "Parent") {
-        url = base_url + '/auth/parent_login';
+        url = base_url + 'auth/parent_login';
         payload = {
             email,
             password,
         };
     } else if (selectedUserType.value === "Child") {
-        url = base_url + '/auth/children_login';
+        url = base_url + 'auth/children_login';
         payload = {
             username: username,
             password,
         };
     } else if (selectedUserType.value === "Admin") {
-        url = base_url + '/auth/admin_login';
+        url = base_url + 'auth/admin_login';
         payload = {
             email: email,
             password,

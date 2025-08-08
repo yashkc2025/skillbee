@@ -1,93 +1,83 @@
 <template>
     <ChildAppLayout>
         <div class="activities" :class="{ 'blur-bg': selectedActivity }">
-            <!-- <div class="top-section">
-                <h2 class="ft-head-1">🎉 Let’s Have Fun with the {{ lesson.name }} Activity from {{ curriculum.name }}!
-                </h2>
-                <input type="text" v-model="searchInput" placeholder="Type to find a activity… 🕵️‍♂️"
-                    class="search-box" />
-            </div> -->
             <AnimatedHeader v-model="searchInput"
                 :heading-messages="[`🎉 Let’s play the ${lesson.name} activity from ${curriculum.name}! 🌟`, '✨ Tap an activity to see details and upload your work! 🚀']"
                 :placeholder-messages="['Type to find a activity… 🕵️‍♂️']" :typing-speed="50" :pause-duration="1500" />
-            <div class="card-item">
-                <div v-for="activity in filteredActivities" :key="activity.activity_id">
-                    <ModuleCard @click="openActivity(activity)" :image="activity.image" :name="activity.name"
-                        :description="activity.description" :show-buttons="true"
-                        :primary-label="activity.progress_status === 100 ? '📤 Reupload' : '📤 Upload'"
-                        secondary-label="📜 History" :progress-status="activity.progress_status"
-                        not-started-label="🔍 Let's Explore!" completed-label="🏆 Activity Mastered!"
-                        @primary="uploadActivity(activity.activity_id)"
-                        @secondary="openActivitySubmissions(activity), moduleHistory = true">
-                        <p class="card-activity-difficulty"
-                            :style="{ color: getDifficultyStyle(activity.difficulty).color }"> Difficulty:
-                            {{ activity.difficulty || 'Unknown' }}
-                        </p>
-                    </ModuleCard>
-                </div>
-            </div>
-            <input type="file" ref="fileInput" class="hidden" accept=".jpg,.jpeg,.png,.pdf"
-                @change="handleFileUpload" />
 
-            <p v-if="activities.length === 0" class="empty-result">
-                No activities in this lesson yet. Please check back later.
-            </p>
-            <p v-if="filteredActivities.length === 0 && activities.length > 0" class="empty-result">
-                No activities found matching your search. Please try a different keyword.
-            </p>
-            <p v-if="filteredActivities.length !== 0 && activities.length !== 0" class="empty-result">
-                Tip: Click on an activity to view details and upload your work!
-            </p>
+            <div v-if="!isLoading && !error">
+                <div class="card-item">
+                    <div v-for="activity in filteredActivities" :key="activity.activity_id">
+                        <ModuleCard @click="openActivity(activity)" :image="activity.image" :name="activity.name"
+                            :description="activity.description" :show-buttons="true"
+                            :primary-label="activity.progress_status === 100 ? '📤 Reupload' : '📤 Upload'"
+                            secondary-label="📜 History" :progress-status="activity.progress_status"
+                            not-started-label="🔍 Let's Explore!" completed-label="🏆 Activity Mastered!"
+                            @primary="uploadActivity(activity.activity_id)"
+                            @secondary="openActivitySubmissions(activity)">
+                            <p class="card-activity-difficulty"
+                                :style="{ color: getDifficultyStyle(activity.difficulty).color }"> Difficulty:
+                                {{ activity.difficulty || 'Unknown' }}
+                            </p>
+                        </ModuleCard>
+                    </div>
+                </div>
+                <input type="file" ref="fileInput" class="hidden" accept=".jpg,.jpeg,.png,.pdf"
+                    @change="handleFileUpload" />
+
+                <p v-if="activities.length === 0" class="empty-result">
+                    No activities in this lesson yet. Please check back later.
+                </p>
+                <p v-if="filteredActivities.length === 0 && activities.length > 0" class="empty-result">
+                    No activities found matching your search. Please try a different keyword.
+                </p>
+                <p v-if="filteredActivities.length !== 0 && activities.length !== 0" class="empty-result">
+                    Tip: Click on an activity to view details and upload your work!
+                </p>
+            </div>
+
+            <div v-if="isLoading" class="loading-state">Loading activities...</div>
+            <div v-if="error" class="error-state">
+                <p>😕 Oops! Could not load activities. {{ error }}</p>
+                <button @click="fetchActivities" class="retry-button">Try Again</button>
+            </div>
         </div>
 
         <div :class="['activity-contents', { 'show-content': selectedActivity }]" v-if="selectedActivity">
             <h2 class="activity-name">🎯 {{ selectedActivity?.name }}</h2>
-            <button class="back-btn" v-if="moduleHistory"
-                @click="selectedActivity = null; showHistory = false; moduleHistory = false">🔙
-                Back to
-                Activities</button>
-            <button class="back-btn" v-if="selectedActivity && showHistory === false && moduleHistory === false"
-                @click="selectedActivity = null; showHistory = false">🔙
-                Back to
-                Activities</button>
-            <button v-if="selectedActivity && showHistory === true && moduleHistory === false" class="back-btn"
-                @click="showHistory = false">🔙
-                Back to
-                Content</button>
+            <button class="back-btn" @click="closePanel">🔙 Back to Activities</button>
+
             <div v-if="showHistory" class="activity-history">
                 <h3>📚 Your Activity History</h3>
-
-                <div v-if="getActivityHistory(selectedActivity.activity_id).length > 0">
-                    <div v-for="history in getActivityHistory(selectedActivity.activity_id)"
-                        :key="history.activity_history_id" class="history-card">
+                <div v-if="isHistoryLoading" class="loading-state">Loading history...</div>
+                <div v-else-if="activityHistory.length > 0">
+                    <div v-for="history in activityHistory" :key="history.activity_history_id" class="history-card">
                         <div class="view-submission-btn-wrap">
-                            <div class="submission-datetime">🗓️ {{ formatDateTime(history.submitted_at) }}
-                            </div>
-                            <button class="view-submission-btn" @click="viewSubmission(selectedActivity)">
+                            <div class="submission-datetime">🗓️ {{ formatDateTime(history.submitted_at) }}</div>
+                            <button class="view-submission-btn" @click="viewSubmission(history)">
                                 👀 View Submission
                             </button>
                         </div>
                         <div class="history-feedback">
-                            <div v-if="history.feedback.admin" class="feedback-admin">
+                            <div v-if="history.feedback?.admin" class="feedback-admin">
                                 <span>👩‍🏫 <b>Admin:</b> {{ history.feedback.admin }}</span>
                             </div>
-                            <div v-if="history.feedback.parent" class="feedback-parent">
+                            <div v-if="history.feedback?.parent" class="feedback-parent">
                                 <span>👨‍👩‍👧 <b>Parent:</b> {{ history.feedback.parent }}</span>
                             </div>
-                            <div v-if="!history.feedback.admin && !history.feedback.parent" class="no-feedback">
+                            <div v-if="!history.feedback?.admin && !history.feedback?.parent" class="no-feedback">
                                 <span>📝 No feedback yet.</span>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div v-else class="no-history">
-                    <span>😅 No submissions yet! Try uploading your work above.</span>
+                    <span>😅 No submissions yet! Try uploading your work.</span>
                 </div>
             </div>
 
             <div v-if="!showHistory">
                 <p class="activity-description">📝 {{ selectedActivity?.description }}</p>
-                <p>📋 {{ selectedActivity?.instruction }}</p>
                 <p class="activity-difficulty">
                     💪 Difficulty:
                     <span :style="{ color: getDifficultyStyle(selectedActivity?.difficulty).color }">
@@ -95,14 +85,12 @@
                         {{ selectedActivity?.difficulty || 'Unknown' }}
                     </span>
                 </p>
-
                 <div class="completed-buttons">
-                    <p v-if="selectedActivity && selectedActivity.progress_status === 100" class="completed-activity">
+                    <p v-if="selectedActivity.progress_status === 100" class="completed-activity">
                         🎉 Activity Completed! You can re-upload your work if needed.
                     </p>
-                    <div v-if="selectedActivity" class="content-buttons">
-                        <AppButton type="primary" v-if="!showHistory"
-                            @click="uploadActivity(selectedActivity.activity_id)">
+                    <div class="content-buttons">
+                        <AppButton type="primary" @click="uploadActivity(selectedActivity.activity_id)">
                             {{ selectedActivity.progress_status === 0 ? '📤 Upload' : '📤 Reupload' }}
                         </AppButton>
                         <AppButton type="secondary" @click="openActivitySubmissions(selectedActivity)">
@@ -116,182 +104,228 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import ChildAppLayout from '@/layouts/ChildAppLayout.vue';
 import AnimatedHeader from '@/components/child/AnimatedHeader.vue';
 import ModuleCard from '@/components/ModuleCard.vue';
 import AppButton from '@/components/AppButton.vue';
 import { searchQuery } from '@/fx/utils';
-import { useRouter } from 'vue-router';
+import { base_url } from '../../router';
 
-const router = useRouter();
+// --- INTERFACES to match API responses ---
+interface CurriculumInfo {
+    curriculum_id: number;
+    name: string;
+}
 
-const curriculum = { curriculum_id: 1, name: 'XYZ' };
-const lesson = { lesson_id: 1, name: 'ABC' };
-const activities = [
-    {
-        activity_id: 1,
-        name: 'Activity 1',
-        description: 'Description for Activity 1',
-        instruction: 'Draw a picture of your favorite animal and use three words to describe it.',
-        difficulty: 'Easy',
-        progress_status: 0,
-        image: '/files/activity1.jpeg',
-    },
-    {
-        activity_id: 2,
-        name: 'Activity 2',
-        description: 'Description for Activity 2',
-        instruction: 'Find five objects in your room that are red. Line them up from smallest to largest.',
-        difficulty: 'Medium',
-        progress_status: 100,
-        image: '/files/activity2.jpeg',
-    },
-    {
-        activity_id: 3,
-        name: 'Activity 3',
-        description: 'Description for Activity 3',
-        instruction: 'Create a treasure map for your backyard or living room. Write clues and draw symbols to help someone find the hidden treasure.',
-        difficulty: 'Hard',
-        progress_status: 100,
-        image: '/files/activity3.png',
-    },
-    {
-        activity_id: 4,
-        name: 'Activity 4',
-        description: 'Description for Activity 4',
-        instruction: 'Listen to a short story. Retell the story in your own words using five sentences.',
-        difficulty: 'Medium',
-        progress_status: 100,
-        image: '/files/activity4.jpeg',
-    }
-];
+interface LessonInfo {
+    lesson_id: number;
+    name: string; // Mapped from 'title' in API
+}
 
-const moduleHistory = ref(false);
+interface Activity {
+    activity_id: number;
+    name: string;
+    description: string;
+    image: string | null;
+    progress_status: number;
+    // These fields are in the template but not the API response, so they are optional
+    instruction?: string;
+    difficulty?: 'Easy' | 'Medium' | 'Hard' | string;
+}
 
-const activity_submission = [
-    {
-        activity_history_id: 1,
-        activity_id: 1,
-        activity_name: 'Activity 1',
-        submitted_at: '2023-10-01T10:00:00Z',
-        feedback: {
-            admin: 'Great job! Your drawing is very creative and colorful. Keep up the good work!',
-            parent: 'I love how you used so many colors! It really brings your drawing to life.',
-        }
-    },
-    {
-        activity_history_id: 2,
-        activity_id: 1,
-        activity_name: 'Activity 1',
-        submitted_at: '2023-10-02T11:30:00Z',
-        feedback: {
-            admin: 'Excellent work! You found all the red objects and arranged them perfectly.',
-            parent: 'Wow, you did a great job organizing the objects by size!',
-        }
-    },
-    {
-        activity_history_id: 3,
-        activity_id: 3,
-        activity_name: 'Activity 3',
-        submitted_at: '2023-10-03T09:15:00Z',
-        feedback: {
-            admin: 'Impressive treasure map! Your clues are very clever.',
-            parent: 'I love how you drew the symbols on the map. It looks like a real adventure!',
-        }
-    },
-    {
-        activity_history_id: 4,
-        activity_id: 3,
-        activity_name: 'Activity 3',
-        submitted_at: '2023-10-04T14:45:00Z',
-        feedback: {
-            admin: 'Great retelling of the story! You captured the main points well.',
-            parent: 'Your summary was very clear and easy to understand. Well done!',
-        }
-    },
-    {
-        activity_history_id: 5,
-        activity_id: 3,
-        activity_name: 'Activity 3',
-        submitted_at: '2023-10-05T22:20:00Z',
-        feedback: {
-            admin: 'Fantastic job! Your creativity really shines through in this activity.',
-            parent: 'I love how you expressed your thoughts so clearly. Keep it up!',
-        }
-    },
-    {
-        activity_history_id: 6,
-        activity_id: 1,
-        activity_name: 'Activity 4',
-        submitted_at: '2023-10-06T12:00:00Z',
-        feedback: {
-        }
-    }
-]
+interface ActivityHistoryItem {
+    activity_history_id: number;
+    activity_id: number;
+    submitted_at: string;
+    feedback: {
+        admin?: string;
+        parent?: string;
+    } | null;
+}
+
+
+// --- COMPONENT STATE ---
+const route = useRoute();
+const curriculum = ref<CurriculumInfo>({ curriculum_id: Number(route.params.curriculumId), name: route.params.curriculumName as string });
+const lesson = ref<LessonInfo>({ lesson_id: Number(route.params.lessonId), name: route.params.lessonName as string });
+const activities = ref<Activity[]>([]);
+const activityHistory = ref<ActivityHistoryItem[]>([]);
+const selectedActivity = ref<Activity | null>(null);
 
 const searchInput = ref('');
-const filteredActivities = computed(() =>
-    searchQuery(activities, searchInput.value, ['name', 'description', 'difficulty'])
-);
-
 const fileInput = ref<HTMLInputElement | null>(null);
-const selectedActivityId = ref<number | null>(null);
-const selectedActivitySubmissions = ref<null | typeof activity_submission[0]>(null);
+const selectedActivityIdForUpload = ref<number | null>(null);
+
+// --- UI & PANEL STATE ---
+const isLoading = ref(true);
+const isHistoryLoading = ref(false);
+const error = ref<string | null>(null);
 const showHistory = ref(false);
 
-function uploadActivity(activityId: number) {
-    selectedActivityId.value = activityId;
-    if (fileInput.value) {
-        fileInput.value.value = '';
-        fileInput.value.click();
+
+// --- COMPUTED PROPERTIES ---
+const filteredActivities = computed(() =>
+    searchQuery(activities.value, searchInput.value, ['name', 'description', 'difficulty'])
+);
+
+
+// --- API & DATA HANDLING ---
+async function fetchActivities() {
+    isLoading.value = true;
+    error.value = null;
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) throw new Error("Authentication token missing.");
+
+        const response = await fetch(`${base_url}api/child/lesson/${lesson.value.lesson_id}/activities`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!response.ok) throw new Error(`Failed to fetch activities (status ${response.status})`);
+
+        const data = await response.json();
+        curriculum.value = data.curriculum;
+        lesson.value = { ...data.lesson, name: data.lesson.title }; // Map title to name
+        activities.value = data.activities;
+
+    } catch (e: any) {
+        error.value = e.message;
+        activities.value = [];
+    } finally {
+        isLoading.value = false;
     }
 }
 
 async function handleFileUpload(event: Event) {
     const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0 || selectedActivityId.value === null) return;
+    if (!input.files?.length || selectedActivityIdForUpload.value === null) return;
+
     const file = input.files[0];
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('activity_id', selectedActivityId.value.toString());
+
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) throw new Error("Authentication token missing.");
+
+        const response = await fetch(`${base_url}api/child/activity/${selectedActivityIdForUpload.value}/submit`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || `Upload failed (status ${response.status})`);
+        }
+
+        alert('File uploaded successfully!');
+        fetchActivities(); // Refresh list to show updated progress
+
+    } catch (e: any) {
+        alert(`Error uploading file: ${e.message}`);
+    } finally {
+        selectedActivityIdForUpload.value = null;
+    }
 }
 
-const selectedActivity = ref<null | typeof activities[0]>(null);
+async function fetchActivityHistory(activityId: number) {
+    isHistoryLoading.value = true;
+    activityHistory.value = [];
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) throw new Error("Authentication token missing.");
 
-function openActivitySubmissions(activity: typeof activities[0]) {
-    selectedActivity.value = activity;
-    showHistory.value = true;
+        const response = await fetch(`${base_url}api/child/activity/${activityId}/history`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!response.ok) throw new Error(`Failed to fetch history (status ${response.status})`);
+
+        const data = await response.json();
+        activityHistory.value = data.activities_submission;
+        console.log("Activity History:", activityHistory.value);
+    } catch (e: any) {
+        console.error("Error fetching history:", e.message);
+    } finally {
+        isHistoryLoading.value = false;
+    }
 }
 
-function openActivity(activity: typeof activities[0]) {
+async function viewSubmission(historyItem: ActivityHistoryItem) {
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) throw new Error("Authentication token missing.");
+
+        const response = await fetch(`${base_url}api/child/activity/history/${historyItem.activity_history_id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!response.ok) throw new Error(`Could not download file (status ${response.status})`);
+
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get('content-disposition');
+        let filename = `submission_${historyItem.activity_history_id}`;
+
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+            if (filenameMatch?.length === 2) filename = filenameMatch[1];
+        }
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+
+    } catch (e: any) {
+        alert(`Error downloading submission: ${e.message}`);
+    }
+}
+
+
+// --- METHODS (Template Interactions) ---
+function uploadActivity(activityId: number) {
+    selectedActivityIdForUpload.value = activityId;
+    if (fileInput.value) {
+        fileInput.value.value = ''; // Reset file input
+        fileInput.value.click();
+    }
+}
+
+function openActivity(activity: Activity) {
     selectedActivity.value = activity;
     showHistory.value = false;
 }
 
-const getActivityHistory = (activityId: number) => {
-    return activity_submission.filter(sub => sub.activity_id === activityId);
-};
-
-function formatDateTime(dateString: string): string {
-    const date = new Date(dateString);
-
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = date.toLocaleString('en-US', { month: 'short' });
-    const year = date.getFullYear();
-
-    let hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-
-    return `${day} / ${month} / ${year} ${hours}:${minutes} ${ampm}`;
+function openActivitySubmissions(activity: Activity) {
+    selectedActivity.value = activity;
+    showHistory.value = true;
+    fetchActivityHistory(activity.activity_id);
 }
 
+function closePanel() {
+    selectedActivity.value = null;
+    showHistory.value = false;
+    activityHistory.value = [];
+}
 
+// --- FORMATTERS & HELPERS ---
+function formatDateTime(dateString: string): string {
+    const options: Intl.DateTimeFormatOptions = {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: true
+    };
+    return new Date(dateString).toLocaleString('en-US', options).replace(',', ' at');
+}
 
-const getDifficultyStyle = (difficulty: string) => {
+const getDifficultyStyle = (difficulty?: string) => {
     switch (difficulty?.toLowerCase()) {
         case 'easy': return { color: '#4CAF50', emoji: '😊' };
         case 'medium': return { color: '#ffa14f', emoji: '🤔' };
@@ -300,13 +334,33 @@ const getDifficultyStyle = (difficulty: string) => {
     }
 };
 
-function viewSubmission(history: typeof activity_submission[0]) {
-    alert(`Viewing submission for: ${history.name} (ID: ${history.activity_history_id})`);
-}
-
+// --- LIFECYCLE HOOK ---
+onMounted(() => {
+    fetchActivities();
+});
 </script>
 
 <style scoped>
+/* Scoped styles remain unchanged as requested */
+.loading-state,
+.error-state {
+    text-align: center;
+    padding: 40px 20px;
+    font-size: 1.2rem;
+    color: #666;
+}
+
+.retry-button {
+    margin-top: 15px;
+    padding: 10px 20px;
+    border: none;
+    background-color: var(--color-primary, #007bff);
+    color: white;
+    border-radius: var(--border-radius, 8px);
+    cursor: pointer;
+    font-family: "VAGRoundedNext";
+}
+
 .top-section {
     display: flex;
     justify-content: space-between;
@@ -334,7 +388,7 @@ function viewSubmission(history: typeof activity_submission[0]) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 20px;
-    padding: 0 20px;
+    padding: 20px;
 }
 
 .card-activity-difficulty {
@@ -362,8 +416,9 @@ function viewSubmission(history: typeof activity_submission[0]) {
     transform: translate(-50%, 100%);
     opacity: 0;
     width: 80%;
+    max-width: 900px;
     max-height: 80vh;
-    padding: 20px 24px 20px;
+    padding: 20px 24px;
     border-radius: var(--border-radius);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
     background: #fff3e0;
@@ -406,6 +461,8 @@ function viewSubmission(history: typeof activity_submission[0]) {
     margin-bottom: 12px;
     text-align: center;
     font-family: "VAGRoundedNext";
+    padding-right: 150px;
+    /* Space for back button */
 }
 
 .completed-buttons {
@@ -435,18 +492,12 @@ function viewSubmission(history: typeof activity_submission[0]) {
 }
 
 .activity-history {
-    /* background: linear-gradient(90deg, #ffe0b2 0%, #fffde7 100%); */
-    /* border-radius: var(--border-radius); */
-    padding: 18px 20px;
-    /* box-shadow: 0 2px 12px rgba(255, 193, 7, 0.13); */
-    /* font-family: 'Comic 'Delius', cursive; */
-    /* font-size: 1.1rem; */
+    padding: 18px 0;
 }
 
 .activity-history h3 {
     color: #ff9800;
     margin-bottom: 16px;
-    /* text-align: center; */
     font-family: 'VAGRoundedNext';
 }
 
@@ -467,12 +518,14 @@ function viewSubmission(history: typeof activity_submission[0]) {
 .feedback-admin,
 .feedback-parent,
 .no-feedback {
-    margin-bottom: 4px;
+    margin-top: 8px;
     padding-left: 8px;
+    font-size: 0.95em;
 }
 
 .no-feedback span {
-    color: #bdbdbd;
+    color: #9E9E9E;
+    font-style: italic;
 }
 
 .feedback-admin span {
@@ -487,11 +540,13 @@ function viewSubmission(history: typeof activity_submission[0]) {
     text-align: center;
     color: #bdbdbd;
     margin-top: 10px;
+    font-style: italic;
 }
 
 .view-submission-btn-wrap {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     margin-bottom: 8px;
 }
 
@@ -504,13 +559,18 @@ function viewSubmission(history: typeof activity_submission[0]) {
     border: none;
     font-family: 'VAGRoundedNext';
     cursor: pointer;
-    padding: 0 20px;
+    padding: 8px 16px;
     box-shadow: 0 2px 8px rgba(255, 193, 7, 0.13);
     transition: background 0.2s;
 }
 
 .view-submission-btn:hover {
-    background: linear-gradient(90deg, #ffe082 0%, #ffd54f 100%);
+    background-color: #ffd54f;
     color: #d84315;
+}
+
+.activity-description,
+.activity-difficulty {
+    margin-bottom: 1rem;
 }
 </style>

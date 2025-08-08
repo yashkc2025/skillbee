@@ -15,12 +15,12 @@
         <div v-for="(question, index) in questionList" :key="index" class="question-card">
             <div class="question-row">
                 <p class="question-text">
-                    Q{{ index + 1 }}: {{ question.question }}
+                    Q{{ index + 1 }}: {{ question.question.question }}
                 </p>
-                <span class="marks">{{ question.marks }} marks</span>
+                <span class="marks">{{ question.question.marks }} marks</span>
             </div>
             <ul class="options-list">
-                <li v-for="(option, idx) in question.options" :key="idx" class="option-item"
+                <li v-for="(option, idx) in question.question.options" :key="idx" class="option-item"
                     :class="{ selected: selectedOptions[index] === idx }" @click="selectOption(index, idx)">
                     <span class="option-label">{{ String.fromCharCode(65 + idx) }}.</span>
                     {{ option }}
@@ -45,78 +45,32 @@
 <script setup lang="ts">
 import AppButton from '@/components/AppButton.vue';
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import { base_url } from '../../router';
 
+// --- SETUP ---
 const router = useRouter();
+const route = useRoute();
 
+// --- STATE ---
 const timer = ref<ReturnType<typeof setInterval> | null>(null);
 const submitted = ref(false);
+const loading = ref(true);
+const error = ref<string | null>(null);
 
-const curriculum = { curriculum_id: 1, name: 'General Knowledge' };
-const lesson = { lesson_id: 1, title: 'Quiz on General Knowledge' };
-const quiz = { quiz_id: 1, name: 'General Knowledge Quiz', time_duration: 90 };
+const curriculum = ref<any>({});
+const lesson = ref<any>({});
+const quiz = ref<any>({});
+const questionList = ref<any[]>([]);
+const timeDuration = ref<number | null>(null); // Start as null, will be populated from API
 
-const timeDuration = ref(quiz.time_duration); // 5 minutes in seconds
+const selectedOptions = ref<{ [key: number]: number }>({}); // key: 0-based question index, value: 0-based option index
 
-const questions = [
-    {
-        "question_index": 0,
-        "question": "What is the capital of France?",
-        "options": ["Berlin", "Madrid", "Paris", "Rome"],
-        "marks": 10,
-    },
-    {
-        "question_index": 1,
-        "question": "What is the largest planet in our solar system?",
-        "options": ["Earth", "Mars", "Jupiter", "Saturn"],
-        "marks": 10,
-    },
-    {
-        "question_index": 2,
-        "question": "What is the chemical symbol for water?",
-        "options": ["H2O", "CO2", "O2", "NaCl"],
-        "marks": 10,
-    },
-    {
-        "question_index": 3,
-        "question": "What is the smallest prime number?",
-        "options": ["1", "2", "3", "5"],
-        "marks": 10,
-    },
-    {
-        "question_index": 4,
-        "question": "What is the main ingredient in guacamole?",
-        "options": ["Tomato", "Avocado", "Onion", "Pepper"],
-        "marks": 10,
-    },
-    {
-        "question_index": 5,
-        "question": "What is the largest mammal in the world?",
-        "options": ["Elephant", "Blue Whale", "Giraffe", "Hippopotamus"],
-        "marks": 10,
-    },
-    {
-        "question_index": 6,
-        "question": "What is the capital of Japan?",
-        "options": ["Seoul", "Beijing", "Tokyo", "Bangkok"],
-        "marks": 10,
-    },
-];
-const questionList = Object.values(questions);
-
-const selectedOptions = ref<{ [key: number]: number }>({});
+// --- METHODS ---
 
 function selectOption(question_index: number, optIdx: number) {
     if (submitted.value) return;
     selectedOptions.value[question_index] = optIdx;
-}
-
-function submitQuiz() {
-    if (submitted.value) return;
-    submitted.value = true;
-    clearTimer();
-    console.log('Quiz submitted with answers:', selectedOptions.value);
-    // alert("Quiz submitted! 🎉");
 }
 
 function clearTimer() {
@@ -126,22 +80,140 @@ function clearTimer() {
     }
 }
 
+function handleTimeUp() {
+    if (!submitted.value) {
+        alert("Time's up! Submitting your answers automatically.");
+        submitQuiz();
+    }
+}
+
+// --- API INTEGRATION ---
+
+async function fetchQuizData() {
+    loading.value = true;
+    error.value = null;
+    const { curriculumId, lessonId, quizId } = route.params;
+
+    if (!curriculumId || !lessonId || !quizId) {
+        error.value = "Required information (curriculum, lesson, or quiz ID) is missing from the URL.";
+        loading.value = false;
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) throw new Error("Authentication token not found.");
+
+        const url = `${base_url}api/child/curriculum/${curriculumId}/lesson/${lessonId}/quiz/${quizId}`;
+        const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || `Failed to fetch quiz data (status ${response.status})`);
+        }
+
+        const data = await response.json();
+        curriculum.value = data.curriculum;
+        console.log("Fetched curriculum:", curriculum.value);
+        lesson.value = data.lesson;
+        console.log("Fetched lesson:", lesson.value);
+        quiz.value = data.quizzes; // API returns 'quizzes' object for the single quiz
+        console.log("Fetched quiz:", quiz.value);
+        questionList.value = data.questions;
+        console.log("Fetched questions:", questionList.value);
+
+        // Handle time duration
+        if (quiz.value.time_duration) {
+            // Assuming format is like "5 mins" or just a number in seconds
+            const durationString = String(quiz.value.time_duration);
+            const parsedSeconds = parseInt(durationString, 10);
+
+            // If it's a string like "5 mins", convert to seconds
+            if (durationString.toLowerCase().includes('min')) {
+                timeDuration.value = parsedSeconds * 60;
+            } else if (!isNaN(parsedSeconds)) {
+                // If it's just a number, assume it's already in seconds
+                timeDuration.value = parsedSeconds;
+            }
+        }
+
+    } catch (e: any) {
+        error.value = e.message;
+    } finally {
+        loading.value = false;
+    }
+}
+
+async function submitQuiz() {
+    if (submitted.value) return;
+
+    clearTimer();
+    const { quizId } = route.params;
+    if (!quizId) {
+        error.value = 'Quiz ID is missing, cannot submit.';
+        return;
+    }
+
+    // Backend expects question keys to be 1-based index as strings
+    const answersPayload: Record<string, string> = {};
+    for (const [qIndexStr, oIndex] of Object.entries(selectedOptions.value)) {
+        const questionIndex = parseInt(qIndexStr, 10);
+        answersPayload[String(questionIndex)] = String(oIndex);
+    }
+
+    console.log("Submitting answers:", answersPayload);
+
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) throw new Error("Authentication token not found.");
+
+        const response = await fetch(`${base_url}api/child/quizzes/${quizId}/submit`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ answers: answersPayload })
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Failed to submit the quiz.');
+        }
+
+        submitted.value = true;
+
+    } catch (e: any) {
+        alert(`Submission failed: ${e.message}`);
+        console.error('Quiz submission error:', e);
+    }
+}
+
+
+// --- COMPUTED & LIFECYCLE ---
+
 const formatTime = computed(() => {
+    if (timeDuration.value === null) return '';
     const minutes = Math.floor(timeDuration.value / 60);
     const seconds = timeDuration.value % 60;
     return `${minutes} min ${seconds.toString().padStart(2, '0')} sec`;
 });
 
-onMounted(() => {
-    timer.value = setInterval(() => {
-        if (timeDuration.value > 0) {
-            timeDuration.value--;
-        } else {
-            if (!submitted.value) {
-                submitQuiz();
+onMounted(async () => {
+    await fetchQuizData();
+
+    // Start timer only if timeDuration is a valid number
+    if (typeof timeDuration.value === 'number' && timeDuration.value > 0) {
+        timer.value = setInterval(() => {
+            if (timeDuration.value! > 0) {
+                timeDuration.value!--;
+            } else {
+                handleTimeUp();
             }
-        }
-    }, 1000);
+        }, 1000);
+    }
 });
 
 onBeforeUnmount(() => {

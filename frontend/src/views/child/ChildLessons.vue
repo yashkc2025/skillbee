@@ -1,193 +1,223 @@
 <template>
     <ChildAppLayout>
         <div class="lessons" :class="{ 'blur-bg': selectedLesson }">
-            <!-- <div class="top-section">
-                <h2 class="ft-head-1">🎉 Let’s Explore {{ curriculum.name }}!</h2>
-                <input type="text" v-model="searchInput" placeholder="Type to find a lesson… 🕵️‍♂️"
-                    class="search-box" />
-            </div> -->
             <AnimatedHeader v-model="searchInput"
                 :heading-messages="[`🎉 Let’s discover the lessons in ${curriculum.name}! 🌟`, '✨ Tap the card to start your learning adventure! 🚀']"
                 :placeholder-messages="['Type to find a lesson… 🕵️‍♂️']" :typing-speed="50" :pause-duration="1500" />
-            <div class="card-item">
-                <div v-for="lesson in filteredLessons" :key="lesson.lesson_id">
-                    <ModuleCard @click="openLesson(lesson)" :image="lesson.image" :name="lesson.title"
-                        :description="lesson.description" primary-label="📝 Activities" secondary-label="✍️ Quizzes"
-                        @primary="goToActivities(curriculum.curriculum_id, curriculum.name, lesson.lesson_id, lesson.title)"
-                        @secondary="goToQuizzes(curriculum.curriculum_id, curriculum.name, lesson.lesson_id, lesson.title)"
-                        :progress-status="lesson.progress_status" :show-buttons="true"
-                        not-started-label="📚 New Lesson!" completed-label="✅ Lesson Complete!" />
-                </div>
+
+            <div v-if="isLoading" class="loading-state">Loading lessons...</div>
+
+            <div v-else-if="error" class="error-state">
+                <p>😕 Oops! We couldn't load the lessons. {{ error }}</p>
+                <button @click="fetchCurriculumLessons" class="retry-button">Try Again</button>
             </div>
-            <p v-if="lessons.length === 0" class="empty-result">
-                There is no single lesson in "{{ curriculum.name }}"
-            </p>
-            <p v-if="filteredLessons.length === 0 && lessons.length > 0" class="empty-result">
-                None of the lesson's title and description has "{{ searchInput }}"
-            </p>
-            <p v-if="filteredLessons.length !== 0 && lessons.length !== 0" class="empty-result">
-                Tip: Click on a lesson card to view its contents.
-            </p>
+
+            <div v-else>
+                <div class="card-item">
+                    <div v-for="lesson in filteredLessons" :key="lesson.lesson_id">
+                        <ModuleCard @click="openLesson(lesson)" :image="lesson.image" :name="lesson.title"
+                            :description="lesson.description" primary-label="📝 Activities" secondary-label="✍️ Quizzes"
+                            @primary="goToActivities(curriculum.curriculum_id, curriculum.name, lesson.lesson_id, lesson.title)"
+                            @secondary="goToQuizzes(curriculum.curriculum_id, curriculum.name, lesson.lesson_id, lesson.title)"
+                            :progress-status="lesson.progress_status" :show-buttons="true"
+                            not-started-label="📚 New Lesson!" completed-label="✅ Lesson Complete!" />
+                    </div>
+                </div>
+                <p v-if="lessons.length === 0" class="empty-result">
+                    There are no lessons in "{{ curriculum.name }}" yet.
+                </p>
+                <p v-if="filteredLessons.length === 0 && lessons.length > 0" class="empty-result">
+                    None of the lesson's title and description has "{{ searchInput }}"
+                </p>
+                <p v-if="filteredLessons.length > 0" class="empty-result">
+                    Tip: Click on a lesson card to view its contents.
+                </p>
+            </div>
         </div>
 
-        <div :class="['lesson-contents', { 'show-content': selectedLesson }]">
-            <h2 class="lesson-title">📘 {{ selectedLesson?.title }}</h2>
-            <button class="back-btn" @click="selectedLesson = null">🔙 Back to Lessons</button>
-            <p>🧠 {{ selectedLesson?.content }}</p>
-            <div v-if="selectedLesson && isUrl(selectedLesson.url_details)" class="reference-link">
-                <h4 class="reference-title">🌐 Please go through reference link to learn more about lesson.
-                </h4>
-                <ol>
-                    <li v-for="link in Object.values(selectedLesson.url_details)" :key="link">🔗
-                        <a :href="link" target="_blank" class="ref-link">
-                            {{ link }}
-                        </a>
-                    </li>
-                </ol>
-            </div>
-            <div class="completed-buttons">
-                <p v-if="selectedLesson && getCompletedAt(selectedLesson.lesson_id)" class="completed-lesson">
-                    ✅ Completed on: {{ getCompletedAt(selectedLesson.lesson_id) }}
-                </p>
-                <div v-if="selectedLesson" class="content-buttons">
-                    <AppButton type="primary"
-                        @click="goToActivities(curriculum.curriculum_id, curriculum.name, selectedLesson.lesson_id, selectedLesson.title)">
-                        📝
-                        Activities
-                    </AppButton>
-                    <AppButton type="secondary"
-                        @click="goToQuizzes(curriculum.curriculum_id, curriculum.name, selectedLesson.lesson_id, selectedLesson.title)">
-                        ✍️
-                        Quizzes
-                    </AppButton>
-                    <AppButton type="tertiary"
-                        :class="['tertiary', { 'disabled-tertiary': isLessonRead(selectedLesson.lesson_id) }]"
-                        :disabled="isLessonRead(selectedLesson.lesson_id)"
-                        @click="markAsRead(selectedLesson.lesson_id)">
-                        {{ isLessonRead(selectedLesson.lesson_id) ? '✔✔ Marked as read' : '✔ Mark as read' }}
-                    </AppButton>
+        <div v-if="selectedLesson" :class="['lesson-contents', { 'show-content': !!selectedLesson }]">
+            <template v-if="isDetailLoading">
+                <h2 class="lesson-title">📘 {{ selectedLesson.title }}</h2>
+                <div class="loading-state">Loading lesson details...</div>
+            </template>
+            <template v-else>
+                <h2 class="lesson-title">📘 {{ selectedLesson.title }}</h2>
+                <button class="back-btn" @click="closeLessonDetail(); fetchCurriculumLessons()">🔙 Back to
+                    Lessons</button>
+                <p class="lesson-main-content">🧠 {{ selectedLesson.content.text }}</p>
+
+                <div v-if="selectedLesson.content.url" class="reference-link">
+                    <h4 class="reference-title">🌐 Please go through reference link to learn more about lesson.</h4>
+                    <ol>
+                        <li v-for="(link, index) in selectedLesson.content.url" :key="index">
+                            <a :href="link" target="_blank" class="ref-link">{{ link }}</a>
+                        </li>
+                    </ol>
                 </div>
-            </div>
+
+                <div class="completed-buttons">
+                    <p v-if="selectedLesson.completed_at" class="completed-lesson">
+                        ✅ Completed on: {{ formatCompletionDate(selectedLesson.completed_at) }}
+                    </p>
+                    <div class="content-buttons">
+                        <AppButton type="primary"
+                            @click="goToActivities(curriculum.curriculum_id, curriculum.name, selectedLesson.lesson_id, selectedLesson.title)">
+                            📝 Activities
+                        </AppButton>
+                        <AppButton type="secondary"
+                            @click="goToQuizzes(curriculum.curriculum_id, curriculum.name, selectedLesson.lesson_id, selectedLesson.title)">
+                            ✍️ Quizzes
+                        </AppButton>
+                        <AppButton type="tertiary"
+                            :class="['tertiary', { 'disabled-tertiary': !!selectedLesson.completed_at }]"
+                            :disabled="!!selectedLesson.completed_at" @click="markAsRead(selectedLesson.lesson_id)">
+                            {{ selectedLesson.completed_at ? '✔✔ Marked as read' : '✔ Mark as read' }}
+                        </AppButton>
+                    </div>
+                </div>
+            </template>
         </div>
     </ChildAppLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import ChildAppLayout from '@/layouts/ChildAppLayout.vue';
 import AnimatedHeader from '@/components/child/AnimatedHeader.vue';
 import ModuleCard from '@/components/ModuleCard.vue';
 import AppButton from '@/components/AppButton.vue';
-import { useRouter } from 'vue-router';
 import { searchQuery } from '@/fx/utils';
+import { base_url } from '../../router';
 
-const router = useRouter();
-
-interface Lesson {
-    lesson_id: number;
-    image: string;
-    title: string;
-    description: string;
-    content: string;
-    url_details: Record<string, string>;
-    progress_status: string;
-}
-
-interface curriculum {
+// INTERFACES
+interface Curriculum {
     curriculum_id: number;
     name: string;
 }
 
-interface LessonHistory {
+interface LessonSummary {
     lesson_id: number;
-    completed_at: string;
+    image: string | null;
+    title: string;
+    description: string;
+    progress_status: number;
 }
 
-interface LessonsHistory {
-    lesson_id: number;
-    completed_at: string;
+interface LessonDetail extends LessonSummary {
+    content: string;
+    completed_at: string | null;
 }
 
-const curriculum = { curriculum_id: 1, name: 'XYZ' };
+// ROUTING
+const route = useRoute();
+const router = useRouter();
 
-const lessons = [
-    {
-        lesson_id: 1,
-        title: 'Lesson 1',
-        image: '/files/lesson1.jpg',
-        description: 'Learn about the basics of Lesson 1',
-        content: 'Lesson 1. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
-        url_details: { 0: 'https://www.lipsum.com/', 1: 'https://drawsql.app/teams/student-839/diagrams/life-skills-app-for-school-aged-children' },
-        progress_status: 30
-    },
-    {
-        lesson_id: 2,
-        title: 'Lesson 2',
-        image: '/files/lesson2.jpeg',
-        description: 'Learn about the basics of Lesson 2',
-        content: 'Lesson 2. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
-        url_details: { 0: 'https//:dflsjds.com', 1: 'https//:google.com' },
-        progress_status: 50
-    },
-    {
-        lesson_id: 3,
-        title: 'Lesson 3',
-        image: '/files/lesson3.jpeg',
-        description: 'Learn about the basics of Lesson 3',
-        content: 'Lesson 3. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
-        url_details: { 0: 'https//:dflsjds.com', 1: 'https//:google.com' },
-        progress_status: 20
-    },
-    {
-        lesson_id: 4,
-        title: 'Ram 4',
-        image: '/files/lesson4.jpeg',
-        description: 'Learn about the basics of Ram 4',
-        content: 'Ram 4. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
-        url_details: {},
-        progress_status: 0
-    },
-    {
-        lesson_id: 5,
-        title: 'Ram 5',
-        image: '/files/lesson5.jpeg',
-        description: 'Learn about the basics of Ram 5',
-        content: 'Ram 5. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.vWhat is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum. What is Lorem Ipsum? Lorem Ipsum is simply dummy text of the printing and typesetting industry.Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.',
-        url_details: {},
-        progress_status: 100
-    }
-];
-
-const lessonsHistory = ref([
-    { lesson_id: 2, completed_at: '10/09/2025' },
-    { lesson_id: 4, completed_at: '14/09/2025' }
-]);
-
+// STATE
+const curriculum = ref<Curriculum>({
+    curriculum_id: Number(route.params.curriculumId),
+    name: route.params.curriculumName as string || 'Curriculum'
+});
+const lessons = ref<LessonSummary[]>([]);
+const selectedLesson = ref<LessonDetail | null>(null);
 const searchInput = ref('');
 
-const filteredLessons = computed(() =>
-    searchQuery(lessons, searchInput.value, ['title', 'description'])
-);
+// UI STATE
+const isLoading = ref(true);
+const isDetailLoading = ref(false);
+const error = ref<string | null>(null);
 
-function isLessonRead(lessonId: number) {
-    return lessonsHistory.value.some(entry => entry.lesson_id === lessonId);
-}
 
-function markAsRead(lessonId: number) {
-    if (!isLessonRead(lessonId)) {
-        const now = new Date();
-        const completedAt =
-            now.toLocaleDateString() + ', ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        lessonsHistory.value.push({
-            lesson_id: lessonId,
-            completed_at: completedAt
+// COMPUTED
+const filteredLessons = computed(() => {
+    return searchQuery(lessons.value, searchInput.value, ['title', 'description']);
+});
+
+// API CALLS
+async function fetchCurriculumLessons() {
+    isLoading.value = true;
+    error.value = null;
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) throw new Error("Authentication token not found.");
+
+        const response = await fetch(`${base_url}api/child/curriculum/${curriculum.value.curriculum_id}/lessons`, {
+            headers: { Authorization: `Bearer ${token}` }
         });
+
+        if (!response.ok) throw new Error(`Failed to fetch lessons (status: ${response.status}).`);
+
+        const data = await response.json();
+        curriculum.value = data.curriculum;
+        lessons.value = data.lessons;
+        console.log("Fetched lessons:", lessons.value);
+    } catch (e: any) {
+        error.value = e.message;
+        lessons.value = [];
+    } finally {
+        isLoading.value = false;
     }
 }
 
-function getCompletedAt(lessonId: number): string | null {
-    const entry = lessonsHistory.value.find(e => e.lesson_id === lessonId);
-    return entry ? entry.completed_at : null;
+async function openLesson(lesson: LessonSummary) {
+    isDetailLoading.value = true;
+    // Set initial data for the panel to show title immediately
+    selectedLesson.value = { ...lesson, content: '', completed_at: null };
+
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) throw new Error("Authentication token not found.");
+
+        const response = await fetch(`${base_url}api/child/lesson/${lesson.lesson_id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!response.ok) throw new Error(`Failed to load lesson details (status: ${response.status}).`);
+
+        const lessonDetails = await response.json();
+        // The backend gives 'content' and 'completed_at'. We merge it with existing summary.
+        selectedLesson.value = { ...lesson, ...lessonDetails };
+
+    } catch (e: any) {
+        console.error("Error opening lesson:", e.message);
+        // Optionally close the panel or show an error inside it
+        closeLessonDetail();
+    } finally {
+        isDetailLoading.value = false;
+    }
+}
+
+async function markAsRead(lessonId: number) {
+    if (!selectedLesson.value || selectedLesson.value.completed_at) return;
+
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) throw new Error("Authentication token not found.");
+
+        const completedAt = new Date().toISOString();
+
+        const response = await fetch(`${base_url}api/child/lesson/${lessonId}/mark-read`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ completed_at: completedAt })
+        });
+
+        if (!response.ok) throw new Error(`Failed to mark as read (status: ${response.status}).`);
+
+        // Update UI instantly on success
+        selectedLesson.value.completed_at = completedAt;
+
+    } catch (e: any) {
+        console.error("Error marking lesson as read:", e.message);
+    }
+}
+
+// METHODS
+function closeLessonDetail() {
+    selectedLesson.value = null;
 }
 
 function goToActivities(curriculumId: number, curriculumName: string, lessonId: number, lessonName: string) {
@@ -198,58 +228,66 @@ function goToQuizzes(curriculumId: number, curriculumName: string, lessonId: num
     router.push({ name: 'child_quizzes', params: { curriculumId, curriculumName, lessonId, lessonName } });
 }
 
-const selectedLesson = ref<null | typeof lessons[0]>(null);
-
-function openLesson(lesson: typeof lessons[0]) {
-    selectedLesson.value = lesson;
+function formatCompletionDate(isoString: string): string {
+    if (!isoString) return '';
+    return new Date(isoString).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
-function isUrl(url_details: Record<string, string> | undefined): boolean {
-    if (!url_details) return false;
-    return Object.values(url_details).some(v => typeof v === 'string' && v.trim() !== '');
-}
+// LIFECYCLE HOOK
+onMounted(() => {
+    fetchCurriculumLessons();
+});
 </script>
 
 <style scoped>
-.top-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 25px;
+/* Scoped styles remain largely the same, with added loading/error states */
+.lessons {
+    transition: filter 0.5s ease;
+}
+
+.blur-bg {
+    filter: blur(5px);
+    pointer-events: none;
+    user-select: none;
+}
+
+.loading-state,
+.error-state {
+    text-align: center;
+    padding: 50px 20px;
+    font-size: 1.2rem;
+    color: #666;
+}
+
+.retry-button {
+    margin-top: 20px;
+    padding: 10px 25px;
+    border: none;
+    background-color: #007bff;
+    /* Example primary color */
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: "VAGRoundedNext", sans-serif;
+    font-size: 1rem;
+    transition: background-color 0.2s ease;
+}
+
+.retry-button:hover {
+    background-color: #0056b3;
 }
 
 .card-item {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 20px;
-    padding: 0 20px;
-}
-
-.search-box {
-    min-width: 25%;
-    width: 40%;
-    max-width: 400px;
-    height: 30px;
-    padding: 10px;
-    /* background: #fffbe7; */
-    border: 1px solid #ccc;
-    border-radius: calc(var(--border-radius) / 1.5);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-    font-family: "VAGRoundedNext";
-}
-
-.search-box::placeholder {
-    font-style: italic;
-}
-
-.content-buttons .tertiary {
-    width: 220px;
-}
-
-.content-buttons .disabled-tertiary {
-    background: #ffb2dd;
-    color: #ad1457;
-    cursor: not-allowed;
+    padding: 20px;
 }
 
 .lesson-contents {
@@ -259,12 +297,13 @@ function isUrl(url_details: Record<string, string> | undefined): boolean {
     transform: translate(-50%, 100%);
     opacity: 0;
     width: 80%;
+    max-width: 900px;
     max-height: 80vh;
-    padding: 20px 24px 20px;
+    padding: 20px 24px;
     border-radius: var(--border-radius);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
     background: #fff3e0;
-    font-family: 'Delius';
+    font-family: 'Delius', cursive;
     font-size: var(--font-ml-lg);
     overflow-y: auto;
     transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
@@ -274,7 +313,6 @@ function isUrl(url_details: Record<string, string> | undefined): boolean {
 .lesson-contents.show-content {
     transform: translate(-50%, -50%);
     opacity: 1;
-    pointer-events: auto;
     z-index: 1000;
 }
 
@@ -300,9 +338,15 @@ function isUrl(url_details: Record<string, string> | undefined): boolean {
 
 .lesson-title {
     color: #ff6f00;
-    margin-bottom: 12px;
+    margin-bottom: 20px;
+    padding-right: 150px;
+    /* Space for back button */
     text-align: center;
     font-family: "VAGRoundedNext";
+}
+
+.lesson-main-content {
+    line-height: 1.6;
 }
 
 .reference-link {
@@ -330,7 +374,7 @@ function isUrl(url_details: Record<string, string> | undefined): boolean {
 }
 
 .completed-buttons {
-    margin-top: 20px;
+    margin-top: 25px;
 }
 
 .completed-lesson {
@@ -340,24 +384,31 @@ function isUrl(url_details: Record<string, string> | undefined): boolean {
     padding: 8px 12px;
     border-radius: calc(var(--border-radius) / 2);
     text-align: center;
+    margin-bottom: 20px;
 }
 
 .content-buttons {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
     gap: 12px;
-    margin-top: 20px;
+}
+
+.content-buttons .tertiary {
+    width: 220px;
+}
+
+.content-buttons .disabled-tertiary {
+    background: #ffb2dd;
+    color: #ad1457;
+    cursor: not-allowed;
+    opacity: 0.8;
 }
 
 .empty-result {
     margin-top: 20px;
     text-align: center;
     padding-bottom: 30px;
-}
-
-.blur-bg {
-    filter: blur(5px);
-    pointer-events: none;
-    user-select: none;
+    color: #555;
 }
 </style>

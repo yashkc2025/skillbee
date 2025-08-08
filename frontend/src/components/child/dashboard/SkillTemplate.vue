@@ -7,7 +7,7 @@ import { useRouter } from "vue-router";
 const router = useRouter();
 
 interface SkillType {
-  curriculum_id: number;
+  skill_id: number;
   label: string;
   link: string;
   progress: number;
@@ -29,7 +29,7 @@ function openCurriculum(curriculumId: number, curriculumName: string) {
   <div>
     <Card title="📚 Curriculums">
       <CardItem v-for="(s, i) in props.skillTypes" :key="i">
-        <div @click.prevent="openCurriculum(s.curriculum_id, s.label)" class="skill-card"
+        <div @click="openCurriculum(s.skill_id, s.label)" class="skill-card"
           style="display: grid; grid-template-columns: 30% 10% 60%; align-items: center">
           <div class="">{{ s.label }}</div>
           <div></div>

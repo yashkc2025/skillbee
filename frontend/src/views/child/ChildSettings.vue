@@ -100,22 +100,44 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import ChildAppLayout from "../../layouts/ChildAppLayout.vue";
 import AppButton from "@/components/AppButton.vue";
+import { base_url } from "../../router";
 
-const profileImageUrl = ref("/files/default-profile.jpg");
+// --- STATE ---
+
+// Profile Image
+const profileImageUrl = ref("/files/default-profile.jpg"); // Default image
+const showProfileModal = ref(false);
+
+// User Details
 const details = ref({
-    name: "Kid Name",
-    email_id: "kid@email.com",
-    dob: "2013-01-01",
-    school: "Happy Kids School"
+    name: "",
+    email_id: "", // Frontend uses email_id
+    dob: "",
+    school: ""
 });
 const savingDetails = ref(false);
 const detailsSuccess = ref("");
+const detailsError = ref("");
 
-const showProfileModal = ref(false);
+// Password
+const passwordForm = ref({
+    current: "",
+    new: "",
+    confirm: ""
+});
+const changingPassword = ref(false);
+const passwordError = ref("");
+const passwordSuccess = ref("");
+const showCurrentPassword = ref(false);
+const showNewPassword = ref(false);
+const showConfirmPassword = ref(false); // Corrected type to boolean
 
+// --- HELPERS ---
+
+// Date constraints for the date of birth input
 const today = new Date();
 const minDate = computed(() => {
     const d = new Date(today);
@@ -128,62 +150,172 @@ const maxDate = computed(() => {
     return d.toISOString().split("T")[0];
 });
 
+
+// --- API INTEGRATION ---
+
+// 1. Fetch all profile data on component mount
+async function fetchProfileData() {
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) throw new Error("Authentication token not found.");
+
+        const response = await fetch(`${base_url}api/child/setting`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!response.ok) throw new Error("Failed to load your profile data.");
+
+        const data = await response.json();
+
+        details.value = {
+            name: data.name,
+            email_id: data.email, // Map backend 'email' to frontend 'email_id'
+            dob: data.dob,
+            school: data.school
+        };
+
+        if (data.profile_image_url) {
+            profileImageUrl.value = data.profile_image_url;
+        }
+
+    } catch (e: any) {
+        detailsError.value = e.message; // Show error in the details section
+    }
+}
+
+// 2. Handle profile image selection and upload
 function onProfileImageChange(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (file) {
         const reader = new FileReader();
         reader.onload = (ev) => {
-            profileImageUrl.value = ev.target?.result as string;
+            const base64String = ev.target?.result as string;
+            profileImageUrl.value = base64String; // Instant UI update
+            uploadProfileImage(base64String); // Send to backend
         };
         reader.readAsDataURL(file);
     }
 }
 
-async function saveDetails() {
-    savingDetails.value = true;
-    setTimeout(() => {
-        savingDetails.value = false;
-        detailsSuccess.value = "Details saved! 🎉";
-        setTimeout(() => {
-            detailsSuccess.value = "";
-        }, 5000);
-    }, 1000);
+async function uploadProfileImage(base64Image: string) {
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) throw new Error("Authentication token not found.");
+
+        await fetch(`${base_url}api/child/profile_image`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ profile_image: base64Image })
+        });
+        // Optionally show a success message
+    } catch (e: any) {
+        alert(`Could not upload image: ${e.message}`);
+        // Optionally revert image to the previous one
+    }
 }
 
-const passwordForm = ref({
-    current: "",
-    new: "",
-    confirm: ""
-});
-const changingPassword = ref(false);
-const passwordError = ref("");
-const passwordSuccess = ref("");
-const showCurrentPassword = ref(false);
-const showNewPassword = ref(false);
-const showConfirmPassword = ref("");
 
+// 3. Save updated profile details
+async function saveDetails() {
+    savingDetails.value = true;
+    detailsSuccess.value = "";
+    detailsError.value = "";
+
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) throw new Error("Authentication token not found.");
+
+        // Create a payload that matches backend expectations ('email')
+        const payload = {
+            name: details.value.name,
+            email: details.value.email_id,
+            dob: details.value.dob,
+            school: details.value.school
+        };
+
+        const response = await fetch(`${base_url}api/child/update_profile`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || "Failed to save details.");
+        }
+
+        detailsSuccess.value = "Details saved! 🎉";
+
+    } catch (e: any) {
+        detailsError.value = e.message;
+    } finally {
+        savingDetails.value = false;
+        setTimeout(() => {
+            detailsSuccess.value = "";
+            detailsError.value = "";
+        }, 5000);
+    }
+}
+
+// 4. Change user password
 async function changePassword() {
     passwordError.value = "";
     passwordSuccess.value = "";
+
     if (passwordForm.value.new !== passwordForm.value.confirm) {
         passwordError.value = "New passwords do not match!";
-        setTimeout(() => {
-            passwordError.value = "";
-        }, 5000);
         return;
     }
+
     changingPassword.value = true;
-    setTimeout(() => {
-        changingPassword.value = false;
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) throw new Error("Authentication token not found.");
+
+        const payload = {
+            current_password: passwordForm.value.current,
+            new_password: passwordForm.value.new,
+            confirm_password: passwordForm.value.confirm,
+        };
+
+        const response = await fetch(`${base_url}api/child/change_password`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || "Could not change password.");
+        }
+
         passwordSuccess.value = "Password changed successfully! 🎉";
-        passwordForm.value.current = "";
-        passwordForm.value.new = "";
-        passwordForm.value.confirm = "";
+        passwordForm.value = { current: "", new: "", confirm: "" }; // Clear form
+
+    } catch (e: any) {
+        passwordError.value = e.message;
+    } finally {
+        changingPassword.value = false;
         setTimeout(() => {
             passwordSuccess.value = "";
+            passwordError.value = "";
         }, 5000);
-    }, 1200);
+    }
 }
+
+// --- LIFECYCLE HOOK ---
+onMounted(() => {
+    fetchProfileData();
+});
 </script>
 
 <style scoped>

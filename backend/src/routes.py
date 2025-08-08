@@ -161,14 +161,14 @@ def child_login():
     return child_loginc(request)
 
 @api.route('/auth/get_user',methods=['GET'])
-@token_required()
-def get_user():
-    return get_auser()
+@token_required(allowed_roles=["admin", "parent", "child"])
+def get_user(current_user, role):
+    return get_auser(current_user, role)
 
 @api.route('/child_dashboard_stats', methods=['GET'])
 @token_required(allowed_roles=["child"])
-def child_dashboard_stats():
-    return get_child_dashboard_stats()
+def child_dashboard_stats(current_user, role):
+    return get_child_dashboard_stats(current_user, role)
 
 @api.route('/children', methods=['GET'])
 @token_required(allowed_roles=['admin', 'parent'])
@@ -418,16 +418,16 @@ def child_profile_image_route(current_user, role):
 
 @api.route('/skill_categories', methods=['GET'])
 @token_required(allowed_roles=["child"])
-def get_skill_categories():
-    return get_user_skill_progress()
+def get_skill_categories(current_user, role):
+    return get_user_skill_progress(current_user, role)
 
 @api.route('/user_badges', methods=['GET'])
 @token_required(allowed_roles=["child"])
-def user_badges():
-    return get_user_badges()
+def user_badges(current_user, role):
+    return get_user_badges(current_user, role)
 
 @api.route('/api/child/<int:child_id>/curriculums', methods=['GET'])
 @token_required(allowed_roles=["child"])
-def get_curr():
-    return get_curriculums_for_child()
+def get_curr(child_id, current_user, role):
+    return get_curriculums_for_child(current_user, role)
 

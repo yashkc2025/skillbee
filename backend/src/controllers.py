@@ -335,7 +335,7 @@ def token_required(allowed_roles=None):
         return decorated
     return decorator
 
-@token_required()
+
 def get_auser(current_user, role):
     # this is according to auth.md and fetches the details of users from the session id as authorisation bearer BUT it returns full profile info
     if role == "child":
@@ -344,6 +344,7 @@ def get_auser(current_user, role):
                 "id": current_user.child_id,
                 "role": "child",
                 "username": current_user.username,
+                "name": current_user.name,
                 "email": current_user.email_id,
                 "dob": current_user.dob.isoformat() if current_user.dob else None,
                 "school": current_user.school,
@@ -415,9 +416,20 @@ def get_user_skill_progress(current_user, role):
     # gets the child lesson progress
     child_id = current_user.child_id
 def get_user_skill_progress(current_user, role):
-    # gets the child lesson progress
+    # gets the child lesson progress based on their age
     child_id = current_user.child_id
-    skills = Skill.query.all()
+    child = current_user
+
+    # --- Logic from get_curriculums_for_child applied below ---
+
+    # 1. Calculate the child's age (assuming age_calc helper function is available)
+    age = age_calc(child.dob)
+
+    # 2. Filter skills based on the child's age
+    skills = Skill.query.filter(Skill.min_age <= age, Skill.max_age >= age).all()
+
+    # --- The rest of the function remains the same ---
+
     response = []
     for skill in skills:
         total_lessons = Lesson.query.filter_by(skill_id=skill.skill_id).count()
@@ -427,13 +439,12 @@ def get_user_skill_progress(current_user, role):
         ).count()
         percent = int((completed / total_lessons) * 100) if total_lessons else 0
         response.append({
+            "skill_id": skill.skill_id,
             "name": skill.name,
-            "link": f"/skills/{skill.skill_id}",  
             "percentage_completed": percent
         })
 
     return jsonify(response), 200
-
 
 @token_required(allowed_roles=["child"])
 def get_user_badges(current_user, role):
@@ -551,8 +562,8 @@ def get_skill_lessons(child_id, skill_id):
             return jsonify({'error': 'Skill not found'}), 404
         
         lessons = Lesson.query.filter_by(skill_id=skill_id).order_by(Lesson.position).all()
-        if not lessons:
-            return jsonify({'error': 'No lessons found for this skill'}), 404
+        # if not lessons:
+        #     return jsonify({'error': 'No lessons found for this skill'}), 404
         
         
         activities = Activity.query.filter(
@@ -601,12 +612,20 @@ def get_skill_lessons(child_id, skill_id):
             attempted_activities = len(attempted_activities_by_lesson.get(lesson.lesson_id, set()))
             total_quizzes = len(quizzes_by_lesson.get(lesson.lesson_id, []))
             attempted_quizzes = len(attempted_quizzes_by_lesson.get(lesson.lesson_id, set()))
+            completed_lesson = LessonHistory.query.filter_by(
+                child_id=child_id,
+                lesson_id=lesson.lesson_id
+            ).first()
+            if completed_lesson:
+                mark_completed = 1
+            else:
+                mark_completed = 0
             lessons_data.append({
                 'lesson_id': lesson.lesson_id,
                 'title': lesson.title,
                 'image': lesson.image,
                 'description': lesson.description,
-                'progress_status': ((attempted_quizzes + attempted_activities) * 100 / (total_activities + total_quizzes)) if (total_activities + total_quizzes) > 0 else 100,
+                'progress_status': ((mark_completed + attempted_quizzes + attempted_activities) * 100 / (total_activities + total_quizzes + 1)) if (total_activities + total_quizzes+1) > 0 else 100,
             })
 
         return jsonify({
@@ -701,7 +720,14 @@ def get_lesson_activities(child_id, lesson_id):
         if not skill:
             return jsonify({'error': 'Curriculum not found'}), 404
         
-        activities = Activity.query.filter_by(lesson_id=lesson_id, child_id=child_id).all()
+        parent_id = Child.query.get(child_id).parent_id
+        if not parent_id:
+            parent_id = 0
+        # I want activities of the lesson all activities which don't have parent_id and also those for which parent_id is equal to the parent_id of the child
+        activities = Activity.query.filter(
+            Activity.lesson_id == lesson_id,
+            (Activity.parent_id.is_(None) | (Activity.parent_id == parent_id)),
+        ).all()
         
         activity_submissions = ActivityHistory.query.filter(
             ActivityHistory.activity_id.in_([a.activity_id for a in activities])
@@ -715,6 +741,7 @@ def get_lesson_activities(child_id, lesson_id):
                 'activity_id': activity.activity_id,
                 'name': activity.name,
                 'description': activity.description,
+                'difficulty': activity.difficulty,
                 'image': activity.image,
                 'progress_status': 100 if activity.activity_id in completed_activities else 0
             })
@@ -768,12 +795,12 @@ def get_activity_details(child_id, activity_id):
 
 def submit_activity(child_id, activity_id):
     try:
-        activity = Activity.query.filter_by(            
-            activity_id=activity_id,
-            child_id=child_id
-        ).first()
-        if not activity:
-            return jsonify({'error': 'Activity not found'}), 404
+        # activity = Activity.query.filter_by(            
+        #     activity_id=activity_id,
+        #     child_id=child_id
+        # ).first()
+        # if not activity:
+        #     return jsonify({'error': 'Activity not found'}), 404
         
         file_data = None
         file_extension = None
@@ -840,12 +867,12 @@ def submit_activity(child_id, activity_id):
 
 def get_activity_history(child_id, activity_id):
     try:
-        activity = Activity.query.filter_by(            
-            activity_id=activity_id,
-            child_id=child_id
-        ).first()
-        if not activity:
-            return jsonify({'error': 'Activity not found'}), 404
+        # activity = Activity.query.filter_by(            
+        #     activity_id=activity_id,
+        #     child_id=child_id
+        # ).first()
+        # if not activity:
+        #     return jsonify({'error': 'Activity not found'}), 404
         
         submissions = ActivityHistory.query.filter_by(
             activity_id=activity_id
@@ -879,11 +906,11 @@ def get_activity_submission(child_id, activity_history_id):
             child_id=child_id
         ).first()
 
-        if not activity:
-            return jsonify({'error': 'Associated activity not found'}), 404
+        # if not activity:
+        #     return jsonify({'error': 'Associated activity not found'}), 404
         
-        if not submission.answer:
-            return jsonify({'error': 'No file found for this submission'}), 404
+        # if not submission.answer:
+        #     return jsonify({'error': 'No file found for this submission'}), 404
 
         # Detect file type from binary data
         file_data = submission.answer
@@ -943,11 +970,17 @@ def get_lesson_quizzes(child_id, lesson_id):
         
         quizzes_data = []
         for quiz in quizzes:
+            # no_of_questions = len(quiz.questions.text) if quiz.questions else 0
             quizzes_data.append({
                 'quiz_id': quiz.quiz_id,
                 'name': quiz.quiz_name,
                 'description': quiz.description,
+                'difficulty': quiz.difficulty,
                 'time_duration': quiz.time_duration,
+                'no_questions': len(quiz.questions) if quiz.questions else 0,
+                # {'0':{'text':'kjsfdjlkjsd', 'marks':5, 'option':['sfd','gfsd','sdg','sdf']}, '1':{'text':'kjsfdjlkjsd', 'marks':5, 'option':['sfd','gfsd','sdg','sdf']}}
+                # 'total_marks': sum(quiz.questions['marks'] for question in quiz.questions) if quiz.questions else 0,
+                'total_marks': sum(question['marks'] for question in quiz.questions.values()) if quiz.questions else 0,
                 'progress_status': 100 if quiz.quiz_id in attempted_quizzes else 0,
                 'image': quiz.image
             })
@@ -970,7 +1003,7 @@ def get_lesson_quizzes(child_id, lesson_id):
         db.session.rollback()
         return jsonify({'error': 'Database error occurred', 'details': str(e)}), 500
 
-@token_required(allowed_roles=["child"])
+# @token_required(allowed_roles=["child"])
 def get_quiz_history(current_user, role, quiz_id):
     # Get teh quiz history
     child_id = current_user.child_id
@@ -985,6 +1018,7 @@ def get_quiz_history(current_user, role, quiz_id):
         history_list.append({
             "quiz_history_id": h.quiz_history_id,
             "quiz_id": h.quiz_id,
+            "quiz_name": h.quiz.quiz_name,
             "attempted_at": h.created_at.isoformat() if hasattr(h, "created_at") else "N/A",
             "score": h.score,
             "feedback": {
@@ -1048,12 +1082,10 @@ def get_quiz_questions(curriculum_id, lesson_id, quiz_id):
         # Format questions with index
         questions_data = []
         if quiz.questions:  # questions is stored as JSON
-            for idx, question in enumerate(quiz.questions):
+            for idx, question in enumerate(quiz.questions.values()):
                 question_data = {
                     'question_index': idx + 1,
-                    'question': question.get('question', ''),
-                    'options': question.get('options', []),
-                    'marks': question.get('marks', 1),
+                    'question': question
                 }
                 questions_data.append(question_data)
         
@@ -1084,99 +1116,92 @@ def get_quiz_questions(curriculum_id, lesson_id, quiz_id):
 def submit_quiz(child_id, quiz_id):
     """
     Submit quiz answers and calculate score.
-    Expected format: {"answers": {"question_index": "option_index"}}
-    Questions and answers arrays have the same order by index.
+    Frontend sends a dictionary of { "0-based-q-index": "0-based-o-index" }
     """
     try:
-            
+
         # Validate quiz exists
         quiz = Quiz.query.get(quiz_id)
         if not quiz:
             return jsonify({'error': 'Quiz not found'}), 404
-        
+
         # Get request data
         data = request.get_json()
         if not data:
             return jsonify({'error': 'No data provided'}), 400
-        
-        answers = data.get('answers')
-        if not answers or not isinstance(answers, dict):
-            return jsonify({'error': 'Invalid answers format. Expected dictionary with question_index: option_index'}), 400
-        
-        # Validate quiz has questions and answers
-        if not quiz.questions or not quiz.answers:
-            return jsonify({'error': 'Quiz has no questions or answer key'}), 500
-        
-        # Validate questions and answers arrays have same length
+
+        answers = data.get('answers', {}) # Default to empty dict
+        if not isinstance(answers, dict):
+            return jsonify({'error': 'Invalid answers format. Expected a dictionary.'}), 400
+
+        # Validate quiz is configured correctly in the database
+        if not (quiz.questions and isinstance(quiz.questions, dict) and 
+                quiz.answers and isinstance(quiz.answers, dict)):
+            return jsonify({'error': 'Quiz is not configured correctly (missing or invalid questions/answers)'}), 500
+
         if len(quiz.questions) != len(quiz.answers):
             return jsonify({'error': 'Quiz data inconsistency: questions and answers count mismatch'}), 500
-        
+
         score = 0
-        total_questions = len(quiz.questions)
-        total_score = sum(q.get('marks', 1) for q in quiz.questions)
-        
+        total_score = sum(q.get('marks', 0) for q in quiz.questions.values())
+
         # Process each submitted answer
-        for question_index_str, option_index_str in answers.items():
+        for q_idx_str, submitted_o_idx_str in answers.items():
             try:
-                question_index = int(question_index_str)
-                option_index = int(option_index_str)
+                # Convert string indices to integers
+                q_idx = int(q_idx_str)
+                submitted_o_idx = int(submitted_o_idx_str)
             except (ValueError, TypeError):
-                continue  
+                continue  # Skip if indices are not valid integers
+
+            # Get the question data using string key (since quiz.questions uses string keys)
+            question_data = quiz.questions.get(str(q_idx))
+            if question_data is None:
+                continue
             
-            # Validate question index (1-based indexing)
-            if question_index < 1 or question_index > total_questions:
-                continue  
+            # Get the correct answer index using string key (since quiz.answers uses string keys)
+            correct_o_idx = quiz.answers.get(str(q_idx))
+            if correct_o_idx is None:
+                continue
             
-            array_index = question_index - 1
+            # Ensure correct_o_idx is an integer for comparison
+            try:
+                correct_o_idx = int(correct_o_idx)
+            except (ValueError, TypeError):
+                continue
             
-            question_data = quiz.questions[array_index]
-            answer_data = quiz.answers[array_index]
-            
-            options = question_data.get('options', [])
-            question_marks = question_data.get('marks', 1)
-            correct_answer = answer_data.get('correct_answer', '')
-            
-            # Validate option index (0-based indexing)
-            if option_index < 0 or option_index >= len(options):
-                continue  # Skip invalid option index
-            
-            # Get selected option
-            selected_option = options[option_index]
-            
-            # Extract option text (handle both string and dict formats)
-            if isinstance(selected_option, dict):
-                selected_option_text = selected_option.get('text', '')
-            elif isinstance(selected_option, str):
-                selected_option_text = selected_option
+            # Compare submitted answer with correct answer
+            if submitted_o_idx == correct_o_idx:
+                marks = question_data.get('marks', 0)
+                score += marks
+                print(f"✅ Question {q_idx}: Correct! Added {marks} marks. Score: {score}")
             else:
-                selected_option_text = str(selected_option)
-            
-            # Check if selected option is correct (single correct answer)
-            if selected_option_text == correct_answer:
-                score += question_marks
-        
-        # Save quiz attempt to history
+                print(f"❌ Question {q_idx}: Wrong. Submitted: {submitted_o_idx}, Correct: {correct_o_idx}")
+
+
+        # Save the attempt to history
         quiz_history = QuizHistory(
             child_id=child_id,
             quiz_id=quiz_id,
             score=score,
+            responses=answers,
             created_at=datetime.now()
         )
-        
         db.session.add(quiz_history)
         db.session.commit()
-        
+
         return jsonify({
             'score': score,
             'total_score': total_score
         }), 200
-        
+
     except SQLAlchemyError as e:
         db.session.rollback()
         return jsonify({'error': 'Database error occurred', 'details': str(e)}), 500
     except Exception as e:
-        return jsonify({'error': f'An error occurred: {str(e)}'}), 500
-
+        # Log the actual exception for debugging
+        print(f"An unexpected error occurred in submit_quiz: {e}")
+        return jsonify({'error': 'An unexpected server error occurred.'}), 500
 
 def get_child_profile_controller(child_id):
     try:
@@ -1184,8 +1209,16 @@ def get_child_profile_controller(child_id):
         if not child:
             return jsonify({'error': 'Child not found'}), 404
         
+        image_url = ""
+        # Check if binary image data exists
+        if child.profile_image:
+            # Encode the binary data into a Base64 string
+            base64_encoded_image = base64.b64encode(child.profile_image).decode('utf-8')
+            # Format it as a Data URL for the <img> tag on the frontend
+            image_url = f"data:image/jpeg;base64,{base64_encoded_image}"
+
         profile_data = {
-            'profile_image_url': child.profile_image if child.profile_image else '',
+            'profile_image_url': image_url, # Use the correctly formatted URL
             'name': child.name,
             'dob': child.dob.isoformat() if child.dob else None,
             'email': child.email_id,
@@ -1194,10 +1227,10 @@ def get_child_profile_controller(child_id):
         
         return jsonify(profile_data), 200
         
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        return jsonify({'error': 'Database error occurred', 'details': str(e)}), 500
-
+    except Exception as e:
+        # Catching a broader exception can help find other serialization issues
+        print(f"An error occurred in get_child_profile_controller: {e}")
+        return jsonify({'error': 'An internal server error occurred', 'details': str(e)}), 500
 
 def update_child_profile(child_id):
     try:
@@ -1331,31 +1364,62 @@ def change_child_password(child_id):
 
 
 
+import base64
+
 def child_profile_image(child_id):
     """
     Handle both GET and POST requests for child profile images.
-    GET: Retrieve profile image
-    POST: Upload/update profile image
+    GET: Retrieves profile image as a Base64 Data URL.
+    POST: Uploads/updates profile image from a Base64 Data URL.
     """
     try:
-        # Find the child
         child = Child.query.get(child_id)
-        
+        if not child:
+            return jsonify({'error': 'Child not found'}), 404
+
         if request.method == 'POST':
-            data=request.get_json()
-            pic= data.get('profile_image') if (data.get('profile_image') != '') else None
+            data = request.get_json()
+            if not data or 'profile_image' not in data:
+                return jsonify({'error': 'No profile image data provided'}), 400
             
-            child.profile_image = pic
+            base64_string = data.get('profile_image')
+
+            # If an empty string is sent, it means "remove profile picture"
+            if not base64_string:
+                child.profile_image = None
+                db.session.commit()
+                return jsonify({'status': 'success', 'message': 'Profile image removed'}), 200
+
+            # --- FIX: Decode Base64 string to binary data before saving ---
+            try:
+                # The header is "data:image/png;base64,". We need to strip it.
+                header, encoded = base64_string.split(',', 1)
+                binary_data = base64.b64decode(encoded)
+            except (ValueError, TypeError) as e:
+                return jsonify({'error': 'Invalid Base64 image format', 'details': str(e)}), 400
+
+            child.profile_image = binary_data
             db.session.commit()
+            return jsonify({'status': 'success', 'message': 'Profile image updated'}), 200
 
         elif request.method == 'GET':
-            return jsonify({
-                'profile_image': child.profile_image if child.profile_image else '',
-            }), 200
-        
+            # --- FIX: Encode binary data to Base64 string before sending ---
+            if child.profile_image:
+                # Assume a common image format like jpeg for the Data URL header
+                # A more advanced solution would be to store the mime type in the DB as well
+                base64_encoded_image = base64.b64encode(child.profile_image).decode('utf-8')
+                image_url = f"data:image/jpeg;base64,{base64_encoded_image}"
+            else:
+                image_url = "" # Frontend will use its default image if this is empty
+
+            return jsonify({'profile_image': image_url}), 200
+
     except SQLAlchemyError as e:
         db.session.rollback()
-        return jsonify({'status': 'error', 'message': 'Database error occurred'}), 500
+        return jsonify({'status': 'error', 'message': 'Database error occurred', 'details': str(e)}), 500
+    except Exception as e:
+        print(f"An unexpected error occurred in child_profile_image: {e}")
+        return jsonify({'error': 'An unexpected server error occurred.'}), 500
     
 def get_children(current_user, role):
     # Admin: all children; Parent: only their children
