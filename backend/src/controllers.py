@@ -1071,54 +1071,54 @@ def get_activity_submission(child_id, activity_history_id):
         return jsonify({"error": "Database error occurred", "details": str(e)}), 500
 
 
-def get_lesson_quizzes(child_id, lesson_id):
-    try:
-        lesson = Lesson.query.filter_by(lesson_id=lesson_id).first()
-        if not lesson:
-            return (
-                jsonify(
-                    {"error": "Lesson not found or does not belong to the curriculum"}
-                ),
-                404,
-            )
+# def get_lesson_quizzes(child_id, lesson_id):
+#     try:
+#         lesson = Lesson.query.filter_by(lesson_id=lesson_id).first()
+#         if not lesson:
+#             return (
+#                 jsonify(
+#                     {"error": "Lesson not found or does not belong to the curriculum"}
+#                 ),
+#                 404,
+#             )
 
-        skill = Skill.query.filter_by(skill_id=lesson.skill_id).first()
-        if not skill:
-            return jsonify({"error": "Curriculum not found"}), 404
+#         skill = Skill.query.filter_by(skill_id=lesson.skill_id).first()
+#         if not skill:
+#             return jsonify({"error": "Curriculum not found"}), 404
 
-        quizzes = Quiz.query.filter_by(lesson_id=lesson_id).all()
+#         quizzes = Quiz.query.filter_by(lesson_id=lesson_id).all()
 
-        quiz_history = QuizHistory.query.filter(
-            QuizHistory.quiz_id.in_([quiz.quiz_id for quiz in quizzes]),
-            QuizHistory.child_id == child_id,
-        ).all()
+#         quiz_history = QuizHistory.query.filter(
+#             QuizHistory.quiz_id.in_([quiz.quiz_id for quiz in quizzes]),
+#             QuizHistory.child_id == child_id,
+#         ).all()
 
-        attempted_quizzes = {history.quiz_id for history in quiz_history}
+#         attempted_quizzes = {history.quiz_id for history in quiz_history}
 
-        quizzes_data = []
-        for quiz in quizzes:
-            quizzes_data.append(
-                {
-                    "quiz_id": quiz.quiz_id,
-                    "name": quiz.quiz_name,
-                    "description": quiz.description,
-                    "time_duration": quiz.time_duration,
-                    "progress_status": 100 if quiz.quiz_id in attempted_quizzes else 0,
-                    "image": quiz.image,
-                }
-            )
+#         quizzes_data = []
+#         for quiz in quizzes:
+#             quizzes_data.append(
+#                 {
+#                     "quiz_id": quiz.quiz_id,
+#                     "name": quiz.quiz_name,
+#                     "description": quiz.description,
+#                     "time_duration": quiz.time_duration,
+#                     "progress_status": 100 if quiz.quiz_id in attempted_quizzes else 0,
+#                     "image": quiz.image,
+#                 }
+#             )
 
-        response_data = {
-            "curriculum": {"curriculum_id": skill.skill_id, "name": skill.name},
-            "lesson": {"lesson_id": lesson.lesson_id, "title": lesson.title},
-            "quizzes": quizzes_data,
-        }
+#         response_data = {
+#             "curriculum": {"curriculum_id": skill.skill_id, "name": skill.name},
+#             "lesson": {"lesson_id": lesson.lesson_id, "title": lesson.title},
+#             "quizzes": quizzes_data,
+#         }
 
-        return jsonify(response_data), 200
+#         return jsonify(response_data), 200
 
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        return jsonify({"error": "Database error occurred", "details": str(e)}), 500
+#     except SQLAlchemyError as e:
+#         db.session.rollback()
+#         return jsonify({"error": "Database error occurred", "details": str(e)}), 500
 
 
 @token_required(allowed_roles=["child"])
