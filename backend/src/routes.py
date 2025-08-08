@@ -498,8 +498,8 @@ def get_activity_submission_route(activity_history_id, current_user, role):
 
 @api.route("/api/child/lesson/<int:lesson_id>/quizzes", methods=["GET"])
 @token_required(allowed_roles=["child"])
-def get_quizzes_route(current_user, role,curriculum_id,lesson_id):
-    return get_lesson_quizzes(current_user.child_id,role,curriculum_id, lesson_id)
+def get_quizzes_route(lesson_id,current_user, role):
+    return get_lesson_quizzes(current_user.child_id, lesson_id)
 
 
 @api.route(

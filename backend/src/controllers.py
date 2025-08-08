@@ -548,17 +548,16 @@ def get_user_badges(child_id):
     return jsonify(response), 200
 
 
-def get_lesson_quizzes(current_user, role, curriculum_id, lesson_id):
-    # Get curriculum(Skill)
-    child_id = current_user.child_id
-    curriculum = Skill.query.get(curriculum_id)
-    if not curriculum:
-        return jsonify({"error": "Curriculum not found"}), 404
-    # G et lesson
-    lesson = Lesson.query.filter_by(lesson_id=lesson_id, skill_id=curriculum_id).first()
+def get_lesson_quizzes(child_id, lesson_id):
+    lesson = Lesson.query.get(lesson_id)
     if not lesson:
         return jsonify({"error": "Lesson not found"}), 404
+    curriculum = Skill.query.get(lesson.skill_id)
+    if not curriculum:
+        return jsonify({"error": "Curriculum not found"}), 404
+
     quizzes = Quiz.query.filter_by(lesson_id=lesson_id).all()
+
     attempted_quiz_ids = {
         qh.quiz_id for qh in QuizHistory.query.filter_by(child_id=child_id).all()
     }
@@ -571,7 +570,7 @@ def get_lesson_quizzes(current_user, role, curriculum_id, lesson_id):
             "time_duration": (
                 f"{quiz.time_duration // 60} mins" if quiz.time_duration else "N/A"
             ),
-            "difficulty": "Medium",
+            "difficulty": quiz.difficulty,
             "progress_status": 100 if quiz.quiz_id in attempted_quiz_ids else 0,
             "image": None,
         }
@@ -589,7 +588,6 @@ def get_lesson_quizzes(current_user, role, curriculum_id, lesson_id):
         ),
         200,
     )
-
 
 def get_curriculums_for_child(current_user, role, child_id):
     child = Child.query.get(child_id)
