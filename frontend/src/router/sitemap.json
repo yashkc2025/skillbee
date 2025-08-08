@@ -51,6 +51,12 @@
       "quiz": "/admin/new/quiz",
       "activity": "/admin/new/activity",
       "badge": "/admin/new/badge"
+    },
+    "edit": {
+      "lesson": "/admin/edit/lesson/:id",
+      "quiz": "/admin/edit/quiz/:id",
+      "activity": "/admin/edit/activity/:id",
+      "badge": "/admin/edit/badge/:id"
     }
   },
   "parent": {

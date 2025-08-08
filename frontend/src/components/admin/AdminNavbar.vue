@@ -60,14 +60,19 @@ const navOptions = [
         icon: "bi bi-gear",
         link: sitemap.admin.settings,
       },
-      {
-        label: "Logout",
-        icon: "bi bi-box-arrow-right",
-        link: '/',
-      }
+      // {
+      //   label: "Logout",
+      //   icon: "bi bi-box-arrow-right",
+      //   link: "/",
+      // },
     ],
   },
 ];
+
+function logout() {
+  localStorage.clear();
+  window.location.href = "/";
+}
 </script>
 
 <template>
@@ -83,16 +88,28 @@ const navOptions = [
       </a> -->
       <div class="navbar-section" v-for="section in navOptions" :key="section.heading">
         <p v-if="section.heading !== ''">{{ section.heading }}</p>
-        <a :href="item.link" v-for="item in section.items" :key="item.label" class="navbar-item">
+        <a
+          :href="item.link"
+          v-for="item in section.items"
+          :key="item.label"
+          class="navbar-item"
+        >
           <i :class="item.icon" class="nav-icon chip"></i>
           <span>{{ item.label }}</span>
         </a>
       </div>
+      <a @click="logout" class="navbar-item addon-link pointer">
+        <i class="bi bi-box-arrow-right nav-icon chip"></i>
+        <span>Logout</span>
+      </a>
     </div>
   </div>
 </template>
 
 <style scoped>
+.addon-link {
+  margin-top: calc(-1 * var(--size-sm));
+}
 .logo-parent {
   display: flex;
   align-items: center;
@@ -102,13 +119,13 @@ const navOptions = [
   border-bottom: 1px solid var(--color-border);
 }
 
-.logo-parent>span {
+.logo-parent > span {
   font-weight: 600;
   font-family: "Inter";
   font-size: 20px;
 }
 
-.logo-parent>img {
+.logo-parent > img {
   width: 120px;
 }
 
@@ -126,8 +143,8 @@ const navOptions = [
   gap: var(--size-2xs);
 }
 
-.create>span,
-.create>i {
+.create > span,
+.create > i {
   color: var(--color-text-light);
   font-size: var(--font-sm);
 }
@@ -154,7 +171,7 @@ const navOptions = [
   padding-top: 0px;
 }
 
-.navbar-section>p {
+.navbar-section > p {
   margin-bottom: var(--size-sm);
   text-transform: uppercase;
   font-size: 12px;
@@ -169,7 +186,7 @@ const navOptions = [
   gap: var(--size-xs);
 }
 
-.navbar-section>a {
+a {
   text-decoration: none;
   color: var(--color-text-dark);
 }

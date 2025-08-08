@@ -1,87 +1,93 @@
 <script setup lang="tsx">
-
 import CardV2 from "@/components/CardV2.vue";
 import InputComponent from "@/components/InputComponent.vue";
 import TableComponent from "@/components/TableComponent.vue";
 import { useRouter } from "vue-router";
-import sitemap from "@/router/sitemap.json"
+import sitemap from "@/router/sitemap.json";
 import AdminAppLayout from "@/layouts/AdminAppLayout.vue";
+import { ref } from "vue";
+import { onMounted } from "vue";
+import { deleteData, fetchData } from "@/fx/api";
+import { getBackendURL } from "@/fx/utils";
 
-const lessons = [
-  {
-    id: 1,
-    title: "Let's make a ship!",
-    curriculum: "Extracurricular Activities",
-  },
-  {
-    id: 2,
-    title: "Debate Club: Argue like a Pro",
-    curriculum: "Communication Skills",
-  },
-  {
-    id: 3,
-    title: "Budget Your Pocket Money",
-    curriculum: "Financial Literacy",
-  },
-  {
-    id: 4,
-    title: "Solve the Mystery! Logic Puzzle Day",
-    curriculum: "Critical Thinking",
-  },
-  {
-    id: 5,
-    title: "Plan a Perfect Study Week",
-    curriculum: "Time Management",
-  },
-  {
-    id: 6,
-    title: "Public Speaking Bootcamp",
-    curriculum: "Communication Skills",
-  },
-  {
-    id: 7,
-    title: "Escape Room Challenge",
-    curriculum: "Critical Thinking",
-  },
-  {
-    id: 8,
-    title: "Start Your Own Club",
-    curriculum: "Extracurricular Activities",
-  },
-  {
-    id: 9,
-    title: "Track Your Spending for a Month",
-    curriculum: "Financial Literacy",
-  },
-  {
-    id: 10,
-    title: "Beat the Clock: Productivity Games",
-    curriculum: "Time Management",
-  }
+type LessonsType = {
+  id: number;
+  title: string;
+  curriculum: string;
+}[];
+
+const lessons = ref<LessonsType>([]);
+const searchText = ref("");
+
+const lessonLabels = [
+  "ID",
+  "Title",
+  "Curriculum",
+  "Activities",
+  "Quiz",
+  "Edit",
+  "Delete",
 ];
 
-const lessonLabels = ["ID", "Title", "Curriculum", "Activities", "Quiz", "Edit"];
+const router = useRouter();
 
-const router = useRouter()
+onMounted(async () => {
+  const data = await fetchData(getBackendURL("lessons"));
 
+  lessons.value = data;
+});
 function addLesson() {
-  router.push(sitemap.admin.new.lesson)
+  router.push(sitemap.admin.new.lesson);
 }
 
 function navToLink(name: string, id: number) {
-  router.push({ name, params: { id } })
+  router.push({ name, params: { id } });
+}
+
+async function deleteItem(id) {
+  await deleteData(getBackendURL("/admin/lesson"), { id });
 }
 
 function tableEntries() {
-  lessons.forEach((p) => {
-    // p.blocked = <span class="chip pointer">{p.blocked ? "Blocked" : "Active"}</span>
-    p.activities = <i class="bi bi-patch-plus pointer" onClick={() => router.push(sitemap.admin.curriculum.activities)}></i>
-    p.quiz = <i class="bi bi-patch-plus pointer" onClick={() => router.push(sitemap.admin.curriculum.quiz)}> </i>
-    p.edit = <i class="bi bi-pen pointer" onClick={() => addLesson()}> </i>
+  const lowerSearch = searchText.value.toLowerCase().trim();
 
-  })
-
-  return lessons
+  return lessons.value
+    .filter((lesson) =>
+      [lesson.title, lesson.curriculum].some((field) =>
+        field.toLowerCase().includes(lowerSearch)
+      )
+    )
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      curriculum: p.curriculum,
+      activities: (
+        <i
+          class="bi bi-patch-plus pointer"
+          onClick={() =>
+            router.push({
+              path: sitemap.admin.curriculum.activities,
+              query: { lesson_id: p.id },
+            })
+          }
+        ></i>
+      ),
+      quiz: (
+        <i
+          class="bi bi-patch-plus pointer"
+          onClick={() =>
+            router.push({
+              path: sitemap.admin.curriculum.quiz,
+              query: { lesson_id: p.id },
+            })
+          }
+        ></i>
+      ),
+      edit: (
+        <i class="bi bi-pen pointer" onClick={() => navToLink("edit_lesson", p.id)}></i>
+      ),
+      delete: <i class="bi bi-trash3 pointer" onClick={() => deleteItem(p.id)}></i>,
+    }));
 }
 </script>
 
@@ -93,7 +99,12 @@ function tableEntries() {
     <CardV2 label-title="Lessons" label-image="bi bi-book">
       <template #top-content>
         <div class="table-header">
-          <InputComponent icon="bi bi-search" name="search" placeholder="Search for a lesson" />
+          <InputComponent
+            icon="bi bi-search"
+            name="search"
+            placeholder="Search for a lesson"
+            v-model="searchText"
+          />
           <i class="bi bi-plus-lg" @click="addLesson"></i>
         </div>
       </template>
@@ -102,7 +113,6 @@ function tableEntries() {
       </template>
     </CardV2>
   </AdminAppLayout>
-
 </template>
 
 <style scope>
@@ -113,7 +123,7 @@ function tableEntries() {
   gap: var(--size-xs);
 }
 
-.table-header>i {
+.table-header > i {
   font-size: var(--font-sm);
   font-weight: 500;
   cursor: pointer;

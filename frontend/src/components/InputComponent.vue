@@ -1,33 +1,78 @@
 <script setup lang="ts">
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
+  (e: "update:modelValue", value: string): void;
 }>();
 
-const props = withDefaults(defineProps<{
-  modelValue: string;
-  name: string;
-  placeholder: string;
-  icon: string;
-  inputType?: 'TextArea' | 'Input';
-  fieldType?: 'url' | 'tel' | 'text' | 'number' | 'email' | 'password' | 'file' | 'datetime-local' | 'date'
-}>(), {
-  inputType: 'Input',
-  fieldType: 'text'
-});
+const props = withDefaults(
+  defineProps<{
+    modelValue: string;
+    name: string;
+    placeholder: string;
+    icon: string;
+    inputType?: "TextArea" | "Input";
+    fieldType?:
+      | "url"
+      | "tel"
+      | "text"
+      | "number"
+      | "email"
+      | "password"
+      | "file"
+      | "datetime-local"
+      | "date";
+    required?: boolean;
+  }>(),
+  {
+    inputType: "Input",
+    fieldType: "text",
+    required: false,
+  }
+);
+
+// function onInput(event: Event) {
+//   const target = event.target as HTMLInputElement | HTMLTextAreaElement;
+//   emit('update:modelValue', target.value);
+// }
 
 function onInput(event: Event) {
   const target = event.target as HTMLInputElement | HTMLTextAreaElement;
-  emit('update:modelValue', target.value);
+
+  // Handle file input manually
+  if (props.fieldType === "file") {
+    const file = (target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      emit("update:modelValue", reader.result as string); // Emit base64 string
+    };
+    reader.readAsDataURL(file);
+  } else {
+    emit("update:modelValue", target.value);
+  }
 }
 </script>
 
 <template>
   <div class="input-wrapper">
     <i :class="icon"></i>
-    <input v-if="inputType !== 'TextArea'" :placeholder="placeholder" :name="name" :type="fieldType" :value="modelValue"
-      @input="onInput" />
-    <textarea v-if="inputType === 'TextArea'" :placeholder="placeholder" :name="name" @input="onInput"
-      :value="modelValue" />
+    <input
+      v-if="inputType !== 'TextArea'"
+      :placeholder="placeholder"
+      :name="name"
+      :type="fieldType"
+      :value="modelValue"
+      @input="onInput"
+      :required
+    />
+    <textarea
+      v-if="inputType === 'TextArea'"
+      :placeholder="placeholder"
+      :name="name"
+      @input="onInput"
+      :value="modelValue"
+      :required
+    />
   </div>
 </template>
 
@@ -59,7 +104,7 @@ textarea {
   border-radius: var(--border-radius);
   outline: none;
   font-size: var(--font-sm);
-  font-family: 'DMSans';
+  font-family: "DMSans";
   transition: border-color 0.3s ease;
 }
 

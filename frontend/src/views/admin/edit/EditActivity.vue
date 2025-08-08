@@ -1,11 +1,17 @@
 <script setup lang="ts">
+const props = defineProps({
+  id: {
+    type: Number,
+    required: true,
+  },
+});
 import CardV2 from "@/components/CardV2.vue";
 import InputComponent from "@/components/InputComponent.vue";
 import AdminAppLayout from "@/layouts/AdminAppLayout.vue";
 import SelectComponent from "@/components/SelectComponent.vue";
 import { ref } from "vue";
 import { onMounted } from "vue";
-import { fetchData, postData } from "@/fx/api";
+import { fetchData, postData, updateData } from "@/fx/api";
 import { getBackendURL, type OptionsType } from "@/fx/utils";
 
 const lesson = ref("");
@@ -14,9 +20,16 @@ const title = ref("");
 const description = ref("");
 const instructions = ref("");
 const difficulty = ref("");
-const point = ref();
 const answerFormat = ref<"Text" | "Image" | "PDF" | "">("");
-
+export interface ActInterface {
+  answer_format: string
+  description: string
+  difficulty: string
+  id: number
+  instructions: string
+  lesson_id: number
+  title: string
+}
 const afOptions = [
   {
     label: "PDF",
@@ -33,33 +46,47 @@ const afOptions = [
 ];
 
 const lessons = ref<OptionsType[]>([]);
-
+const actDetails = ref<ActInterface>()
 
 onMounted(async () => {
-  const data = await fetchData(getBackendURL("lessons"))
+  const lessonData = await fetchData(getBackendURL("lessons"))
+  actDetails.value = await fetchData(getBackendURL(`admin/activity/${props.id}`))
 
-  lessons.value = data.map((d) => ({ value: d.id, label: d.title }));
+  if (actDetails.value){
+    lesson.value = actDetails.value.lesson_id
+    title.value = actDetails.value.title
+    description.value = actDetails.value.description
+    instructions.value = actDetails.value.instructions
+    difficulty.value = actDetails.value.difficulty
+    answerFormat.value = actDetails.value.answer_format
+  }
+  lessons.value = lessonData.map((d) => ({ value: d.id, label: d.title }));
 });
 
-async function newActivity() {
-  postData(getBackendURL("admin/activity"), {
+async function updateActivity() {
+  const data = {
+    id : props.id,
     title: title.value,
     image: image.value,
     instructions: instructions.value,
     description: description.value,
     difficulty: difficulty.value,
-    point: point.value,
     lesson_id: lesson.value,
     answer_format : answerFormat.value
-  });
+  };
+  if (image.value && image.value.trim() !== "") {
+    data.image = image.value;
+  }
+
+  await updateData(getBackendURL("admin/activity"), data);
 }
 </script>
 
 <template>
   <AdminAppLayout>
-    <form class="outer" @submit.prevent="newActivity">
+    <form class="outer" @submit.prevent="updateActivity">
       <p class="intro">
-        <span class="darken">New Activity</span>
+        <span class="darken">Update Activity</span>
       </p>
       <CardV2 label-title="Metadata" label-image="bi bi-book">
         <template #content class="form">
@@ -77,7 +104,6 @@ async function newActivity() {
               placeholder="Image"
               v-model="image"
               field-type="file"
-              :required="true"
             />
             <InputComponent
               icon="bi bi-book"
@@ -106,14 +132,6 @@ async function newActivity() {
               name="difficulty"
               placeholder="Difficulty"
               v-model="difficulty"
-              :required="true"
-            />
-            <InputComponent
-              icon="bi bi-arrow-up"
-              name="point"
-              placeholder="Points"
-              v-model="point"
-              field-type="number"
               :required="true"
             />
           </div>
