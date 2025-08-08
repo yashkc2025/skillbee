@@ -412,8 +412,6 @@ def token_required(allowed_roles=None):
 
     return decorator
 
-
-@token_required()
 def get_auser(current_user, role):
     # this is according to auth.md and fetches the details of users from the session id as authorisation bearer BUT it returns full profile info
     if role == "child":
@@ -466,9 +464,7 @@ def get_auser(current_user, role):
     return jsonify({"error": "Invalid session data"}), 401
 
 
-@token_required(allowed_roles=["child"])
-def get_child_dashboard_stats(current_user, role):
-    child_id = current_user.child_id
+def get_child_dashboard_stats(child_id):
     lessons_completed = LessonHistory.query.filter_by(child_id=child_id).count()
     all_lessons = Lesson.query.all()
     skill_progress = {}
@@ -507,10 +503,8 @@ def get_child_dashboard_stats(current_user, role):
     )
 
 
-@token_required(allowed_roles=["child"])
-def get_user_skill_progress(current_user, role):
+def get_user_skill_progress(child_id):
     # gets the child lesson progress
-    child_id = current_user.child_id
     skills = Skill.query.all()
     response = []
     for skill in skills:
@@ -534,9 +528,8 @@ def get_user_skill_progress(current_user, role):
     return jsonify(response), 200
 
 
-@token_required(allowed_roles=["child"])
-def get_user_badges(current_user, role):
-    child_id = current_user.child_id
+def get_user_badges(child_id):
+    # child_id = current_user.child_id
 
     # Get badge name and image by joining Badge and BadgeHistory
     data = (
@@ -555,7 +548,6 @@ def get_user_badges(current_user, role):
     return jsonify(response), 200
 
 
-@token_required(allowed_roles=["child"])
 def get_lesson_quizzes(current_user, role, curriculum_id, lesson_id):
     # Get curriculum(Skill)
     child_id = current_user.child_id
@@ -599,15 +591,16 @@ def get_lesson_quizzes(current_user, role, curriculum_id, lesson_id):
     )
 
 
-# @token_required(allowed_roles=["child"])
-def get_curriculums_for_child(current_user, role):
-    child_id = current_user.child_id
-    child = current_user
+def get_curriculums_for_child(current_user, role, child_id):
+    child = Child.query.get(child_id)
+    if not child:
+        return jsonify({"error": "Child not found"}), 404
     age = age_calc(child.dob)
     skills = Skill.query.filter(Skill.min_age <= age, Skill.max_age >= age).all()
     skill_ids = [s.skill_id for s in skills]
     lessons = Lesson.query.filter(Lesson.skill_id.in_(skill_ids)).all()
     lesson_ids = [l.lesson_id for l in lessons]
+    
     lesson_map = {}
     for lesson in lessons:
         lesson_map.setdefault(lesson.skill_id, []).append(lesson.lesson_id)
@@ -633,7 +626,6 @@ def get_curriculums_for_child(current_user, role):
             QuizHistory.score >= 40,
         )
     }
-    # result
     result = []
     for skill in skills:
         lids = lesson_map.get(skill.skill_id, [])
@@ -655,10 +647,10 @@ def get_curriculums_for_child(current_user, role):
                 "progress_status": progress,
             }
         )
+
     return jsonify({"curriculums": result}), 200
 
 
-# @token_required(allowed_roles=["child"])
 def get_skill_lessons(child_id, skill_id):
     try:
         skill = Skill.query.get(skill_id)
