@@ -5,19 +5,27 @@
 </template>
 
 <script setup lang="ts">
-import { use } from 'echarts/core';
-import { CanvasRenderer } from 'echarts/renderers';
-import { LineChart } from 'echarts/charts';
+const props = defineProps<{
+  childId: string;
+}>();
+
+import { use } from "echarts/core";
+import { CanvasRenderer } from "echarts/renderers";
+import { LineChart } from "echarts/charts";
 import {
   TitleComponent,
   TooltipComponent,
   LegendComponent,
   GridComponent,
-} from 'echarts/components';
-import VChart from 'vue-echarts';
-import { ref, onMounted, nextTick } from 'vue';
-import type { ECRef } from 'vue-echarts';
-import { install$5 } from 'echarts/types/dist/shared';
+} from "echarts/components";
+import VChart from "vue-echarts";
+import { ref, onMounted, nextTick } from "vue";
+import type { ECRef } from "vue-echarts";
+import { install$5 } from "echarts/types/dist/shared";
+import { watch } from "vue";
+import type { ProfileType } from "@/views/admin/ChildrenProfile.vue";
+import { fetchData } from "@/fx/api";
+import { getBackendURL } from "@/fx/utils";
 
 use([
   CanvasRenderer,
@@ -29,51 +37,55 @@ use([
 ]);
 
 const chartRef = ref<ECRef>();
+const chartData = ref();
+const option = ref();
 
-onMounted(() => {
-  nextTick(() => {
-    chartRef.value?.resize();
+onMounted(async () => {
+  const data: ProfileType = await fetchData(getBackendURL("children/profile"), {
+    id: props.childId,
   });
-});
+  if (data) {
+    chartData.value = {
+      point: data.point_earned.map((p) => p.point) ?? [],
+      dates: data.point_earned.map((p) => p.date) ?? [],
+    };
 
-const option = ref({
-  textStyle: {
-    fontFamily: 'DMSans',
-  },
-  tooltip: { trigger: 'axis' },
-  legend: {
-    // data: ['Direct', 'Email', 'Ad Networks', 'Video Ads', 'Search Engines'],
-    bottom: 0,
-    icon: 'circle',
-    itemGap: 20,
-  },
-  xAxis: {
-    type: 'category',
-    boundaryGap: false,
-    data: [
-      '2025-02-15', '2025-02-16', '2025-02-19',
-      '2025-02-23', '2025-02-24',
-      '2025-02-25', '2025-02-26', '2025-02-27', '2025-03-01',
-
-    ]
-  },
-  yAxis: { type: 'value' },
-  series: [
-    {
-      name: 'Points ',
-      type: 'line',
-      data: [10, 15, 5, 20, 12, 14, 1, 20],
-      smooth: false
-    }
-  ],
-  grid: {
-    top: 10,
-    bottom: 30, // increased for x-axis labels
-    left: 10,   // small padding
-    right: 35,  // allows space for last label
-    containLabel: true
+    option.value = {
+      textStyle: {
+        fontFamily: "DMSans",
+      },
+      tooltip: { trigger: "axis" },
+      legend: {
+        // data: ['Direct', 'Email', 'Ad Networks', 'Video Ads', 'Search Engines'],
+        bottom: 0,
+        icon: "circle",
+        itemGap: 20,
+      },
+      xAxis: {
+        type: "category",
+        boundaryGap: false,
+        data: chartData.value.dates,
+      },
+      yAxis: { type: "value" },
+      series: [
+        {
+          name: "Points ",
+          type: "line",
+          data: chartData.value.point,
+          smooth: false,
+        },
+      ],
+      grid: {
+        top: 10,
+        bottom: 30, // increased for x-axis labels
+        left: 10, // small padding
+        right: 35, // allows space for last label
+        containLabel: true,
+      },
+    };
+    await nextTick();
+    chartRef.value?.resize();
   }
-
 });
 </script>
 
@@ -82,7 +94,6 @@ const option = ref({
   width: 100%;
   height: 250px;
   position: relative;
-
 }
 
 .chart {

@@ -55,3 +55,19 @@ export function flattenObject(obj: AnyObject, parentKey = '', result: AnyObject 
 export function logout() {
   localStorage.removeItem('authToken');
 }
+const BACKEND_URL = "http://localhost:5000/"
+export function getBackendURL(slug: string): string {
+  return `${BACKEND_URL}${slug}`
+}
+
+export function fixImage(imgStr: string): string {
+  if (imgStr.startsWith("dataimage")) {
+    return imgStr.replace(/^dataimage\/(.*)base64/, 'data:image/$1;base64,');
+  }
+  return imgStr;
+}
+
+export type OptionsType = {
+  value: number;
+  label: string;
+};

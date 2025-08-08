@@ -29,7 +29,7 @@ the body used:
   "email": "ub123@gmail.com",
   "password": "abcdef",
   "username": "ubbbbbbb",
-  "dob": "2009-09-09",
+  "dob": "2015-09-09",
   "school": "sphs",
   "profile_image": ""
 }
@@ -50,4 +50,57 @@ similarly check the /child_dashboard_stats and /skill_categories.
 
 Dummy data has been added to seed_data.py and run once to add to database.
 
+Ok now we get into admin routes.
+We have token authorization as well.So we have to go to the Headers place sand add Authorisation then beside that Bearer 646a02d0-1cab-4564-9051-7eef7ebe0d0f  (if token expired please login and get the new token).
+Create new activities:  First go to the route  ​http://127.0.0.1:5000/admin/activity sand select POST. 
+Send this body in JSON:
+
+{
+    "title": "test",
+    "description": "abc",
+    "image": "",
+    "instructions": "1,2,3",
+    "difficulty": "Med",
+    "answer_format": "text"
+}
+
+Create new badges:  First go to the route  ​http://127.0.0.1:5000/admin/badge sand select POST. 
+{
+  "title": "test",
+  "description": "abc",
+  "image": "",
+  "points": "50"
+}
+
+lessons:
+
+{
+  "skill_id": 1,
+  "title": "test",
+  "content": "{abc}",
+  "image": "",
+  "description": "abcdefg"
+}
+
+
+quizzes:
+
+{ "lesson_id":1,
+  "title": "Test Quiz",
+  "image": "",  
+  "description": "Quiz on Critical Thinking",
+  "difficulty": "Medium",
+  "time_duration": 60,
+  "points": 10,
+  "questions": [
+    {
+      "question": "What is 2 + 2?",
+      "options": [
+        {"text": "3", "isCorrect": false},
+        {"text": "4", "isCorrect": true},
+        {"text": "5", "isCorrect": false}
+      ]
+    }
+  ]
+}
 Urjaswi Banerjee
