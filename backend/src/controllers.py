@@ -23,6 +23,14 @@ def parent_regisc(request):
         pic=data.get('profile_image')
         if pic == '':
             pic = None
+        
+        # Validate base64 if provided
+        if pic:
+            try:
+                # Test if it's valid base64 (validation only)
+                base64.b64decode(pic)
+            except Exception:
+                return jsonify({'error': 'Invalid base64 image'}), 400
         if not all([name,email,password]):
             return jsonify({'error':'Invalid/Missing fields'}), 400
         else:
@@ -36,7 +44,7 @@ def parent_regisc(request):
                 }), 400
 
             hashed_password=generate_password_hash(password)
-            new_parent=Parent(name=name,email_id=email,password=hashed_password,profile_image=pic)
+            new_parent=Parent(name=name,email_id=email,password=hashed_password,profile_image=pic)  # Store base64 string directly
             db.session.add(new_parent)
             db.session.commit()
             session_id = str(uuid.uuid4())
@@ -79,6 +87,14 @@ def child_regisc(request):
         pic=data.get('profile_image')
         if pic == '':
             pic = None
+        
+        # Validate base64 if provided
+        if pic:
+            try:
+                # Test if it's valid base64 (validation only)
+                base64.b64decode(pic)
+            except Exception:
+                return jsonify({'error': 'Invalid base64 image'}), 400
         if dob_str:
             try:
                 dob = datetime.strptime(dob_str, '%Y-%m-%d').date()
@@ -105,7 +121,7 @@ def child_regisc(request):
                     }), 400
                 hashed_password=generate_password_hash(password)
                 new_child=Child(name=name,email_id=email,username=username,password=hashed_password,dob=dob,
-                                school=school,profile_image=pic)
+                                school=school,profile_image=pic)  # Store base64 string directly
                 db.session.add(new_child)
                 db.session.commit()
                 session_id = str(uuid.uuid4())
@@ -279,64 +295,7 @@ def child_loginc(request):
         return jsonify({'error': 'Database error occurred', 'details': str(e)}), 500
     
 
-# dashboard
 
-def token_required(allowed_roles=None):
-    def decorator(f):
-        @wraps(f)
-        def decorated(*args, **kwargs):
-            token = None
-            if 'Authorization' in request.headers:
-                token = request.headers['Authorization'].split(' ')[-1] 
-            
-            if not token:
-                return jsonify({'error': 'Token is missing'}), 401
-
-            try:
-                session = Session.query.filter_by(session_id=token).first()
-                if not session:
-                    return jsonify({'error': 'Invalid token'}), 401
-
-                session_info = session.session_information
-                
-                login_time = datetime.fromisoformat(session_info['login_time'])
-                if datetime.now() > login_time + timedelta(hours=3):
-                    db.session.delete(session)
-                    db.session.commit()
-                    return jsonify({'error': 'Token has expired'}), 401
-
-                current_user = None
-                role = None
-
-                if 'admin_id' in session_info:
-                    current_user = Admin.query.get(session_info['admin_id'])
-                    role = 'admin'
-                elif 'parent_id' in session_info:
-                    current_user = Parent.query.get(session_info['parent_id'])
-                    role = 'parent'
-                elif 'child_id' in session_info:
-                    current_user = Child.query.get(session_info['child_id'])
-                    role = 'child'
-
-                if not current_user:
-                    return jsonify({'error': 'User not found'}), 401
-
-                if allowed_roles and role not in allowed_roles:
-                    return jsonify({'error': 'Insufficient permissions'}), 403
-
-                kwargs['current_user'] = current_user
-                kwargs['role'] = role
-
-                return f(*args, **kwargs)
-
-            except SQLAlchemyError as e:
-                db.session.rollback()
-                return jsonify({'error': 'Database error occurred', 'details': str(e)}), 500
-
-        return decorated
-    return decorator
-
-@token_required()
 def get_auser(current_user, role):
     # this is according to auth.md and fetches the details of users from the session id as authorisation bearer BUT it returns full profile info
     if role == "child":
@@ -372,7 +331,7 @@ def get_auser(current_user, role):
     return jsonify({'error': 'Invalid session data'}), 401
 
 
-@token_required(allowed_roles=["child"])
+
 def get_child_dashboard_stats(current_user, role):
     child_id = current_user.child_id
     lessons_completed = LessonHistory.query.filter_by(child_id=child_id).count()
@@ -411,7 +370,7 @@ def get_child_dashboard_stats(current_user, role):
     }), 200
 
 
-@token_required(allowed_roles=["child"])
+
 def get_user_skill_progress(current_user, role):
     # gets the child lesson progress
     child_id = current_user.child_id
@@ -433,7 +392,7 @@ def get_user_skill_progress(current_user, role):
     return jsonify(response), 200
 
 
-@token_required(allowed_roles=["child"])
+
 def get_user_badges(current_user, role):
     child_id = current_user.child_id
 
@@ -442,10 +401,10 @@ def get_user_badges(current_user, role):
         BadgeHistory.child_id == child_id
     ).all()
 
-    # Convert image from binary to base64 string (for testing in JSON)
+    # Image is already stored as base64 string
     response = []
     for name, image in data:
-        image_str = base64.b64encode(image).decode('utf-8') if image else ""
+        image_str = image if image else ""
         response.append({
             "name": name,
             "image": image_str
@@ -454,44 +413,6 @@ def get_user_badges(current_user, role):
     return jsonify(response), 200
 
 
-@token_required(allowed_roles=["child"])
-def get_lesson_quizzes(current_user, role, curriculum_id, lesson_id):
-    # Get curriculum(Skill)
-    child_id = current_user.child_id
-    curriculum = Skill.query.get(curriculum_id)
-    if not curriculum:
-        return jsonify({'error': 'Curriculum not found'}), 404
-    #G et lesson 
-    lesson = Lesson.query.filter_by(lesson_id=lesson_id, skill_id=curriculum_id).first()
-    if not lesson:
-        return jsonify({'error': 'Lesson not found'}), 404
-    quizzes = Quiz.query.filter_by(lesson_id=lesson_id).all()
-    attempted_quiz_ids = {
-        qh.quiz_id for qh in QuizHistory.query.filter_by(child_id=child_id).all()
-    }
-    quiz_list = []
-    for quiz in quizzes:
-        quiz_data = {
-            "quiz_id": quiz.quiz_id,
-            "name": quiz.quiz_name,
-            "description": quiz.description,
-            "time_duration": f"{quiz.time_duration // 60} mins" if quiz.time_duration else "N/A",
-            "difficulty": "Medium",  
-            "progress_status": 100 if quiz.quiz_id in attempted_quiz_ids else 0,
-            "image": None  
-        }
-        quiz_list.append(quiz_data)
-    return jsonify({
-        "curriculum": {
-            "curriculum_id": curriculum.skill_id,
-            "name": curriculum.name
-        },
-        "lesson": {
-            "lesson_id": lesson.lesson_id,
-            "title": lesson.title
-        },
-        "quizzes": quiz_list
-    }), 200
 
 
 def get_curriculums_for_child(current_user):
@@ -547,7 +468,6 @@ def get_curriculums_for_child(current_user):
         })
     return jsonify({"curriculums": result}), 200
 
-# @token_required(allowed_roles=["child"])
 def get_skill_lessons(child_id, skill_id):
     try:
         skill = Skill.query.get(skill_id)
@@ -975,29 +895,7 @@ def get_lesson_quizzes(child_id, lesson_id):
         db.session.rollback()
         return jsonify({'error': 'Database error occurred', 'details': str(e)}), 500
 
-@token_required(allowed_roles=["child"])
-def get_quiz_history(current_user, role, quiz_id):
-    # Get teh quiz history
-    child_id = current_user.child_id
-    histories = QuizHistory.query.filter_by(child_id=child_id, quiz_id=quiz_id).all()
-    if not histories:
-        return jsonify({"quizzes_history": []}), 200
-    child = Child.query.get(child_id)
-    parent_name = child.parent.name if child.parent else None
-    parent_email = child.parent.email_id if child.parent else None
-    history_list = []
-    for h in histories:
-        history_list.append({
-            "quiz_history_id": h.quiz_history_id,
-            "quiz_id": h.quiz_id,
-            "attempted_at": h.created_at.isoformat() if hasattr(h, "created_at") else "N/A",
-            "score": h.score,
-            "feedback": {
-                "admin": "admin@gmail.com",  
-                "parent": f"Parent: {parent_name} ({parent_email})" if parent_name else ""
-            }
-        })
-    return jsonify({"quizzes_history": history_list}), 200
+
 def get_quiz_history(child_id, quiz_id):
     try:
         quiz = Quiz.query.get(quiz_id)
@@ -1355,6 +1253,14 @@ def child_profile_image(child_id):
             
             pic = data.get('profile_image') if (data.get('profile_image') != '') else None
             
+            # Validate base64 if provided
+            if pic:
+                try:
+                    # Test if it's valid base64 (optional validation)
+                    base64.b64decode(pic)
+                except Exception:
+                    return jsonify({'status': 'error', 'message': 'Invalid base64 image'}), 400
+            
             child.profile_image = pic
             db.session.commit()
             
@@ -1456,11 +1362,8 @@ def get_badges(current_user, role):
     response = []
 
     for badge in badges:
-        # Convert binary image to base64 string (if available)
-        if badge.image:
-            image_base64 = base64.b64encode(badge.image).decode("utf-8")
-        else:
-            image_base64 = ""
+        # Image is already stored as base64 string
+        image_base64 = badge.image if badge.image else ""
 
         response.append({
             "id": badge.badge_id,
@@ -1486,11 +1389,13 @@ def create_child(*args, current_user, role, **kwargs):
     dob_str = data["dob"].strip()
     school = data["school"].strip()
 
-    # Image is optional; if present, decode base64
+    # Image is optional; if present, validate base64 but store as string
     pic = data.get("profile_image")
     if pic and pic != "":
         try:
-            profile_image = base64.b64decode(pic)
+            # Test if it's valid base64 (validation only)
+            base64.b64decode(pic)
+            profile_image = pic  # Store base64 string directly
         except Exception:
             return jsonify({"error": "Invalid base64 image for profile_image"}), 400
     else:
@@ -1569,18 +1474,18 @@ def create_badge(current_user, role):
     if not name or not points or not description:
         return jsonify({"error": "Missing required fields"}), 400
 
-    try:
-        if image_base64:
-            image_binary = base64.b64decode(image_base64)
-        else:
-            image_binary = None
-    except Exception:
-        return jsonify({"error": "Invalid base64 image"}), 400
+    # Validate base64 if provided, but store as string
+    if image_base64:
+        try:
+            # Test if it's valid base64 (validation only)
+            base64.b64decode(image_base64)
+        except Exception:
+            return jsonify({"error": "Invalid base64 image"}), 400
 
     badge = Badge(
         name=name,
         description=description,
-        image=image_binary,
+        image=image_base64,  # Store base64 string directly
         points=points
     )
 
@@ -1610,13 +1515,13 @@ def create_activity(current_user, role):
     difficulty=data['difficulty']    
     answer_format = data['answer_format']
 
-    try:
-        if image:
-            image_base64 = base64.b64decode(image)
-        else:
-            image_base64 = None
-    except Exception:
-        return jsonify({"error": "Invalid base64 image"}), 400
+    # Validate base64 if provided, but store as string
+    if image:
+        try:
+            # Test if it's valid base64 (validation only)
+            base64.b64decode(image)
+        except Exception:
+            return jsonify({"error": "Invalid base64 image"}), 400
     allowed_formats = ['text', 'image', 'pdf']
     if answer_format not in allowed_formats:
         return jsonify({"error": "Invalid answer_format. Must be one of: text, image, pdf"}), 400
@@ -1626,7 +1531,7 @@ def create_activity(current_user, role):
         description = description,
         instructions = instructions,
         difficulty = difficulty,
-        image = image_base64,
+        image = image,  # Store base64 string directly
         lesson_id = lesson_id,
         answer_format = answer_format
     )
@@ -1715,11 +1620,14 @@ def create_lesson(current_user, role):
     except json.JSONDecodeError:
         return jsonify({'error': 'Content must be valid JSON'}), 400
 
-    try:
-        image_binary = base64.b64decode(image_base64) if image_base64 else None
-    except Exception as e:
-        print("Image decoding error:", e)
-        return jsonify({'error': 'Invalid base64 image'}), 400
+    # Validate base64 if provided, but store as string
+    if image_base64:
+        try:
+            # Test if it's valid base64 (validation only)
+            base64.b64decode(image_base64)
+        except Exception as e:
+            print("Image validation error:", e)
+            return jsonify({'error': 'Invalid base64 image'}), 400
 
     try:
         max_position = db.session.query(db.func.max(Lesson.position)).filter_by(skill_id=skill_id).scalar()
@@ -1730,7 +1638,7 @@ def create_lesson(current_user, role):
             title=title,
             content=content,
             description=description,
-            image=image_binary,
+            image=image_base64,  # Store base64 string directly
             position=next_position
         )
 
@@ -1772,10 +1680,13 @@ def create_quiz(current_user, role):
     time_duration = data['time_duration']
     questions = data['questions']
 
-    try:
-        image_binary = base64.b64decode(picture) if picture else None
-    except Exception:
-        return jsonify({'error': 'Invalid base64 image'}), 400
+    # Validate base64 if provided, but store as string
+    if picture:
+        try:
+            # Test if it's valid base64 (validation only)
+            base64.b64decode(picture)
+        except Exception:
+            return jsonify({'error': 'Invalid base64 image'}), 400
 
     if not isinstance(questions, list) or not questions:
         return jsonify({'error': 'questions must be a non-empty list'}), 400
@@ -1814,7 +1725,7 @@ def create_quiz(current_user, role):
         answers=answers_json,
         difficulty=difficulty,
         points=points,
-        image=image_binary,
+        image=picture,  # Store base64 string directly
         lesson_id=lesson_id,
         position=next_position,
         is_visible=True,
@@ -1930,7 +1841,8 @@ def admin_child_profile(current_user, role):
     for bh in badge_histories:
         badge_img_base64 = ""
         if bh.badge and bh.badge.image:
-            badge_img_base64 = "data:image/png;base64," + base64.b64encode(bh.badge.image).decode("utf-8")
+            # Image is stored as base64 string directly
+            badge_img_base64 = bh.badge.image
         badges.append({
             "badge_id": str(bh.badge_id),
             "title": bh.badge.name if bh.badge else "",

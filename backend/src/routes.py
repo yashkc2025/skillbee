@@ -162,13 +162,13 @@ def child_login():
 
 @api.route('/auth/get_user',methods=['GET'])
 @token_required()
-def get_user(current_user=None, role=None):
-    return get_auser()
+def get_user(current_user, role):
+    return get_auser(current_user, role)
 
 @api.route('/child_dashboard_stats', methods=['GET'])
 @token_required(allowed_roles=["child"])
-def child_dashboard_stats(current_user=None, role=None):
-    return get_child_dashboard_stats()
+def child_dashboard_stats(current_user, role):
+    return get_child_dashboard_stats(current_user, role)
 
 @api.route('/children', methods=['GET'])
 @token_required(allowed_roles=['admin', 'parent'])
@@ -423,13 +423,13 @@ def child_profile_image_route(current_user, role):
 
 @api.route('/skill_categories', methods=['GET'])
 @token_required(allowed_roles=["child"])
-def get_skill_categories(current_user=None, role=None):
-    return get_user_skill_progress()
+def get_skill_categories(current_user, role):
+    return get_user_skill_progress(current_user, role)
 
 @api.route('/user_badges', methods=['GET'])
 @token_required(allowed_roles=["child"])
 def user_badges(current_user, role):
-    return get_user_badges()
+    return get_user_badges(current_user, role)
 
 
 

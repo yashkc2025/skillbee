@@ -20,7 +20,7 @@ class Parent(db.Model):
     name = db.Column(db.Text, nullable=False)
     email_id = db.Column(db.Text, nullable=False, index=True)
     password = db.Column(db.Text, nullable=False)
-    profile_image = db.Column(db.LargeBinary, nullable=True)
+    profile_image = db.Column(db.Text, nullable=True)  # Store base64 string
     is_blocked = db.Column(db.Boolean, default=False)
 
     children = db.relationship('Child', backref='parent', lazy=True)
@@ -39,7 +39,7 @@ class Child(db.Model):
     streak = db.Column(db.Integer, default=0)
     last_login = db.Column(db.DateTime, default=datetime(1970, 1, 1))
     enrollment_date = db.Column(db.DateTime, default=datetime.now())
-    profile_image = db.Column(db.LargeBinary, nullable=True)
+    profile_image = db.Column(db.Text, nullable=True)  # Store base64 string
     is_blocked = db.Column(db.Boolean, default=False)
 
     parent_id = db.Column(db.Integer, db.ForeignKey('parent.parent_id'), index=True)  
@@ -60,7 +60,7 @@ class Skill(db.Model):
     description = db.Column(db.Text, nullable=True)
     min_age = db.Column(db.Integer, nullable=False)
     max_age = db.Column(db.Integer, nullable=False)
-    image = db.Column(db.LargeBinary, nullable=True)  # Image stored as BLOB
+    image = db.Column(db.Text, nullable=True)  # Store base64 string
 
     lessons = db.relationship('Lesson', backref='skill', lazy=True)
 
@@ -79,7 +79,7 @@ class Lesson(db.Model):
     description = db.Column(db.Text, nullable=True)    
     content = db.Column(JSON, nullable=False)
     position = db.Column(db.Integer, nullable=False)
-    image = db.Column(db.LargeBinary, nullable=True)
+    image = db.Column(db.Text, nullable=True)  # Store base64 string
     
 
     activities = db.relationship('Activity', backref='lesson', lazy=True)
@@ -110,7 +110,7 @@ class Activity(db.Model):
     name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text, nullable=False)
     answer_format = db.Column(db.Text, nullable=True)
-    image = db.Column(db.LargeBinary, nullable=True)  
+    image = db.Column(db.Text, nullable=True)  # Store base64 string
     instructions = db.Column(db.Text, nullable=True)
     difficulty = db.Column(db.Text, nullable=True)
     
@@ -131,7 +131,7 @@ class Activity(db.Model):
 class ActivityHistory(db.Model):
     activity_history_id = db.Column(db.Integer, primary_key=True)
     activity_id = db.Column(db.Integer, db.ForeignKey('activity.activity_id'), nullable=False, index=True)
-    answer = db.Column(db.LargeBinary)
+    answer = db.Column(db.LargeBinary)  # Keep as binary for file uploads
     feedback = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now(), nullable=False)
 
@@ -142,7 +142,7 @@ class Quiz(db.Model):
     description = db.Column(db.Text, nullable=False)
     difficulty = db.Column(db.String,nullable=False)
     points = db.Column(db.Integer, nullable=False)
-    image = db.Column(db.LargeBinary, nullable=True)
+    image = db.Column(db.Text, nullable=True)  # Store base64 string
     questions = db.Column(JSON, nullable=False)
     answers = db.Column(JSON, nullable=False)
     time_duration = db.Column(db.Integer) 
@@ -178,7 +178,7 @@ class Badge(db.Model):
     badge_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text)
-    image = db.Column(db.LargeBinary, nullable=True) 
+    image = db.Column(db.Text, nullable=True)  # Store base64 string
     points = db.Column(db.Integer, default=0)
     badge_histories = db.relationship('BadgeHistory', backref='badge', lazy=True)
     quizzes = db.relationship('Quiz', backref='badge', lazy=True)
