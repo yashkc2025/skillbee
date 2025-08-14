@@ -64,12 +64,7 @@ async function fetchLeaderboard() {
     leaderboardStats.value = data.map((item: any) => ({
       position: item.rank,
       name: item.name,
-      points: item.points, // Add this line to include points
-      // Assuming 'promoted_on' is not available in the new API,
-      // you'll need to decide how to handle this.
-      // For now, I'll use a placeholder or remove it if not needed.
-      // If you need this data, please update your API to include it.
-      promoted_on: "N/A",
+      points: item.points,
     }));
   } catch (error) {
     console.error("Error fetching leaderboard:", error);

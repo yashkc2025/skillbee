@@ -7,7 +7,8 @@
             <div class="settings-section profile-section">
                 <h3>🖼️ Profile Image</h3>
                 <div class="profile-image-wrap">
-                    <img :src="profileImageUrl" alt="Profile" class="profile-image" @click="showProfileModal = true" />
+                    <img :src="fixImage(profileImageUrl)" alt="Profile" class="profile-image"
+                        @click="showProfileModal = true" />
                     <input type="file" accept="image/*" @change="onProfileImageChange" id="profile-upload"
                         class="profile-upload-input" />
                     <label for="profile-upload" class="profile-upload-btn">Change Image</label>
@@ -104,6 +105,7 @@ import { ref, computed, onMounted } from "vue";
 import ChildAppLayout from "../../layouts/ChildAppLayout.vue";
 import AppButton from "@/components/AppButton.vue";
 import { base_url } from "../../router";
+import { fixImage } from "../../fx/utils";
 
 // --- STATE ---
 

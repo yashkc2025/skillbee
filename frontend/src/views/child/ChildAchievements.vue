@@ -3,19 +3,16 @@
     <div class="achievements-page">
       <h2 class="achievements-title ft-head-1">🏆 My Achievements</h2>
 
-      <!-- Badges Section -->
       <div class="badges-section">
         <h3>🎖️ Badges Earned</h3>
         <div class="badges-list">
+          <div v-if="badges.length === 0">You're on your way to your first badge — keep trying!</div>
           <div v-for="badge in badges" :key="badge.id" class="badge-card">
-            <img :src="badge.icon" :alt="badge.name" class="badge-icon" />
-            <!-- <div class="badge-name">{{ badge.name }}</div>
-                        <div class="badge-desc">{{ badge.description }}</div> -->
+            <img :src="fixImage(badge.image)" :alt="badge.label" class="badge-icon" />
           </div>
         </div>
       </div>
 
-      <!-- Heatmap Section -->
       <div class="heatmap-section">
         <h3>🔥 Activity Streak</h3>
         <div class="heatmap-kid-bg">
@@ -23,35 +20,69 @@
         </div>
       </div>
 
-      <!-- Curriculum-wise Performance Chart -->
-      <div class="charts-section">
+      <div class="charts-section" v-if="childId">
         <h3>📚 Curriculum Progress</h3>
-        <SkillChart />
+        <ChildSkillChart :child-id="childId.toString()" />
       </div>
 
-      <!-- Points Earned Over Time Chart -->
       <div class="charts-section" v-if="childId">
         <h3>📈 Points Earned Over Time</h3>
-        <PointsChart :child-id="childId" />
+        <PointsChart :child-id="childId.toString()" />
       </div>
     </div>
   </ChildAppLayout>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import ChildAppLayout from "@/layouts/ChildAppLayout.vue";
-import SkillChart from "@/components/admin/charts/SkillChart.vue";
+import ChildSkillChart from "@/components/admin/charts/ChildSkillChart.vue";
 import PointsChart from "@/components/admin/charts/PointsChart.vue";
 import ChildHeatmap from "@/components/child/dashboard/ChildHeatmap.vue";
-import { onMounted } from "vue";
 import { base_url } from "../../router";
+import { fixImage } from "../../fx/utils";
 
-const childId = ref<number>();
+const childId = ref<number | undefined>();
+
+const props = defineProps({
+  child_id: {
+    type: Number,
+    required: true,
+  },
+});
+
+interface Badge {
+  id: number;
+  label: string;
+  image: string;
+}
+
+const badges = ref<Badge[]>([]);
+
+async function fetchBadges() {
+  const token = localStorage.getItem("authToken");
+  try {
+    const response = await fetch(`${base_url}child_badges`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch badges");
+    }
+    const data: Badge[] = await response.json();
+    badges.value = data;
+    console.log("Badges fetched successfully:", badges.value);
+  } catch (error) {
+    console.error("Error fetching badges:", error);
+  }
+}
 
 onMounted(async () => {
   const token = localStorage.getItem("authToken");
-
   const userDataResponse = await fetch(`${base_url}auth/get_user`, {
     method: "GET",
     headers: {
@@ -62,51 +93,14 @@ onMounted(async () => {
 
   if (userDataResponse) {
     childId.value = userDataResponse.user.id;
+    console.log("ChildID", childId.value);
   }
+  await fetchBadges();
 });
-
-// Dummy badge data
-const badges = ref([
-  {
-    id: 1,
-    // name: "Quiz Master",
-    icon: "/badges/quiz_master.png",
-    // description: "Completed 5 quizzes!",
-  },
-  {
-    id: 2,
-    // name: "Finisher",
-    icon: "/badges/finisher.png",
-    // description: "Completed all lessons in a curriculum!",
-  },
-  {
-    id: 3,
-    // name: "Perfect",
-    icon: "/badges/perfect.png",
-    // description: "Achieved 100% score in a quiz!",
-  },
-  {
-    id: 4,
-    // name: "30 Day Streak",
-    icon: "/badges/30_day_streak.png",
-    // description: "Maintained a 30-day activity streak!",
-  },
-  {
-    id: 5,
-    // name: "Math Magician",
-    icon: "/badges/all_rounder.png",
-    // description: "Solved 100 math problems!",
-  },
-  {
-    id: 6,
-    // name: "Quick Thinker",
-    icon: "/badges/cash_clash.png",
-    // description: "Answered 50 questions in under 1 minute!",
-  },
-]);
 </script>
 
 <style scoped>
+/* Your existing styles remain unchanged */
 .achievements-page {
   margin: 0 auto;
   padding: 28px 18px 18px 18px;
@@ -176,14 +170,12 @@ const badges = ref([
   font-size: var(--font-sm);
 }
 
-/* Kid-friendly Heatmap Section */
 .heatmap-section {
   margin-bottom: 36px;
   background: #fff3e0;
   border-radius: var(--border-radius);
   padding: 18px 18px 10px 18px;
   box-shadow: 0 2px 8px rgba(33, 150, 243, 0.08);
-  /* text-align: center; */
 }
 
 .heatmap-section h3 {
@@ -195,13 +187,9 @@ const badges = ref([
 }
 
 .heatmap-kid-bg {
-  /* background: linear-gradient(90deg, #fffde7 0%, #ffe082 100%); */
   background: #fffde7;
   border-radius: var(--border-radius);
-  /* padding: 18px 0 10px 0; */
   margin-bottom: 8px;
-  /* display: flex; */
-  /* justify-content: center;align-items: center; */
   width: 100%;
   height: 200px;
 }

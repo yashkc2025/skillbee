@@ -59,6 +59,7 @@ from .controllers import (
     update_child_profile,
     change_child_password,
     child_profile_image,
+    get_child_badges,
     get_children,
     get_parents,
     get_lessons,
@@ -567,6 +568,10 @@ def change_child_password_route(current_user, role):
 def child_profile_image_route(current_user, role):
     return child_profile_image(current_user.child_id)
 
+@api.route("/child_badges", methods=["GET"])
+@token_required(allowed_roles=["child"])
+def child_badges(current_user, role):
+    return get_child_badges(current_user.child_id)
 
 @api.route("/skill_categories", methods=["GET"])
 @token_required(allowed_roles=["child"])

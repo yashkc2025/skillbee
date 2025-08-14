@@ -564,7 +564,7 @@ def get_user_skill_progress(child_id):
     
     # Get skills filtered by the child's age
     skills: List[Skill] = Skill.query.filter(
-        Skill.min_age <= age, Skill.max_age >= age
+        Skill.min_age <= age, Skill.max_age > age
     ).all()
     
     response = []
@@ -658,7 +658,7 @@ def get_curriculums_for_child(current_user, role, child_id):
     if not child:
         return jsonify({"error": "Child not found"}), 404
     age = age_calc(child.dob)
-    skills = Skill.query.filter(Skill.min_age <= age, Skill.max_age >= age).all()
+    skills = Skill.query.filter(Skill.min_age <= age, Skill.max_age > age).all()
     skill_ids = [s.skill_id for s in skills]
     lessons = Lesson.query.filter(Lesson.skill_id.in_(skill_ids)).all()
     lesson_ids = [l.lesson_id for l in lessons]
@@ -1712,6 +1712,31 @@ def child_profile_image(child_id):
         db.session.rollback()
         return jsonify({"status": "error", "message": "Database error occurred"}), 500
 
+def get_child_badges(child_id):
+    """Retrieve all badges earned by a child.
+    """
+    try:
+        child = Child.query.get(child_id)
+        if not child:
+            return jsonify({"error": "Child not found"}), 404
+        badges = Badge.query.join(BadgeHistory).filter(BadgeHistory.child_id == child_id).all()
+        response = []
+        for badge in badges:
+            if badge.image:
+                image_base64 = base64.b64encode(badge.image).decode("utf-8")
+            else:
+                image_base64 = ""
+            response.append(
+                {
+                    "id": badge.badge_id,
+                    "label": badge.name,
+                    "image": image_base64
+                }
+            )
+        return jsonify(response), 200
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({"error": "Database error occurred", "details": str(e)}), 500
 
 def get_children(current_user, role):
     # Admin: all children; Parent: only their children
