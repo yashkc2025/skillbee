@@ -506,10 +506,35 @@ def get_child_dashboard_stats(child_id):
         200,
     )
 
+def get_leaderboard(child_id):
+    all_children = Child.query.filter_by(is_blocked=False).order_by(Child.points.desc()).all()
+
+    leaderboard = []
+    for index, child in enumerate(all_children, start=1):
+        leaderboard.append({
+            "rank": index,
+            "id": child.child_id,
+            "name": child.name,
+            "username": child.username,
+            "points": child.points,
+            "streak": child.streak
+        })
+
+    return jsonify(leaderboard), 200
 
 def get_user_skill_progress(child_id):
     # gets the child lesson progress
-    skills: List[Skill] = Skill.query.all()
+    child = Child.query.get(child_id)
+    if not child:
+        return jsonify({"error": "Child not found"}), 404
+    
+    age = age_calc(child.dob) # Assuming age_calc function is defined elsewhere
+    
+    # Get skills filtered by the child's age
+    skills: List[Skill] = Skill.query.filter(
+        Skill.min_age <= age, Skill.max_age >= age
+    ).all()
+    
     response = []
     for skill in skills:
         total_lessons = Lesson.query.filter_by(skill_id=skill.skill_id).count()
@@ -531,7 +556,6 @@ def get_user_skill_progress(child_id):
         )
 
     return jsonify(response), 200
-
 
 def get_user_badges(child_id):
     # child_id = current_user.child_id
@@ -573,9 +597,11 @@ def get_lesson_quizzes(child_id, lesson_id):
             "name": quiz.quiz_name,
             "description": quiz.description,
             "time_duration": (
-                f"{quiz.time_duration // 60} mins" if quiz.time_duration else "N/A"
+                f"{quiz.time_duration // 60} mins {quiz.time_duration % 60} sec" if quiz.time_duration else "no time limit"
             ),
             "difficulty": quiz.difficulty,
+            "total_marks": len(quiz.questions),
+            "no_questions": len(quiz.questions),
             "progress_status": 100 if quiz.quiz_id in attempted_quiz_ids else 0,
             "image": None,
         }
@@ -1277,15 +1303,15 @@ def submit_quiz(child_id, quiz_id):
             return jsonify({"error": "No data provided"}), 400
 
         answers = data.get("answers")
-        if not answers or not isinstance(answers, dict):
-            return (
-                jsonify(
-                    {
-                        "error": "Invalid answers format. Expected dictionary with question_index: option_index"
-                    }
-                ),
-                400,
-            )
+        # if not answers or not isinstance(answers, dict):
+        #     return (
+        #         jsonify(
+        #             {
+        #                 "error": "Invalid answers format. Expected dictionary with question_index: option_index"
+        #             }
+        #         ),
+        #         400,
+        #     )
 
         # Validate quiz has questions and answers
         if not quiz.questions or not quiz.answers:
@@ -1366,6 +1392,70 @@ def submit_quiz(child_id, quiz_id):
         return jsonify({"error": "Database error occurred", "details": str(e)}), 500
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+    
+
+def get_child_quiz_history(curriculum_id, lesson_id, quiz_id, quiz_history_id):
+    try:
+        # Validate quiz history exists
+        quiz_history = QuizHistory.query.get(quiz_history_id)
+        if not quiz_history:
+            return jsonify({"error": "Quiz history not found"}), 404
+        # Validate quiz exists
+        quiz = Quiz.query.get(quiz_id)
+        if not quiz:
+            return jsonify({"error": "Quiz not found"}), 404
+        # Validate curriculum exists
+        curriculum = Skill.query.get(curriculum_id)
+        if not curriculum:
+            return jsonify({"error": "Curriculum not found"}), 404
+        # Validate lesson exists and belongs to curriculum
+        lesson = Lesson.query.filter_by(
+            lesson_id=lesson_id, skill_id=curriculum_id
+        ).first()
+        if not lesson:
+            return (
+                jsonify(
+                    {"error": "Lesson not found or does not belong to the curriculum"}
+                ),
+                404,
+            )
+        # Format questions with index
+        questions_data = []
+        if quiz.questions:  # questions is stored as JSON
+            for idx, question in enumerate(quiz.questions):
+                question_data = {
+                    "question_index": idx + 1,
+                    "question": question.get("question", ""),
+                    "options": question.get("options", []),
+                    "marks": question.get("marks", 1),
+                }
+                questions_data.append(question_data)
+        # Prepare response data
+        response_data = {
+            "curriculum": {
+                "curriculum_id": curriculum.skill_id,
+                "name": curriculum.name,
+            },
+            "lesson": {"lesson_id": lesson.lesson_id, "title": lesson.title},
+            "quizzes": {
+                "quiz_id": quiz.quiz_id,
+                "name": quiz.quiz_name,
+                "time_duration": quiz.time_duration,
+            },
+            "questions": questions_data,
+            "quiz_history": {
+                "quiz_history_id": quiz_history.quiz_history_id,
+                "child_id": quiz_history.child_id,
+                "quiz_id": quiz_history.quiz_id,
+                "score": quiz_history.score,
+                "created_at": quiz_history.created_at.isoformat(),
+                "responses": quiz_history.responses,
+            },
+        }
+        return jsonify(response_data), 200
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({"error": "Database error occurred", "details": str(e)}), 500
 
 
 def get_child_profile_controller(child_id):

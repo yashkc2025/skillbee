@@ -81,6 +81,12 @@ const router = createRouter({
       props: true
     },
     {
+      path: sitemap.child_app.curriculum.attempt_history,
+      name: 'child_quiz_attempt_history',
+      component: ChildQuizQuestions,
+      props: true
+    },
+    {
       path: sitemap.child_app.achievements,
       name: 'child_achievements',
       component: ChildAchievements

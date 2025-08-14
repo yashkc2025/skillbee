@@ -264,9 +264,22 @@ function attemptQuiz(quiz: Quiz) {
 }
 
 function viewSubmission(history: QuizHistoryItem) {
-    // There is no backend endpoint for viewing a specific attempt's details.
-    // This function will remain as an alert.
-    alert(`Viewing attempt for: ${history.quiz_name} (ID: ${history.quiz_history_id}) with score: ${history.score}`);
+    router.push({
+        name: 'child_quiz_attempt_history',
+        params: {
+            quizId: history.quiz_id,
+            quizName: history.quiz_name,
+            lessonId: lesson.value.lesson_id,
+            curriculumId: curriculum.value.curriculum_id,
+            quizHistoryId: history.quiz_history_id
+        }
+    });
+    // selectedQuiz.value = null;
+    // showHistory.value = false;
+    // quizHistory.value = [];
+    // isHistoryLoading.value = false;
+    // isLoading.value = false;
+    // error.value = null;
 }
 
 // --- FORMATTERS & HELPERS ---
@@ -283,7 +296,8 @@ function formatDateTime(dateStr: string) {
     if (!dateStr || dateStr === "N/A") return "Date not available";
     const options: Intl.DateTimeFormatOptions = {
         day: '2-digit', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', hour12: true
+        hour: '2-digit', minute: '2-digit', hour12: true,
+        second: '2-digit'
     };
     return new Date(dateStr).toLocaleString('en-US', options).replace(',', ' at');
 }

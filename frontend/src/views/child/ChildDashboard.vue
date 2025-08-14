@@ -9,37 +9,6 @@ import ChildLeaderboard from "@/components/child/ChildLeaderboard.vue";
 import { onMounted, ref } from "vue";
 import { base_url } from "../../router";
 
-// const skillTypes = [
-//   { skill_id: 1, label: "🧠 Critical Thinking", link: "", progress: 60 },
-//   { skill_id: 2, label: "💬 Communication Skills", link: "", progress: 40 },
-//   { skill_id: 3, label: "⏰ Time Management", link: "", progress: 80 },
-//   { skill_id: 4, label: "🎵 Extracurricular Activities", link: "", progress: 20 },
-//   { skill_id: 5, label: "💰 Financial Literacy", link: "", progress: 100 },
-// ];
-
-// const badges = [
-//   {
-//     label: "Quick Thinker",
-//     image:
-//       "http://static.vecteezy.com/system/resources/previews/055/850/981/non_2x/cute-brain-cartoon-with-lightning-bolt-vector.jpg",
-//   },
-//   {
-//     label: "Quick Thinker (alt)",
-//     image:
-//       "https://thumbs.dreamstime.com/b/brain-lightning-brainstorm-concept-like-cloud-power-mind-103281710.jpg",
-//   },
-//   {
-//     label: "Math Magician",
-//     image:
-//       "https://play-lh.googleusercontent.com/_amVHhZZT0Jk3MAHEog0rZeCVMl2w6zQYoDH8Mo7ZjKUIQwRoUxg-FhgALctyKmAjoo",
-//   },
-//   {
-//     label: "Math Magician (alt)",
-//     image:
-//       "https://is3-ssl.mzstatic.com/image/thumb/Purple122/v4/91/5c/c1/915cc1a2-0c75-4f6a-437b-68553220653e/source/512x512bb.jpg",
-//   },
-// ];
-
 function getIntroText(name: string): string {
   const dayName = getTodayName();
 
@@ -63,28 +32,6 @@ function getIntroText(name: string): string {
   return introOptions[randomIndex];
 }
 
-// const stats = [
-//   {
-//     label: "Lessons Completed",
-//     answer: "12",
-//   },
-//   {
-//     label: "Badges Earned",
-//     answer: "6",
-//   },
-//   {
-//     label: "Skills Completed",
-//     count: "2",
-//   },
-//   {
-//     label: "Leaderboard Rank",
-//     answer: "#2",
-//   },
-//   {
-//     label: "Streak",
-//     count: "25",
-//   },
-// ];
 
 const user = ref({});
 
@@ -203,7 +150,7 @@ onMounted(() => {
           <ChildHeatmap class="heatmap-fullwidth" />
         </div>
       </div>
-      <ChildLeaderboard />
+      <ChildLeaderboard :user-name="user.name" />
       <SkillTemplate :skillTypes="skillTypes" />
       <div class="kid-badges-section">
         <BadgesTemplate :badges="badges" />
@@ -213,6 +160,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* Your existing styles remain unchanged */
 .kid-dashboard {
   display: flex;
   flex-direction: column;
@@ -227,12 +175,10 @@ onMounted(() => {
   font-family: "VAGRoundedNext";
   font-size: var(--font-lg);
   color: #ff9800;
-  /* background: #fff8e1; */
   border-radius: var(--border-radius);
   padding: 18px 24px;
   margin-bottom: 10px;
   text-align: center;
-  /* box-shadow: 0 2px 8px rgba(255, 193, 7, 0.08); */
   letter-spacing: 1px;
 }
 
@@ -255,14 +201,8 @@ onMounted(() => {
   flex: 1;
   background: linear-gradient(90deg, #e3f2fd 0%, #fffde7 100%);
   border-radius: var(--border-radius);
-  /* display: flex;flex-direction: column; */
-  /* justify-content: center; */
-  /* align-items: center; */
   border: 2px solid #ffd54f;
-  /* box-shadow: 0 2px 8px rgba(33, 150, 243, 0.08); */
-  /* padding: 18px 0; */
   width: 100%;
-  /* height: 200px; */
 }
 
 .kid-badges-section {
