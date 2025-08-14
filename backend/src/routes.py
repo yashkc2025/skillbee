@@ -36,6 +36,7 @@ from .controllers import (
     child_loginc,
     get_auser,
     get_child_dashboard_stats,
+    get_child_heatmap,
     get_leaderboard,
     get_user_skill_progress,
     get_user_badges,
@@ -249,6 +250,17 @@ def get_user(current_user, role):
 @token_required(allowed_roles=["child"])
 def child_dashboard_stats(current_user, role):
     return get_child_dashboard_stats(current_user.child_id)
+
+@api.route("/child_heatmap", methods=["GET"])
+@token_required(allowed_roles=["child"])
+def child_heatmap(current_user, role):
+    return get_child_heatmap(current_user.child_id)
+
+@api.route("/child_leaderboard", methods=["GET"])
+@token_required(allowed_roles=["child"])
+def child_leaderboard(current_user, role):
+    return get_leaderboard(current_user.child_id)
+
 
 
 @api.route("/children", methods=["GET"])
@@ -554,11 +566,6 @@ def change_child_password_route(current_user, role):
 @token_required(allowed_roles=["child"])
 def child_profile_image_route(current_user, role):
     return child_profile_image(current_user.child_id)
-
-@api.route("/child_leaderboard", methods=["GET"])
-@token_required(allowed_roles=["child"])
-def child_leaderboard(current_user, role):
-    return get_leaderboard(current_user.child_id)
 
 
 @api.route("/skill_categories", methods=["GET"])

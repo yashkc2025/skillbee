@@ -491,7 +491,7 @@ def get_child_dashboard_stats(child_id):
         (index + 1 for index, c in enumerate(all_children) if c.child_id == child_id),
         None,
     )
-    heatmap = [{"date": datetime.now().strftime("%Y-%m-%d"), "status": 1}]
+    
     return (
         jsonify(
             {
@@ -499,12 +499,44 @@ def get_child_dashboard_stats(child_id):
                 "skills_completed": completed_skills,
                 "streak": streak,
                 "badges_earned": badges_earned,
-                "leaderboard_rank": leaderboard_rank,
-                "heatmap": heatmap,
+                "leaderboard_rank": leaderboard_rank
             }
         ),
         200,
     )
+
+def get_child_heatmap(child_id):
+    """
+    Fetches all activity records for a child and returns them formatted
+    for a heatmap.
+    """
+    try:
+        date_counts = {}
+        all_records = []
+        all_records.extend(LessonHistory.query.filter_by(child_id=child_id).all())
+        # all_records.extend(ActivityHistory.query.filter_by(child_id=child_id).all())
+        all_records.extend(QuizHistory.query.filter_by(child_id=child_id).all())
+        
+        for record in all_records:
+            date_str = record.created_at.strftime("%Y-%m-%d")
+
+            if date_str in date_counts:
+                date_counts[date_str] += 1
+            else:
+                date_counts[date_str] = 1
+
+        heatmap = []
+        for date, count in date_counts.items():
+            heatmap.append({"date": date, "count": count})
+
+        # --- FIX: Wrap the heatmap data in a dictionary.
+        # The frontend expects a JSON object with a 'heatmap' key.
+        return jsonify({"heatmap": heatmap}), 200
+
+    except Exception as e:
+        # It's good practice to log the error for debugging
+        print(f"Error fetching child heatmap: {e}")
+        return jsonify({"error": "Failed to fetch heatmap data"}), 500
 
 def get_leaderboard(child_id):
     all_children = Child.query.filter_by(is_blocked=False).order_by(Child.points.desc()).all()

@@ -13,7 +13,7 @@ const props = defineProps({
   },
 });
 
-const leaderboardStats = ref<Array<{ position: number; name: string; promoted_on: string }>>([]);
+const leaderboardStats = ref<Array<{ position: number; name: string; points: number; promoted_on: string }>>([]);
 const showAll = ref(false);
 
 const userIndex = computed(() => leaderboardStats.value.findIndex(s => s.name === props.userName));
@@ -64,6 +64,7 @@ async function fetchLeaderboard() {
     leaderboardStats.value = data.map((item: any) => ({
       position: item.rank,
       name: item.name,
+      points: item.points, // Add this line to include points
       // Assuming 'promoted_on' is not available in the new API,
       // you'll need to decide how to handle this.
       // For now, I'll use a placeholder or remove it if not needed.

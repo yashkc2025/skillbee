@@ -22,7 +22,7 @@ const endDate = ref<string>(new Date().toISOString().slice(0, 10)); // Current d
 async function fetchHeatmapData() {
   try {
     const token = localStorage.getItem("authToken");
-    const response = await fetch(`${base_url}child_dashboard_stats`, {
+    const response = await fetch(`${base_url}child_heatmap`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -31,16 +31,23 @@ async function fetchHeatmapData() {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to fetch heatmap data");
+      throw new Error(`Failed to fetch heatmap data: ${response.statusText}`);
     }
 
     const data = await response.json();
-    // The API returns an array of objects with 'date' and 'status'
-    // We need to map 'status' to 'count' to be compatible with vue3-calendar-heatmap
-    heatmapValues.value = data.heatmap.map((item: any) => ({
-      date: item.date,
-      count: item.status,
-    }));
+
+    // --- FIX: Access the 'heatmap' key from the response data.
+    // The backend now returns {"heatmap": [...]}.
+    if (data && data.heatmap) {
+      // The `vue3-calendar-heatmap` library expects an array of objects
+      // with `date` and `count` keys, which our backend now provides directly.
+      heatmapValues.value = data.heatmap;
+      console.log("Heatmap data fetched successfully:", heatmapValues.value);
+    } else {
+      throw new Error("Invalid data format from API");
+    }
+
+    console.log("Heatmap data fetched successfully:", heatmapValues.value);
   } catch (error) {
     console.error("Error fetching heatmap data:", error);
   }
