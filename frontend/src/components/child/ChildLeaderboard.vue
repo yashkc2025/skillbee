@@ -1,55 +1,79 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, defineProps } from "vue";
 import Card from '@/components/Card.vue';
 import CardItem from '@/components/CardItem.vue';
 import AppButton from "../AppButton.vue";
+import { base_url } from "../../router";
 
-const leaderboardStats = [
-  { position: 1, name: "Nishant Kumar", promoted_on: "2025-06-20" },
-  { position: 2, name: "Aarav Mehta", promoted_on: "2025-06-22" },
-  { position: 3, name: "Rohan Verma", promoted_on: "2025-06-24" },
-  { position: 4, name: "Sneha Reddy", promoted_on: "2025-06-25" },
-  { position: 5, name: "Vivaan Nair", promoted_on: "2025-06-27" },
-  { position: 6, name: "Ananya Singh", promoted_on: "2025-06-28" },
-  { position: 7, name: "Arjun Patel", promoted_on: "2025-06-30" },
-  { position: 8, name: "Isha Kapoor", promoted_on: "2025-07-01" },
-  { position: 9, name: "Rahul Sharma", promoted_on: "2025-07-02" },
-  { position: 10, name: "Priya Gupta", promoted_on: "2025-07-03" }
-];
+// Props to receive the current user's name from the parent component
+const props = defineProps({
+  userName: {
+    type: String,
+    required: true,
+  },
+});
 
+const leaderboardStats = ref<Array<{ position: number; name: string; points: number; promoted_on: string }>>([]);
 const showAll = ref(false);
-const userName = "Isha Kapoor"; // Replace with actual user name from auth context or props
 
-const userIndex = computed(() => leaderboardStats.findIndex(s => s.name === userName));
+const userIndex = computed(() => leaderboardStats.value.findIndex(s => s.name === props.userName));
 
 const visibleRows = computed(() => {
   if (showAll.value) {
-    return leaderboardStats;
+    return leaderboardStats.value;
   }
   // If user is not in leaderboard, show top 6
   if (userIndex.value === -1) {
-    return leaderboardStats.slice(0, 6);
+    return leaderboardStats.value.slice(0, 6);
   }
   // If user is in top 6, show top 6
   if (userIndex.value < 6) {
-    return leaderboardStats.slice(0, 6);
+    return leaderboardStats.value.slice(0, 6);
   }
   // If user is below 6th, show 1st 3, then previous, user, next
-  const rows: typeof leaderboardStats = [];
-  rows.push(...leaderboardStats.slice(0, 3));
+  const rows: typeof leaderboardStats.value = [];
+  rows.push(...leaderboardStats.value.slice(0, 3));
   // previous, user, next
-  if (userIndex.value > 0) rows.push(leaderboardStats[userIndex.value - 1]);
-  rows.push(leaderboardStats[userIndex.value]);
-  if (userIndex.value < leaderboardStats.length - 1) rows.push(leaderboardStats[userIndex.value + 1]);
+  if (userIndex.value > 0) rows.push(leaderboardStats.value[userIndex.value - 1]);
+  rows.push(leaderboardStats.value[userIndex.value]);
+  if (userIndex.value < leaderboardStats.value.length - 1) rows.push(leaderboardStats.value[userIndex.value + 1]);
   return rows;
 });
 
 function expandTable() {
-  if (showAll.value === false)
-    showAll.value = true;
-  else
-    showAll.value = false;
+  showAll.value = !showAll.value;
 }
+
+// Function to fetch leaderboard data from the API
+async function fetchLeaderboard() {
+  try {
+    const token = localStorage.getItem("authToken");
+    const response = await fetch(`${base_url}child_leaderboard`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch leaderboard data");
+    }
+
+    const data = await response.json();
+    leaderboardStats.value = data.map((item: any) => ({
+      position: item.rank,
+      name: item.name,
+      points: item.points,
+    }));
+  } catch (error) {
+    console.error("Error fetching leaderboard:", error);
+  }
+}
+
+onMounted(() => {
+  fetchLeaderboard();
+});
 </script>
 
 <template>
@@ -64,14 +88,14 @@ function expandTable() {
         <div class="leaderboard-table-header">
           <span class="leaderboard-col center">Rank</span>
           <span class="leaderboard-col">Name</span>
-          <span class="leaderboard-col">Promoted On</span>
+          <span class="leaderboard-col">Points</span>
         </div>
       </div>
       <CardItem v-for="(s, i) in visibleRows" :key="i">
         <div class="leaderboard-row" :class="{
-          'leaderboard-me': s.name === userName,
+          'leaderboard-me': s.name === props.userName,
           'leaderboard-top': s.position === 1,
-          'leaderboard-other': s.name !== userName && s.position !== 1
+          'leaderboard-other': s.name !== props.userName && s.position !== 1
         }">
           <span class="leaderboard-rank">
             <span v-if="s.position === 1">🥇</span>
@@ -79,8 +103,8 @@ function expandTable() {
             <span v-else-if="s.position === 3">🥉</span>
             <span v-else>#{{ s.position }}</span>
           </span>
-          <span class="leaderboard-name">{{ s.name === userName ? "👦 You" : s.name }}</span>
-          <span class="leaderboard-date">{{ s.promoted_on }}</span>
+          <span class="leaderboard-name">{{ s.name === props.userName ? "👦 You" : s.name }}</span>
+          <span class="leaderboard-date">{{ s.points }}</span>
         </div>
       </CardItem>
     </Card>
@@ -92,6 +116,7 @@ function expandTable() {
 </template>
 
 <style scoped>
+/* Your existing styles remain unchanged */
 .leaderboard-table-header {
   display: grid;
   grid-template-columns: 15% 55% 30%;
@@ -101,19 +126,16 @@ function expandTable() {
   font-weight: bold;
   background: #fff3e0;
   border-radius: var(--border-radius);
-  /* padding: 8px 0 8px 0; */
+  padding: var(--size-xs) var(--size-md);
   margin-bottom: 1px;
   text-align: left;
   letter-spacing: 1px;
-  /* margin: 4px 0; */
-  padding: var(--size-xs) var(--size-md);
   border: 1px solid rgba(211, 210, 210, 0.455);
 }
 
 .center {
   margin-left: 20px;
 }
-
 
 .leaderboard-row {
   display: grid;
@@ -124,14 +146,12 @@ function expandTable() {
   background: #fff8e1;
   border-radius: var(--border-radius);
   margin: 1px 0;
-  /* padding: 10px 0; */
   padding: var(--size-xs) var(--size-md);
   box-shadow: 0 1px 4px rgba(255, 193, 7, 0.08);
   transition: background 0.2s, transform 0.15s;
 }
 
 .leaderboard-top {
-  /* background: linear-gradient(90deg, #ffe082 0%, #fffde7 100%); */
   background: #fffde7;
   font-weight: bold;
   color: #ff9800;
@@ -139,12 +159,10 @@ function expandTable() {
 }
 
 .leaderboard-me {
-  /* background: linear-gradient(90deg, #b2ff59 0%, #fffde7 100%); */
   background: #b2ff5983;
   font-weight: bold;
   color: #388e3c;
   border: 2px solid #43a047;
-  /* transform: scale(1.03); */
 }
 
 .leaderboard-other {
@@ -154,7 +172,6 @@ function expandTable() {
 .leaderboard-rank {
   font-size: 1.3rem;
   font-family: 'VAGRoundedNext', cursive;
-  /* text-align: center; */
   margin-left: 20px;
 }
 
@@ -176,20 +193,6 @@ function expandTable() {
   justify-content: center;
   margin-top: 10px;
 }
-
-/* .expand-btn {
-   background: linear-gradient(90deg, #ffd54f 0%, #ffb300 100%);
-   color: #4a148c;
-   font-weight: bold;
-   border-radius: 12px;
-   font-family: 'VAGRoundedNext', cursive;
-   font-size: 1.1rem;
-   padding: 8px 28px;
-   box-shadow: 0 2px 8px rgba(255, 193, 7, 0.13);
-   border: none;
-   cursor: pointer;
-   transition: background 0.2s, color 0.2s;
- } */
 
 .expand-btn:hover {
   background: #ffe082;

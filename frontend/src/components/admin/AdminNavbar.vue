@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import sitemap from "@/router/sitemap.json";
+import { logout } from "@/fx/utils";
 
 const navOptions = [
   {

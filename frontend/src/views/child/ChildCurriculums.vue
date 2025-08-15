@@ -1,86 +1,86 @@
 <template>
     <ChildAppLayout>
         <div class="curriculums">
-            <!-- <div class="top-section">
-                <h2 class="ft-head-1">✨ What do you want to learn? 🎯</h2>
-                <input type="text" v-model="searchInput" placeholder="Type to find curriculum... 🕵️‍♂️"
-                    class="search-box">
-            </div> -->
             <AnimatedHeader v-model="searchInput"
                 :heading-messages="['✨ What do you want to learn? 🎯', '✨ Tap the card to start learning!']"
                 :placeholder-messages="['Type to find curriculum... 🕵️‍♂️']" :typing-speed="50"
                 :pause-duration="1500" />
-            <div class="card-item">
-                <div v-for="curriculum in filteredCurriculums" :key="curriculum.curriculum_id">
-                    <ModuleCard @click="openLessons(curriculum.curriculum_id, curriculum.name)"
-                        :image="curriculum.image" :name="curriculum.name" :description="curriculum.description"
-                        :progress-status="curriculum.progress_status" :show-buttons="false"
-                        not-started-label="🚦 Ready to Start!" completed-label="🎓 Curriculum Complete!">
-                    </ModuleCard>
-                </div>
+
+            <div v-if="isLoading" class="loading-state">
+                <p>Loading your learning journey...</p>
             </div>
-            <p v-if="filteredCurriculums.length === 0" class="empty-result">
-                None of the curriculum's name and description has "{{ searchInput }}"
-            </p>
-            <p v-if="filteredCurriculums.length !== 0" class="empty-result">
-                Tip: Click on a curriculum card to view its lessons.
-            </p>
+
+            <div v-else-if="error" class="error-state">
+                <p>😕 Oops! We couldn't load the curriculums. {{ error }}</p>
+                <button @click="fetchCurriculums" class="retry-button">Try Again</button>
+            </div>
+
+            <div v-else>
+                <div class="card-item">
+                    <div v-for="curriculum in filteredCurriculums" :key="curriculum.curriculum_id">
+                        <ModuleCard @click="openLessons(curriculum.curriculum_id, curriculum.name)"
+                            :image="curriculum.image" :name="curriculum.name" :description="curriculum.description"
+                            :progress-status="curriculum.progress_status" :show-buttons="false"
+                            not-started-label="🚦 Ready to Start!" completed-label="🎓 Curriculum Complete!">
+                        </ModuleCard>
+                    </div>
+                </div>
+                <p v-if="filteredCurriculums.length === 0 && curriculums.length > 0" class="empty-result">
+                    None of the curriculum's name and description has "{{ searchInput }}"
+                </p>
+                <p v-if="filteredCurriculums.length !== 0" class="empty-result">
+                    Tip: Click on a curriculum card to view its lessons.
+                </p>
+                <p v-if="curriculums.length === 0" class="empty-result">
+                    No curriculums are available for you at the moment. Please check back later!
+                </p>
+            </div>
         </div>
     </ChildAppLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import ChildAppLayout from '@/layouts/ChildAppLayout.vue';
 import AnimatedHeader from '@/components/child/AnimatedHeader.vue';
 import ModuleCard from '@/components/ModuleCard.vue';
 import { searchQuery } from '@/fx/utils';
 import { useRouter } from 'vue-router';
+import { base_url } from '../../router';
 
 const router = useRouter();
 
-const curriculums = [
-    {
-        curriculum_id: 1,
-        name: 'Critical Thinking',
-        image: '/files/critical_thinking.jpeg',
-        description: 'Develop your critical thinking skills through engaging lessons and activities.',
-        progress_status: 60
-    },
-    {
-        curriculum_id: 2,
-        name: 'Communication Skills',
-        image: '/files/communication_skill.jpeg',
-        description: 'Enhance your communication skills with interactive lessons and practical exercises.',
-        progress_status: 40
-    },
-    {
-        curriculum_id: 3,
-        name: 'Time Management',
-        image: '/files/time_management.jpeg',
-        description: 'Learn effective time management techniques to boost your productivity in your life.',
-        progress_status: 80
-    },
-    {
-        curriculum_id: 4,
-        name: 'Extracurricular Activities',
-        image: '/files/extracurriculum_activities.jpeg',
-        description: 'Explore various extracurricular activities to enrich your learning experience.',
-        progress_status: 20
-    },
-    {
-        curriculum_id: 5,
-        name: 'Financial Literacy',
-        image: '/files/financial_literacy.jpeg',
-        description: 'Understand the basics knowledge of financial literacy and money management.',
-        progress_status: 100
-    }
-]
+// Interface for User object
+interface User {
+    id: number;
+    role?: string;
+    username?: string;
+    name?: string;
+    email?: string;
+    dob?: string;
+    school?: string;
+}
 
+// Interface for Curriculum object based on backend response
+interface Curriculum {
+    curriculum_id: number;
+    name: string;
+    description: string;
+    image: string | null;
+    progress_status: number;
+}
+
+const user = ref<User | null>(null);
+const curriculums = ref<Curriculum[]>([]);
 const searchInput = ref('');
 
+// Refs for loading and error states
+const isLoading = ref(true);
+const error = ref<string | null>(null);
+
 const filteredCurriculums = computed(() => {
-    return searchQuery(curriculums, searchInput.value, ['name', 'description']);
+    if (!Array.isArray(curriculums.value)) return [];
+    return searchQuery(curriculums.value, searchInput.value, ['name', 'description']);
 });
 
 function openLessons(curriculumId: number, curriculumName: string) {
@@ -88,17 +88,100 @@ function openLessons(curriculumId: number, curriculumName: string) {
         name: 'child_lessons',
         params: { curriculumId, curriculumName }
     });
-
 }
+
+async function fetchCurriculums() {
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            // No token found, user needs to log in.
+            throw new Error("Authentication token not found. Please log in again.");
+        }
+
+        const userDataResponse = await fetch(`${base_url}auth/get_user`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+        });
+
+        if (!userDataResponse.ok) {
+            if (userDataResponse.status === 401) {
+                throw new Error("Your session has expired. Please log in again.");
+            }
+            throw new Error(`Failed to fetch user data (status: ${userDataResponse.status})`);
+        }
+
+        const userData = await userDataResponse.json();
+        user.value = userData.user;
+
+        if (!user.value?.id) {
+            throw new Error("Could not retrieve a valid user ID.");
+        }
+
+        const response = await fetch(`${base_url}api/child/${user.value.id}/curriculums`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch curriculums (status: ${response.status})`);
+        }
+
+        const curriculumData = await response.json();
+        curriculums.value = curriculumData.curriculums;
+
+    } catch (e: any) {
+        console.error('Error fetching curriculums:', e);
+        error.value = e.message || 'An unknown error occurred.';
+        curriculums.value = [];
+    } finally {
+        isLoading.value = false;
+    }
+}
+
+onMounted(() => {
+    fetchCurriculums();
+});
 
 </script>
 
 <style scoped>
-.top-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 25px;
+.curriculums {
+    padding-bottom: 20px;
+}
+
+.loading-state,
+.error-state {
+    text-align: center;
+    padding: 50px 20px;
+    font-size: 1.2rem;
+    color: #666;
+}
+
+.retry-button {
+    margin-top: 20px;
+    padding: 10px 25px;
+    border: none;
+    background-color: #007bff;
+    /* Example primary color */
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: "VAGRoundedNext", sans-serif;
+    font-size: 1rem;
+    transition: background-color 0.2s ease;
+}
+
+.retry-button:hover {
+    background-color: #0056b3;
 }
 
 .search-box {
@@ -121,11 +204,12 @@ function openLessons(curriculumId: number, curriculumName: string) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 20px;
-    padding: 0 20px;
+    padding: 20px;
 }
 
 .empty-result {
     text-align: center;
     margin: 20px;
+    color: #555;
 }
 </style>

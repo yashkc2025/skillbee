@@ -2,6 +2,7 @@ from io import BytesIO
 from functools import wraps
 import json
 from pydoc import describe
+from typing import List
 from flask import request, jsonify, send_file
 from .db import db
 from .models import (
@@ -25,11 +26,12 @@ from datetime import datetime, date, timedelta
 import uuid
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import and_, func, case, cast, Integer
-from sqlalchemy.orm import joinedload
+from sqlalchemy import and_, func, case, cast, Integer, distinct
 import time
 import base64
 from .decorators import only_admin, only_admin_or_parent, only_parent
-import imghdr
+
+# import imghdr
 
 
 def parent_regisc(request):
@@ -309,7 +311,7 @@ def child_loginc(request):
     Handle child login request by validating credentials and generating a session token.
     """
     data = request.get_json()
-    identifier = data.get("email_or_username")
+    identifier = data.get("username")
     password = data.get("password")
 
     if not identifier or not password:
@@ -414,7 +416,6 @@ def token_required(allowed_roles=None):
     return decorator
 
 
-@token_required()
 def get_auser(current_user, role):
     # this is according to auth.md and fetches the details of users from the session id as authorisation bearer BUT it returns full profile info
     if role == "child":
@@ -431,6 +432,7 @@ def get_auser(current_user, role):
                         ),
                         "school": current_user.school,
                         "profile_image": None,
+                        "name": current_user.name,
                     }
                 }
             ),
@@ -467,9 +469,7 @@ def get_auser(current_user, role):
     return jsonify({"error": "Invalid session data"}), 401
 
 
-@token_required(allowed_roles=["child"])
-def get_child_dashboard_stats(current_user, role):
-    child_id = current_user.child_id
+def get_child_dashboard_stats(child_id):
     lessons_completed = LessonHistory.query.filter_by(child_id=child_id).count()
     all_lessons = Lesson.query.all()
     skill_progress = {}
@@ -492,7 +492,7 @@ def get_child_dashboard_stats(current_user, role):
         (index + 1 for index, c in enumerate(all_children) if c.child_id == child_id),
         None,
     )
-    heatmap = [{"date": datetime.now().strftime("%Y-%m-%d"), "status": 1}]
+
     return (
         jsonify(
             {
@@ -501,43 +501,124 @@ def get_child_dashboard_stats(current_user, role):
                 "streak": streak,
                 "badges_earned": badges_earned,
                 "leaderboard_rank": leaderboard_rank,
-                "heatmap": heatmap,
             }
         ),
         200,
     )
 
 
-@token_required(allowed_roles=["child"])
-def get_user_skill_progress(current_user, role):
+def get_child_heatmap(child_id):
+    """
+    Fetches all activity records for a child and returns them formatted
+    for a heatmap.
+    """
+    try:
+        date_counts = {}
+        all_records = []
+        all_records.extend(LessonHistory.query.filter_by(child_id=child_id).all())
+        # all_records.extend(ActivityHistory.query.filter_by(child_id=child_id).all())
+        all_records.extend(QuizHistory.query.filter_by(child_id=child_id).all())
+
+        for record in all_records:
+            date_str = record.created_at.strftime("%Y-%m-%d")
+
+            if date_str in date_counts:
+                date_counts[date_str] += 1
+            else:
+                date_counts[date_str] = 1
+
+        heatmap = []
+        for date, count in date_counts.items():
+            heatmap.append({"date": date, "count": count})
+
+        # --- FIX: Wrap the heatmap data in a dictionary.
+        # The frontend expects a JSON object with a 'heatmap' key.
+        return jsonify({"heatmap": heatmap}), 200
+
+    except Exception as e:
+        # It's good practice to log the error for debugging
+        print(f"Error fetching child heatmap: {e}")
+        return jsonify({"error": "Failed to fetch heatmap data"}), 500
+
+
+def get_leaderboard(child_id):
+    all_children = (
+        Child.query.filter_by(is_blocked=False).order_by(Child.points.desc()).all()
+    )
+
+    leaderboard = []
+    for index, child in enumerate(all_children, start=1):
+        leaderboard.append(
+            {
+                "rank": index,
+                "id": child.child_id,
+                "name": child.name,
+                "username": child.username,
+                "points": child.points,
+                "streak": child.streak,
+            }
+        )
+
+    return jsonify(leaderboard), 200
+
+
+def get_user_skill_progress(child_id):
     # gets the child lesson progress
-    child_id = current_user.child_id
-    skills = Skill.query.all()
+    child = Child.query.get(child_id)
+    if not child:
+        return jsonify({"error": "Child not found"}), 404
+
+    age = age_calc(child.dob)  # Assuming age_calc function is defined elsewhere
+
+    # Get skills filtered by the child's age
+    skills: List[Skill] = Skill.query.filter(
+        Skill.min_age <= age, Skill.max_age > age
+    ).all()
+
     response = []
     for skill in skills:
-        total_lessons = Lesson.query.filter_by(skill_id=skill.skill_id).count()
+        # I want total_lessons_quizzes as count of all lessons and quizzes in each lesson of a skill
+        # total_lessons_quizzes =
+        total_lessons = (
+            Lesson.query.filter_by(skill_id=skill.skill_id).count()
+            + Quiz.query.join(Lesson).filter(Lesson.skill_id == skill.skill_id).count()
+        )
         completed = (
             LessonHistory.query.join(Lesson)
             .filter(
                 Lesson.skill_id == skill.skill_id, LessonHistory.child_id == child_id
             )
             .count()
+        ) + (
+            db.session.query(
+                func.count(distinct(QuizHistory.quiz_id))
+            )  # This is the key change
+            .join(Quiz)
+            .join(Lesson)
+            .filter(
+                Lesson.skill_id == skill.skill_id,
+                QuizHistory.child_id == child_id,
+            )
+            .scalar()  # Use .scalar() to get the single count value
         )
         percent = int((completed / total_lessons) * 100) if total_lessons else 0
+        print(
+            f"Skill: {skill.name}, Total Lessons: {total_lessons}, Completed: {completed}, Percentage: {percent}%"
+        )
         response.append(
             {
                 "name": skill.name,
                 "link": f"/skills/{skill.skill_id}",
                 "percentage_completed": percent,
+                "id": skill.skill_id,
             }
         )
 
     return jsonify(response), 200
 
 
-@token_required(allowed_roles=["child"])
-def get_user_badges(current_user, role):
-    child_id = current_user.child_id
+def get_user_badges(child_id):
+    # child_id = current_user.child_id
 
     # Get badge name and image by joining Badge and BadgeHistory
     data = (
@@ -556,18 +637,16 @@ def get_user_badges(current_user, role):
     return jsonify(response), 200
 
 
-@token_required(allowed_roles=["child"])
-def get_lesson_quizzes(current_user, role, curriculum_id, lesson_id):
-    # Get curriculum(Skill)
-    child_id = current_user.child_id
-    curriculum = Skill.query.get(curriculum_id)
-    if not curriculum:
-        return jsonify({"error": "Curriculum not found"}), 404
-    # G et lesson
-    lesson = Lesson.query.filter_by(lesson_id=lesson_id, skill_id=curriculum_id).first()
+def get_lesson_quizzes(child_id, lesson_id):
+    lesson = Lesson.query.get(lesson_id)
     if not lesson:
         return jsonify({"error": "Lesson not found"}), 404
+    curriculum = Skill.query.get(lesson.skill_id)
+    if not curriculum:
+        return jsonify({"error": "Curriculum not found"}), 404
+
     quizzes = Quiz.query.filter_by(lesson_id=lesson_id).all()
+
     attempted_quiz_ids = {
         qh.quiz_id for qh in QuizHistory.query.filter_by(child_id=child_id).all()
     }
@@ -578,9 +657,13 @@ def get_lesson_quizzes(current_user, role, curriculum_id, lesson_id):
             "name": quiz.quiz_name,
             "description": quiz.description,
             "time_duration": (
-                f"{quiz.time_duration // 60} mins" if quiz.time_duration else "N/A"
+                f"{quiz.time_duration // 60} mins {quiz.time_duration % 60} sec"
+                if quiz.time_duration
+                else "no time limit"
             ),
-            "difficulty": "Medium",
+            "difficulty": quiz.difficulty,
+            "total_marks": len(quiz.questions),
+            "no_questions": len(quiz.questions),
             "progress_status": 100 if quiz.quiz_id in attempted_quiz_ids else 0,
             "image": None,
         }
@@ -600,15 +683,16 @@ def get_lesson_quizzes(current_user, role, curriculum_id, lesson_id):
     )
 
 
-# @token_required(allowed_roles=["child"])
-def get_curriculums_for_child(current_user, role):
-    child_id = current_user.child_id
-    child = current_user
+def get_curriculums_for_child(current_user, role, child_id):
+    child = Child.query.get(child_id)
+    if not child:
+        return jsonify({"error": "Child not found"}), 404
     age = age_calc(child.dob)
-    skills = Skill.query.filter(Skill.min_age <= age, Skill.max_age >= age).all()
+    skills = Skill.query.filter(Skill.min_age <= age, Skill.max_age > age).all()
     skill_ids = [s.skill_id for s in skills]
     lessons = Lesson.query.filter(Lesson.skill_id.in_(skill_ids)).all()
     lesson_ids = [l.lesson_id for l in lessons]
+
     lesson_map = {}
     for lesson in lessons:
         lesson_map.setdefault(lesson.skill_id, []).append(lesson.lesson_id)
@@ -634,7 +718,6 @@ def get_curriculums_for_child(current_user, role):
             QuizHistory.score >= 40,
         )
     }
-    # result
     result = []
     for skill in skills:
         lids = lesson_map.get(skill.skill_id, [])
@@ -656,10 +739,10 @@ def get_curriculums_for_child(current_user, role):
                 "progress_status": progress,
             }
         )
+
     return jsonify({"curriculums": result}), 200
 
 
-# @token_required(allowed_roles=["child"])
 def get_skill_lessons(child_id, skill_id):
     try:
         skill = Skill.query.get(skill_id)
@@ -671,7 +754,7 @@ def get_skill_lessons(child_id, skill_id):
             Lesson.query.filter_by(skill_id=skill_id).order_by(Lesson.position).all()
         )
         if not lessons:
-            return jsonify({"error": "No lessons found for this skill"}), 404
+            return []
 
         activities = Activity.query.filter(
             Activity.lesson_id.in_([lesson.lesson_id for lesson in lessons]),
@@ -727,11 +810,17 @@ def get_skill_lessons(child_id, skill_id):
             attempted_quizzes = len(
                 attempted_quizzes_by_lesson.get(lesson.lesson_id, set())
             )
+
+            if lesson.image:
+                image_base64 = base64.b64encode(lesson.image).decode("utf-8")
+            else:
+                image_base64 = ""
+
             lessons_data.append(
                 {
                     "lesson_id": lesson.lesson_id,
                     "title": lesson.title,
-                    "image": lesson.image,
+                    "image": image_base64,
                     "description": lesson.description,
                     "progress_status": (
                         (
@@ -833,15 +922,13 @@ def get_lesson_activities(child_id, lesson_id):
     try:
         lesson = Lesson.query.get(lesson_id)
         if not lesson:
-            return jsonify({"error": "Lesson not found"}), 404
+            return []
 
         skill = Skill.query.get(lesson.skill_id)
         if not skill:
             return jsonify({"error": "Curriculum not found"}), 404
 
-        activities = Activity.query.filter_by(
-            lesson_id=lesson_id, child_id=child_id
-        ).all()
+        activities = Activity.query.filter_by(lesson_id=lesson_id).all()
 
         activity_submissions = ActivityHistory.query.filter(
             ActivityHistory.activity_id.in_([a.activity_id for a in activities])
@@ -853,12 +940,17 @@ def get_lesson_activities(child_id, lesson_id):
 
         activities_data = []
         for activity in activities:
+            if activity.image:
+                image_base64 = base64.b64encode(activity.image).decode("utf-8")
+            else:
+                image_base64 = ""
+
             activities_data.append(
                 {
                     "activity_id": activity.activity_id,
                     "name": activity.name,
                     "description": activity.description,
-                    "image": activity.image,
+                    "image": image_base64,
                     "progress_status": (
                         100 if activity.activity_id in completed_activities else 0
                     ),
@@ -1082,57 +1174,57 @@ def get_activity_submission(child_id, activity_history_id):
         return jsonify({"error": "Database error occurred", "details": str(e)}), 500
 
 
-def get_lesson_quizzes(child_id, lesson_id):
-    try:
-        lesson = Lesson.query.filter_by(lesson_id=lesson_id).first()
-        if not lesson:
-            return (
-                jsonify(
-                    {"error": "Lesson not found or does not belong to the curriculum"}
-                ),
-                404,
-            )
+# def get_lesson_quizzes(child_id, lesson_id):
+#     try:
+#         lesson = Lesson.query.filter_by(lesson_id=lesson_id).first()
+#         if not lesson:
+#             return (
+#                 jsonify(
+#                     {"error": "Lesson not found or does not belong to the curriculum"}
+#                 ),
+#                 404,
+#             )
 
-        skill = Skill.query.filter_by(skill_id=lesson.skill_id).first()
-        if not skill:
-            return jsonify({"error": "Curriculum not found"}), 404
+#         skill = Skill.query.filter_by(skill_id=lesson.skill_id).first()
+#         if not skill:
+#             return jsonify({"error": "Curriculum not found"}), 404
 
-        quizzes = Quiz.query.filter_by(lesson_id=lesson_id).all()
+#         quizzes = Quiz.query.filter_by(lesson_id=lesson_id).all()
 
-        quiz_history = QuizHistory.query.filter(
-            QuizHistory.quiz_id.in_([quiz.quiz_id for quiz in quizzes]),
-            QuizHistory.child_id == child_id,
-        ).all()
+#         quiz_history = QuizHistory.query.filter(
+#             QuizHistory.quiz_id.in_([quiz.quiz_id for quiz in quizzes]),
+#             QuizHistory.child_id == child_id,
+#         ).all()
 
-        attempted_quizzes = {history.quiz_id for history in quiz_history}
+#         attempted_quizzes = {history.quiz_id for history in quiz_history}
 
-        quizzes_data = []
-        for quiz in quizzes:
-            quizzes_data.append(
-                {
-                    "quiz_id": quiz.quiz_id,
-                    "name": quiz.quiz_name,
-                    "description": quiz.description,
-                    "time_duration": quiz.time_duration,
-                    "progress_status": 100 if quiz.quiz_id in attempted_quizzes else 0,
-                    "image": quiz.image,
-                }
-            )
+#         quizzes_data = []
+#         for quiz in quizzes:
+#             quizzes_data.append(
+#                 {
+#                     "quiz_id": quiz.quiz_id,
+#                     "name": quiz.quiz_name,
+#                     "description": quiz.description,
+#                     "time_duration": quiz.time_duration,
+#                     "progress_status": 100 if quiz.quiz_id in attempted_quizzes else 0,
+#                     "image": quiz.image,
+#                 }
+#             )
 
-        response_data = {
-            "curriculum": {"curriculum_id": skill.skill_id, "name": skill.name},
-            "lesson": {"lesson_id": lesson.lesson_id, "title": lesson.title},
-            "quizzes": quizzes_data,
-        }
+#         response_data = {
+#             "curriculum": {"curriculum_id": skill.skill_id, "name": skill.name},
+#             "lesson": {"lesson_id": lesson.lesson_id, "title": lesson.title},
+#             "quizzes": quizzes_data,
+#         }
 
-        return jsonify(response_data), 200
+#         return jsonify(response_data), 200
 
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        return jsonify({"error": "Database error occurred", "details": str(e)}), 500
+#     except SQLAlchemyError as e:
+#         db.session.rollback()
+#         return jsonify({"error": "Database error occurred", "details": str(e)}), 500
 
 
-@token_required(allowed_roles=["child"])
+# @token_required(allowed_roles=["child"])
 def get_quiz_history(current_user, role, quiz_id):
     # Get teh quiz history
     child_id = current_user.child_id
@@ -1258,8 +1350,7 @@ def get_quiz_questions(curriculum_id, lesson_id, quiz_id):
 def submit_quiz(child_id, quiz_id):
     """
     Submit quiz answers and calculate score.
-    Expected format: {"answers": {"question_index": "option_index"}}
-    Questions and answers arrays have the same order by index.
+    Frontend sends a dictionary of { "0-based-q-index": "0-based-o-index" }
     """
     try:
 
@@ -1274,15 +1365,15 @@ def submit_quiz(child_id, quiz_id):
             return jsonify({"error": "No data provided"}), 400
 
         answers = data.get("answers")
-        if not answers or not isinstance(answers, dict):
-            return (
-                jsonify(
-                    {
-                        "error": "Invalid answers format. Expected dictionary with question_index: option_index"
-                    }
-                ),
-                400,
-            )
+        # if not answers or not isinstance(answers, dict):
+        #     return (
+        #         jsonify(
+        #             {
+        #                 "error": "Invalid answers format. Expected dictionary with question_index: option_index"
+        #             }
+        #         ),
+        #         400,
+        #     )
 
         # Validate quiz has questions and answers
         if not quiz.questions or not quiz.answers:
@@ -1303,11 +1394,13 @@ def submit_quiz(child_id, quiz_id):
         total_questions = len(quiz.questions)
         total_score = sum(q.get("marks", 1) for q in quiz.questions)
 
+        option_index = question_index = len(answers)
         # Process each submitted answer
-        for question_index_str, option_index_str in answers.items():
+        for q_idx_str, submitted_o_idx_str in answers.items():
             try:
-                question_index = int(question_index_str)
-                option_index = int(option_index_str)
+                # Convert string indices to integers
+                q_idx = int(q_idx_str)
+                submitted_o_idx = int(submitted_o_idx_str)
             except (ValueError, TypeError):
                 continue
 
@@ -1342,12 +1435,15 @@ def submit_quiz(child_id, quiz_id):
             # Check if selected option is correct (single correct answer)
             if selected_option_text == correct_answer:
                 score += question_marks
-
         # Save quiz attempt to history
+        print([child_id, quiz_id, score])
         quiz_history = QuizHistory(
-            child_id=child_id, quiz_id=quiz_id, score=score, created_at=datetime.now()
+            child_id=child_id,
+            quiz_id=quiz_id,
+            score=score,
+            created_at=datetime.now(),
+            responses=answers,
         )
-
         db.session.add(quiz_history)
         db.session.commit()
 
@@ -1358,6 +1454,70 @@ def submit_quiz(child_id, quiz_id):
         return jsonify({"error": "Database error occurred", "details": str(e)}), 500
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+
+def get_child_quiz_history(curriculum_id, lesson_id, quiz_id, quiz_history_id):
+    try:
+        # Validate quiz history exists
+        quiz_history = QuizHistory.query.get(quiz_history_id)
+        if not quiz_history:
+            return jsonify({"error": "Quiz history not found"}), 404
+        # Validate quiz exists
+        quiz = Quiz.query.get(quiz_id)
+        if not quiz:
+            return jsonify({"error": "Quiz not found"}), 404
+        # Validate curriculum exists
+        curriculum = Skill.query.get(curriculum_id)
+        if not curriculum:
+            return jsonify({"error": "Curriculum not found"}), 404
+        # Validate lesson exists and belongs to curriculum
+        lesson = Lesson.query.filter_by(
+            lesson_id=lesson_id, skill_id=curriculum_id
+        ).first()
+        if not lesson:
+            return (
+                jsonify(
+                    {"error": "Lesson not found or does not belong to the curriculum"}
+                ),
+                404,
+            )
+        # Format questions with index
+        questions_data = []
+        if quiz.questions:  # questions is stored as JSON
+            for idx, question in enumerate(quiz.questions):
+                question_data = {
+                    "question_index": idx + 1,
+                    "question": question.get("question", ""),
+                    "options": question.get("options", []),
+                    "marks": question.get("marks", 1),
+                }
+                questions_data.append(question_data)
+        # Prepare response data
+        response_data = {
+            "curriculum": {
+                "curriculum_id": curriculum.skill_id,
+                "name": curriculum.name,
+            },
+            "lesson": {"lesson_id": lesson.lesson_id, "title": lesson.title},
+            "quizzes": {
+                "quiz_id": quiz.quiz_id,
+                "name": quiz.quiz_name,
+                "time_duration": quiz.time_duration,
+            },
+            "questions": questions_data,
+            "quiz_history": {
+                "quiz_history_id": quiz_history.quiz_history_id,
+                "child_id": quiz_history.child_id,
+                "quiz_id": quiz_history.quiz_id,
+                "score": quiz_history.score,
+                "created_at": quiz_history.created_at.isoformat(),
+                "responses": quiz_history.responses,
+            },
+        }
+        return jsonify(response_data), 200
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({"error": "Database error occurred", "details": str(e)}), 500
 
 
 def get_child_profile_controller(child_id):
@@ -1541,14 +1701,16 @@ def change_child_password(child_id):
         return jsonify({"status": "error", "message": "Database error occurred"}), 500
 
 
+import base64
+
+
 def child_profile_image(child_id):
     """
     Handle both GET and POST requests for child profile images.
-    GET: Retrieve profile image
-    POST: Upload/update profile image
+    GET: Retrieves profile image as a Base64 Data URL.
+    POST: Uploads/updates profile image from a Base64 Data URL.
     """
     try:
-        # Find the child
         child = Child.query.get(child_id)
 
         if request.method == "POST":
@@ -1559,6 +1721,10 @@ def child_profile_image(child_id):
 
             child.profile_image = pic
             db.session.commit()
+            return (
+                jsonify({"status": "success", "message": "Profile image updated"}),
+                200,
+            )
 
         elif request.method == "GET":
             return (
@@ -1575,6 +1741,32 @@ def child_profile_image(child_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": "Database error occurred"}), 500
+
+
+def get_child_badges(child_id):
+    """Retrieve all badges earned by a child."""
+    try:
+        child = Child.query.get(child_id)
+        if not child:
+            return jsonify({"error": "Child not found"}), 404
+        badges = (
+            Badge.query.join(BadgeHistory)
+            .filter(BadgeHistory.child_id == child_id)
+            .all()
+        )
+        response = []
+        for badge in badges:
+            if badge.image:
+                image_base64 = base64.b64encode(badge.image).decode("utf-8")
+            else:
+                image_base64 = ""
+            response.append(
+                {"id": badge.badge_id, "label": badge.name, "image": image_base64}
+            )
+        return jsonify(response), 200
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return jsonify({"error": "Database error occurred", "details": str(e)}), 500
 
 
 def get_children(current_user, role):
@@ -2953,7 +3145,7 @@ def get_learning_funnel_chart(current_user, role):
         )
 
 
-def get_age_group_distribution_chart(current_user, role):
+def get_age_group_distribution_chart():
     today = date.today()
     age_brackets = [
         ("age_8_10", 8, 10),
@@ -3124,7 +3316,7 @@ def update_parent_password(current_user):
     return jsonify({"message": "Password updated successfully."}), 200
 
 
-def post_feedback():
+def post_feedback(current_user, role):
     data = request.get_json()
 
     skill_type = data.get("skill_type")
