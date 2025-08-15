@@ -30,6 +30,9 @@ import NewQuiz from '@/views/admin/new/NewQuiz.vue'
 import EditLesson from '@/views/admin/edit/EditLesson.vue'
 import EditQuiz from '@/views/admin/edit/EditQuiz.vue'
 import EditActivity from '@/views/admin/edit/EditActivity.vue'
+import ActivitiesListByParent from "@/views/parent/ActivitiesListByParent.vue"
+import NewActivityByParent from "@/views/parent/NewActivityByParent.vue"
+import EditActivityByParent from "@/views/parent/EditActivityByParent.vue"
 
 export const base_url = 'http://127.0.0.1:5000'
 
@@ -174,6 +177,16 @@ const router = createRouter({
       component: NewActivity
     },
     {
+      path: sitemap.parent.activity.new,
+      name: 'new_activity_parent',
+      component: NewActivityByParent
+    },
+    {
+      path: sitemap.parent.activity.list,
+      name: 'activity_parent_list',
+      component: ActivitiesListByParent
+    },
+    {
       path: sitemap.admin.new.badge,
       name: 'new_badge',
       component: NewBadge
@@ -193,6 +206,12 @@ const router = createRouter({
       path: sitemap.admin.edit.activity,
       name: "edit_activity",
       component: EditActivity,
+      props: true
+    },
+    {
+      path: sitemap.parent.activity.edit,
+      name: "edit_activity_parent",
+      component: EditActivityByParent,
       props: true
     },
     {

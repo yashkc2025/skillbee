@@ -25,6 +25,7 @@ from datetime import datetime, date, timedelta
 import uuid
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import and_, func, case, cast, Integer
+from sqlalchemy.orm import joinedload
 import time
 import base64
 from .decorators import only_admin, only_admin_or_parent, only_parent
@@ -1820,7 +1821,7 @@ def create_badge(current_user, role):
     return jsonify({"message": "Badge Created"}, 201)
 
 
-def create_activity(current_user, role):
+def create_activity():
     data = request.get_json()
     required_fields = [
         "title",
@@ -1842,6 +1843,7 @@ def create_activity(current_user, role):
     difficulty = data["difficulty"]
     answer_format = data["answer_format"]
     lesson_id = data["lesson_id"]
+    child_id = data.get("child_id")
 
     try:
         if image:
@@ -1867,7 +1869,12 @@ def create_activity(current_user, role):
         image=image_base64,
         lesson_id=lesson_id,
         answer_format=answer_format,
+        child_id=child_id,
     )
+
+    if child_id is not None:
+        activity.child_id = child_id
+
     db.session.add(activity)
     db.session.commit()
 
@@ -2186,6 +2193,7 @@ def admin_child_profile(current_user, role):
                     ),
                     "score": qh.score,
                     "max_score": quiz.points,
+                    "feedback": qh.feedback,
                 }
             )
 
@@ -2207,6 +2215,7 @@ def admin_child_profile(current_user, role):
                 ),
                 "score": "Pass",
                 "max_score": "Pass",
+                "feedback": ah.feedback,
             }
         )
 
@@ -2398,7 +2407,7 @@ def unblock_parent():
     return jsonify({"message": f"Parent with ID {parent_id} has been unblocked."}), 200
 
 
-def update_activity(current_user, role):
+def update_activity():
     data = request.get_json()
 
     activity_id = data.get("id")
@@ -2415,6 +2424,7 @@ def update_activity(current_user, role):
     instructions = data.get("instructions")
     difficulty = data.get("difficulty")
     lesson_id = data.get("lesson_id")
+    child_id = data.get("child_id")
 
     # point = data.get("point")
     answer_format = data.get("answer_format")
@@ -2435,6 +2445,8 @@ def update_activity(current_user, role):
         activity.difficulty = difficulty
     if lesson_id is not None:
         activity.lesson_id = lesson_id
+    if child_id is not None:
+        activity.child_id = child_id
 
     # if point is not None:
     #     activity.points = point
@@ -2650,7 +2662,7 @@ def delete_badge(current_user, role):
     return jsonify({"message": f"Badge with ID {badge_id} has been deleted."}), 200
 
 
-def delete_activity(current_user, role):
+def delete_activity():
     try:
         data = request.get_json()
     except Exception:
@@ -3234,6 +3246,7 @@ def get_activity_details_by_id(activity_id: int):
                 "difficulty": act.difficulty,
                 "lesson_id": act.lesson_id,
                 "answer_format": act.answer_format,
+                "child_id": act.child_id,
             }
         ),
         200,
@@ -3263,3 +3276,80 @@ def get_quiz_details_by_id(quiz_id: int):
         ),
         200,
     )
+
+
+def get_activity_by_parent(parent_id: int):
+    activities = (
+        db.session.query(Activity, Child.name.label("child_name"))
+        .join(Child, Activity.child_id == Child.child_id)
+        .filter(Child.parent_id == parent_id)
+        .all()
+    )
+
+    # manually serialize
+    result = []
+    for a, child_name in activities:
+        result.append(
+            {
+                "id": a.activity_id,
+                "title": a.name,
+                "description": a.description,
+                "answer_format": a.answer_format,
+                "child_name": child_name,
+                "lesson": a.lesson_id,
+            }
+        )
+
+    return jsonify(result)
+
+
+def get_settings(user_id: int, role):
+    if role == "admin":
+        admin: Admin = Admin.query.filter(Admin.admin_id == user_id).first_or_404()
+
+        return {"email_id": admin.email_id}
+
+    elif role == "parent":
+        parent: Parent = Parent.query.filter(Parent.parent_id == user_id).first_or_404()
+
+        return {
+            "email_id": parent.email_id,
+            "name": parent.name,
+        }
+
+
+def update_settings(user_id: int, role):
+    data = request.get_json()
+
+    if role == "admin":
+        admin: Admin = Admin.query.filter(Admin.admin_id == user_id).first_or_404()
+        email_id = data["email_id"]
+
+        if email_id is not None:
+            admin.email_id = email_id
+
+        db.session.commit()
+
+        return jsonify({"email_id": admin.email_id})
+
+    elif role == "parent":
+        parent: Parent = Parent.query.filter(Parent.parent_id == user_id).first_or_404()
+
+        email_id = data["email_id"]
+        name = data["name"]
+
+        if email_id is not None:
+            parent.email_id = email_id
+        if name is not None:
+            parent.name = name
+
+        db.session.commit()
+
+        return jsonify(
+            {
+                "email_id": parent.email_id,
+                "name": parent.name,
+            }
+        )
+
+    return jsonify({"error": "Invalid role"}), 400

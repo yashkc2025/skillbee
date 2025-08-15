@@ -62,6 +62,11 @@
   "parent": {
     "dashboard": "/parent/",
     "new_children": "/parent/new/children",
-    "settings": "/parent/settings"
+    "settings": "/parent/settings",
+    "activity": {
+      "list": "/parent/activity",
+      "edit": "/parent/activity/edit/:id",
+      "new": "/parent/activity/new"
+    }
   }
 }

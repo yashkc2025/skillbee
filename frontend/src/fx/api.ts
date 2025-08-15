@@ -96,6 +96,15 @@ export async function updateData(address: string, data: Object) {
       body: JSON.stringify(data), // Convert the data object to a JSON string
       credentials: "include",
     });
+    if (response.status >= 400) {
+      const data = await response.json();
+      if (data.error) {
+        toast.error(data.error);
+      }
+      if (data.message) {
+        toast.error(data.message);
+      }
+    }
 
     if (response.status === 200 || response.status === 201) {
       const responseData = await response.json();
