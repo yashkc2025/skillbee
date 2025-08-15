@@ -93,6 +93,7 @@ async function createQuiz() {
               name="title"
               placeholder="Title"
               v-model="title"
+              :required="true"
             />
             <InputComponent
               icon="bi bi-image"
@@ -100,6 +101,7 @@ async function createQuiz() {
               placeholder="Image"
               v-model="image"
               field-type="file"
+              :required="true"
             />
             <InputComponent
               icon="bi bi-body-text"
@@ -107,6 +109,7 @@ async function createQuiz() {
               placeholder="Description"
               v-model="description"
               input-type="TextArea"
+              :required="true"
             />
           </div>
         </template>
@@ -121,6 +124,7 @@ async function createQuiz() {
               name="difficulty"
               placeholder="Difficulty"
               v-model="difficulty"
+              :required="true"
             />
             <InputComponent
               icon="bi bi-arrow-up"
@@ -128,6 +132,7 @@ async function createQuiz() {
               placeholder="Points"
               v-model="point"
               field-type="number"
+              :required="true"
             />
             <InputComponent
               icon="bi bi-clock"

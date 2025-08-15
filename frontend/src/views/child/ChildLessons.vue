@@ -140,6 +140,9 @@
             >
               {{ selectedLesson.completed_at ? "✔✔ Marked as read" : "✔ Mark as read" }}
             </AppButton>
+            <AppButton type="quaternary" @click="downloadPDF">
+              📥 Download as PDF
+            </AppButton>
           </div>
         </div>
       </template>
@@ -156,6 +159,7 @@ import ModuleCard from "@/components/ModuleCard.vue";
 import AppButton from "@/components/AppButton.vue";
 import { searchQuery } from "@/fx/utils";
 import { base_url } from "../../router";
+import jsPDF from "jspdf";
 
 // INTERFACES
 interface Curriculum {
@@ -172,8 +176,11 @@ interface LessonSummary {
 }
 
 interface LessonDetail extends LessonSummary {
-  content: string;
-  completed_at: string | null;
+  completed_at: string;
+  content: {
+    text: string;
+    url: { [key: number]: string }[];
+  };
 }
 
 // ROUTING
@@ -198,6 +205,70 @@ const error = ref<string | null>(null);
 const filteredLessons = computed(() => {
   return searchQuery(lessons.value, searchInput.value, ["title", "description"]);
 });
+
+function downloadPDF() {
+  if (!selectedLesson.value) return;
+
+  const doc = new jsPDF();
+  const lesson = selectedLesson.value;
+  const margin = 15;
+  let y = margin;
+
+  // Title
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.text(lesson.title, margin, y);
+  y += 12;
+
+  // Description
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+  const desc = `Description: ${lesson.description || "N/A"}`;
+  const splitDesc = doc.splitTextToSize(desc, 180);
+  doc.text(splitDesc, margin, y);
+  y += splitDesc.length * 7 + 5;
+
+  // Divider line
+  doc.setDrawColor(180);
+  doc.line(margin, y, 200 - margin, y);
+  y += 10;
+
+  // Content
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("Content:", margin, y);
+  y += 8;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+  const content = lesson.content?.text || lesson.content || "";
+  const splitContent = doc.splitTextToSize(content, 180);
+  doc.text(splitContent, margin, y);
+  y += splitContent.length * 7 + 5;
+
+  // Reference Links
+  if (lesson.content.url?.length > 0) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text("Reference Links:", margin, y);
+    y += 8;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+
+    lesson.content.url.forEach((linkObj, index) => {
+      // Each linkObj is like { 0: "https://..." }
+      const link = Object.values(linkObj)[0];
+      const linkText = `${index + 1}. ${link}`;
+      const splitLink = doc.splitTextToSize(linkText, 180);
+      doc.text(splitLink, margin, y);
+      y += splitLink.length * 7;
+    });
+  }
+
+  // Save PDF
+  doc.save(`${lesson.title}.pdf`);
+}
 
 // API CALLS
 async function fetchCurriculumLessons() {
