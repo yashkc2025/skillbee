@@ -2145,7 +2145,7 @@ def admin_child_profile(current_user, role):
             {
                 "skill_id": str(skill.skill_id),
                 "skill_name": skill.name,
-                "lesson_started_count": lesson_started_count,
+                # "lesson_started_count": lesson_started_count,
                 "lesson_completed_count": lesson_completed_count,
                 "quiz_attempted_count": quiz_attempted_count,
             }
