@@ -32,6 +32,9 @@ import base64
 # import imghdr
 
 
+# import imghdr
+
+
 def parent_regisc(request):
     # Function for parent registration that will later be sent as a request to the routes
     try:
@@ -402,44 +405,6 @@ def update_child_streak(child):
         db.session.rollback()
         print(f"Error updating child streak: {e}")
 
-
-def update_child_activity_streak(child):
-    """
-    Update child's streak based on learning activity (lessons, quizzes, etc.).
-    This updates the last_login to track daily activity.
-    """
-    now = datetime.now()
-    today = now.date()
-    
-    # Only update if this is the first activity of the day
-    if child.last_login:
-        last_activity_date = child.last_login.date()
-        if last_activity_date < today:
-            # New day of activity
-            days_diff = (today - last_activity_date).days
-            
-            if days_diff == 1:
-                # Consecutive day - increment streak
-                child.streak = (child.streak or 0) + 1
-            elif days_diff > 1:
-                # Missed days - reset streak  
-                child.streak = 1
-            
-            # Update last activity (last_login) to today
-            child.last_login = now
-    else:
-        # First activity ever
-        child.streak = 1
-        child.last_login = now
-    
-    try:
-        db.session.commit()
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(f"Error updating child activity streak: {e}")
-
-
-
 def get_auser(current_user, role):
     # this is according to auth.md and fetches the details of users from the session id as authorisation bearer BUT it returns full profile info
     if role == "child":
@@ -594,15 +559,27 @@ def get_user_skill_progress(child_id):
     
     response = []
     for skill in skills:
-        total_lessons = Lesson.query.filter_by(skill_id=skill.skill_id).count()
+        # I want total_lessons_quizzes as count of all lessons and quizzes in each lesson of a skill
+        # total_lessons_quizzes = 
+        total_lessons = Lesson.query.filter_by(skill_id=skill.skill_id).count() + Quiz.query.join(Lesson).filter(Lesson.skill_id == skill.skill_id).count()
         completed = (
             LessonHistory.query.join(Lesson)
             .filter(
                 Lesson.skill_id == skill.skill_id, LessonHistory.child_id == child_id
             )
             .count()
+        ) + (
+            db.session.query(func.count(distinct(QuizHistory.quiz_id))) # This is the key change
+            .join(Quiz)
+            .join(Lesson)
+            .filter(
+                Lesson.skill_id == skill.skill_id,
+                QuizHistory.child_id == child_id,
+            )
+            .scalar() # Use .scalar() to get the single count value
         )
         percent = int((completed / total_lessons) * 100) if total_lessons else 0
+        print(f"Skill: {skill.name}, Total Lessons: {total_lessons}, Completed: {completed}, Percentage: {percent}%")
         response.append(
             {
                 "name": skill.name,
@@ -941,6 +918,18 @@ def get_lesson_activities(child_id, lesson_id):
                 image_base64 = activity.image
             else:
                 image_base64 = ""
+
+            activities_data.append(
+                {
+                    "activity_id": activity.activity_id,
+                    "name": activity.name,
+                    "description": activity.description,
+                    "image": image_base64,
+                    "progress_status": (
+                        100 if activity.activity_id in completed_activities else 0
+                    ),
+                }
+            )
 
             activities_data.append(
                 {
@@ -1389,6 +1378,7 @@ def submit_quiz(child_id, quiz_id):
                     partial_score = (len(correct_selections) / len(correct_answers)) * question_marks
                     score += partial_score
         # Save quiz attempt to history
+        print([child_id, quiz_id, score])
         quiz_history = QuizHistory(
             child_id=child_id,
             quiz_id=quiz_id,

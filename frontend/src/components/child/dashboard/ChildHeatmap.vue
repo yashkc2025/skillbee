@@ -36,18 +36,12 @@ async function fetchHeatmapData() {
 
     const data = await response.json();
 
-    // --- FIX: Access the 'heatmap' key from the response data.
-    // The backend now returns {"heatmap": [...]}.
     if (data && data.heatmap) {
-      // The `vue3-calendar-heatmap` library expects an array of objects
-      // with `date` and `count` keys, which our backend now provides directly.
       heatmapValues.value = data.heatmap;
-      console.log("Heatmap data fetched successfully:", heatmapValues.value);
     } else {
       throw new Error("Invalid data format from API");
     }
 
-    console.log("Heatmap data fetched successfully:", heatmapValues.value);
   } catch (error) {
     console.error("Error fetching heatmap data:", error);
   }

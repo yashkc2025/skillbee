@@ -589,7 +589,6 @@ def get_skill_categories(current_user, role):
 def user_badges(current_user, role):
     return get_user_badges(current_user.child_id)
 
-
 @api.route("/skills", methods=["GET"])
 @token_required(allowed_roles=["admin", "parent"])
 def get_sklills_route(current_user, role):
