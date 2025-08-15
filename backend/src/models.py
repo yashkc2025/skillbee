@@ -125,12 +125,17 @@ class Activity(db.Model):
             "answer_format IN ('text','image','pdf')",
             name='check_answer_format'
         ),
+        CheckConstraint(
+            "(parent_id IS NULL AND child_id IS NULL) OR (parent_id IS NOT NULL AND child_id IS NOT NULL)",
+            name='check_parent_child_consistency'
+        ),
     )
 
 
 class ActivityHistory(db.Model):
     activity_history_id = db.Column(db.Integer, primary_key=True)
     activity_id = db.Column(db.Integer, db.ForeignKey('activity.activity_id'), nullable=False, index=True)
+    child_id = db.Column(db.Integer, db.ForeignKey('child.child_id'), nullable=False, index=True)
     answer = db.Column(db.LargeBinary)  # Keep as binary for file uploads
     feedback = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now(), nullable=False)

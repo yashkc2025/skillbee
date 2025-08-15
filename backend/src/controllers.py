@@ -25,7 +25,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta
 import uuid
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy import and_, func, case, cast, Integer
+from sqlalchemy import and_, func, case, cast, Integer, distinct
 import time
 import base64
 
@@ -374,10 +374,6 @@ def child_loginc(request):
 
 
 def update_child_streak(child):
-    """
-    Update child's streak based on login activity.
-    Streak increments if child logs in on consecutive days.
-    """
     now = datetime.now()
     today = now.date()
     
@@ -386,17 +382,12 @@ def update_child_streak(child):
         days_diff = (today - last_login_date).days
         
         if days_diff == 1:
-            # Consecutive day - increment streak
             child.streak = (child.streak or 0) + 1
         elif days_diff > 1:
-            # Missed days - reset streak
             child.streak = 1
-        # If days_diff == 0 (same day), keep current streak unchanged
     else:
-        # First login ever
         child.streak = 1
     
-    # Update last_login to current time
     child.last_login = now
     
     try:
@@ -404,6 +395,44 @@ def update_child_streak(child):
     except SQLAlchemyError as e:
         db.session.rollback()
         print(f"Error updating child streak: {e}")
+
+def check_and_award_badges(child_id):
+    try:
+        child = Child.query.get(child_id)
+        if not child:
+            return
+        
+        existing_badge_ids = {
+            bh.badge_id for bh in BadgeHistory.query.filter_by(child_id=child_id).all()
+        }
+        
+        available_badges = Badge.query.filter(
+            ~Badge.badge_id.in_(existing_badge_ids)
+        ).all()
+        
+        current_points = child.points or 0
+        
+        new_badges = []
+        for badge in available_badges:
+            if badge.points and current_points >= badge.points:
+                new_badges.append(badge)
+        
+        for badge in new_badges:
+            badge_history = BadgeHistory(
+                child_id=child_id,
+                badge_id=badge.badge_id,
+                created_at=datetime.now()
+            )
+            db.session.add(badge_history)
+        
+        if new_badges:
+            db.session.commit()
+            
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        print(f"Error checking and awarding badges: {e}")
+    except Exception as e:
+        print(f"Unexpected error in badge checking: {e}")
 
 def get_auser(current_user, role):
     # this is according to auth.md and fetches the details of users from the session id as authorisation bearer BUT it returns full profile info
@@ -545,22 +574,18 @@ def get_leaderboard(child_id):
     return jsonify(leaderboard), 200
 
 def get_user_skill_progress(child_id):
-    # gets the child lesson progress
     child = Child.query.get(child_id)
     if not child:
         return jsonify({"error": "Child not found"}), 404
     
-    age = age_calc(child.dob) # Assuming age_calc function is defined elsewhere
+    age = age_calc(child.dob)
     
-    # Get skills filtered by the child's age
     skills: List[Skill] = Skill.query.filter(
         Skill.min_age <= age, Skill.max_age > age
     ).all()
     
     response = []
     for skill in skills:
-        # I want total_lessons_quizzes as count of all lessons and quizzes in each lesson of a skill
-        # total_lessons_quizzes = 
         total_lessons = Lesson.query.filter_by(skill_id=skill.skill_id).count() + Quiz.query.join(Lesson).filter(Lesson.skill_id == skill.skill_id).count()
         completed = (
             LessonHistory.query.join(Lesson)
@@ -569,14 +594,14 @@ def get_user_skill_progress(child_id):
             )
             .count()
         ) + (
-            db.session.query(func.count(distinct(QuizHistory.quiz_id))) # This is the key change
+            db.session.query(func.count(distinct(QuizHistory.quiz_id)))
             .join(Quiz)
             .join(Lesson)
             .filter(
                 Lesson.skill_id == skill.skill_id,
                 QuizHistory.child_id == child_id,
             )
-            .scalar() # Use .scalar() to get the single count value
+            .scalar()
         )
         percent = int((completed / total_lessons) * 100) if total_lessons else 0
         print(f"Skill: {skill.name}, Total Lessons: {total_lessons}, Completed: {completed}, Percentage: {percent}%")
@@ -592,9 +617,6 @@ def get_user_skill_progress(child_id):
     return jsonify(response), 200
 
 def get_user_badges(child_id):
-    # child_id = current_user.child_id
-
-    # Get badge name and image by joining Badge and BadgeHistory
     data = (
         db.session.query(Badge.name, Badge.image)
         .join(BadgeHistory)
@@ -602,7 +624,6 @@ def get_user_badges(child_id):
         .all()
     )
 
-    # Image is already stored as base64 string
     response = []
     for name, image in data:
         image_str = image if image else ""
@@ -902,7 +923,10 @@ def get_lesson_activities(child_id, lesson_id):
         if not skill:
             return jsonify({"error": "Curriculum not found"}), 404
 
-        activities = Activity.query.filter_by(lesson_id=lesson_id).all()
+        activities = Activity.query.filter(
+            Activity.lesson_id == lesson_id,
+            (Activity.child_id == child_id) | (Activity.child_id.is_(None))
+        ).all()
 
         activity_submissions = ActivityHistory.query.filter(
             ActivityHistory.activity_id.in_([a.activity_id for a in activities])
@@ -918,18 +942,6 @@ def get_lesson_activities(child_id, lesson_id):
                 image_base64 = activity.image
             else:
                 image_base64 = ""
-
-            activities_data.append(
-                {
-                    "activity_id": activity.activity_id,
-                    "name": activity.name,
-                    "description": activity.description,
-                    "image": image_base64,
-                    "progress_status": (
-                        100 if activity.activity_id in completed_activities else 0
-                    ),
-                }
-            )
 
             activities_data.append(
                 {
@@ -990,15 +1002,17 @@ def get_activity_details(child_id, activity_id):
 def submit_activity(child_id, activity_id):
     try:
         activity = Activity.query.filter_by(
-            activity_id=activity_id, child_id=child_id
+            activity_id=activity_id
         ).first()
         if not activity:
             return jsonify({"error": "Activity not found"}), 404
 
+        if activity.child_id and activity.child_id != child_id:
+            return jsonify({"error": "Activity does not belong to this child"}), 403
+
         file_data = None
         file_extension = None
 
-        # Handle multipart/form-data uploads
         if request.files and "file" in request.files:
             uploaded_file = request.files["file"]
 
@@ -1008,13 +1022,11 @@ def submit_activity(child_id, activity_id):
             file_extension = uploaded_file.filename.lower().split(".")[-1]
             file_data = uploaded_file.read()
 
-        # Handle raw binary uploads (Content-Type: image/jpeg, etc.)
         elif request.content_type and request.content_type.startswith(
             ("image/", "application/pdf")
         ):
             file_data = request.get_data()
 
-            # Determine extension from content type
             content_type_map = {
                 "image/jpeg": "jpg",
                 "image/jpg": "jpg",
@@ -1032,15 +1044,13 @@ def submit_activity(child_id, activity_id):
         if not file_data:
             return jsonify({"error": "No file data received"}), 400
 
-        # Check file size (10MB limit)
-        max_file_size = 10 * 1024 * 1024  # 10MB in bytes
+        max_file_size = 10 * 1024 * 1024
         if len(file_data) > max_file_size:
             return (
                 jsonify({"error": "File size too large. Maximum allowed size is 10MB"}),
                 400,
             )
 
-        # Validate file format
         allowed_extensions = ["jpg", "jpeg", "png", "pdf"]
         if file_extension not in allowed_extensions:
             return (
@@ -1055,7 +1065,7 @@ def submit_activity(child_id, activity_id):
         submission_time = datetime.now()
 
         activity_submission = ActivityHistory(
-            activity_id=activity_id, answer=file_data, created_at=submission_time
+            activity_id=activity_id, child_id=child_id, answer=file_data, created_at=submission_time
         )
 
         db.session.add(activity_submission)
@@ -1079,13 +1089,16 @@ def submit_activity(child_id, activity_id):
 def get_activity_history(child_id, activity_id):
     try:
         activity = Activity.query.filter_by(
-            activity_id=activity_id, child_id=child_id
+            activity_id=activity_id
         ).first()
         if not activity:
             return jsonify({"error": "Activity not found"}), 404
+        
+        if activity.child_id and activity.child_id != child_id:
+            return jsonify({"error": "Activity does not belong to this child"}), 403
 
         submissions = (
-            ActivityHistory.query.filter_by(activity_id=activity_id)
+            ActivityHistory.query.filter_by(activity_id=activity_id, child_id=child_id)
             .order_by(ActivityHistory.created_at.desc())
             .all()
         )
@@ -1114,35 +1127,35 @@ def get_activity_submission(child_id, activity_history_id):
             return jsonify({"error": "Submission not found"}), 404
 
         activity = Activity.query.filter_by(
-            activity_id=submission.activity_id, child_id=child_id
+            activity_id=submission.activity_id
         ).first()
 
         if not activity:
             return jsonify({"error": "Associated activity not found"}), 404
+        
+        if activity.child_id and activity.child_id != child_id:
+            return jsonify({"error": "Activity does not belong to this child"}), 403
 
         if not submission.answer:
             return jsonify({"error": "No file found for this submission"}), 404
 
-        # Detect file type from binary data
         file_data = submission.answer
 
-        # Check file signatures (magic numbers) to determine actual file type
-        if file_data.startswith(b"\xff\xd8\xff"):  # JPEG
+        if file_data.startswith(b"\xff\xd8\xff"):
             content_type = "image/jpeg"
             file_extension = "jpg"
-        elif file_data.startswith(b"\x89PNG\r\n\x1a\n"):  # PNG
+        elif file_data.startswith(b"\x89PNG\r\n\x1a\n"):
             content_type = "image/png"
             file_extension = "png"
-        elif file_data.startswith(b"%PDF"):  # PDF
+        elif file_data.startswith(b"%PDF"):
             content_type = "application/pdf"
             file_extension = "pdf"
         else:
-            # Fallback to activity.answer_format if available
             if activity.answer_format and activity.answer_format.lower() == "pdf":
                 content_type = "application/pdf"
                 file_extension = "pdf"
             elif activity.answer_format and activity.answer_format.lower() == "image":
-                content_type = "image/jpeg"  # Default to JPEG for images
+                content_type = "image/jpeg"
                 file_extension = "jpg"
             else:
                 content_type = "application/octet-stream"
@@ -1158,18 +1171,6 @@ def get_activity_submission(child_id, activity_history_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         return jsonify({"error": "Database error occurred", "details": str(e)}), 500
-
-
-# def get_lesson_quizzes(child_id, lesson_id):
-#     try:
-#         lesson = Lesson.query.filter_by(lesson_id=lesson_id).first()
-#         if not lesson:
-#             return (
-#                 jsonify(
-#                     {"error": "Lesson not found or does not belong to the curriculum"}
-#                 ),
-#                 404,
-#             )
 
 
 def get_quiz_history(child_id, quiz_id):
@@ -1265,38 +1266,21 @@ def get_quiz_questions(curriculum_id, lesson_id, quiz_id):
 
 
 def submit_quiz(child_id, quiz_id):
-    """
-    Submit quiz answers and calculate score.
-    Frontend sends a dictionary of { "0-based-q-index": "0-based-o-index" }
-    """
     try:
 
-        # Validate quiz exists
         quiz = Quiz.query.get(quiz_id)
         if not quiz:
             return jsonify({"error": "Quiz not found"}), 404
 
-        # Get request data
         data = request.get_json()
         if not data:
             return jsonify({"error": "No data provided"}), 400
 
         answers = data.get("answers")
-        # if not answers or not isinstance(answers, dict):
-        #     return (
-        #         jsonify(
-        #             {
-        #                 "error": "Invalid answers format. Expected dictionary with question_index: option_index"
-        #             }
-        #         ),
-        #         400,
-        #     )
 
-        # Validate quiz has questions and answers
         if not quiz.questions or not quiz.answers:
             return jsonify({"error": "Quiz has no questions or answer key"}), 500
 
-        # Validate questions and answers arrays have same length
         if len(quiz.questions) != len(quiz.answers):
             return (
                 jsonify(
@@ -1311,15 +1295,12 @@ def submit_quiz(child_id, quiz_id):
         total_questions = len(quiz.questions)
         total_score = sum(q.get("marks", 1) for q in quiz.questions)
 
-        # Process each submitted answer
         for q_idx_str, submitted_answer in answers.items():
             try:
-                # Convert question index to integer
                 q_idx = int(q_idx_str)
             except (ValueError, TypeError):
                 continue
 
-            # Validate question index (0-based indexing)
             if q_idx < 0 or q_idx >= total_questions:
                 continue
 
@@ -1330,9 +1311,7 @@ def submit_quiz(child_id, quiz_id):
             question_marks = question_data.get("marks", 1)
             correct_answers = answer_data.get("correct_answers", [])
 
-            # Handle both single selection and multiple selection formats
             if isinstance(submitted_answer, list):
-                # Multiple selections (for multiple choice questions)
                 selected_options = []
                 for opt_idx in submitted_answer:
                     try:
@@ -1342,7 +1321,6 @@ def submit_quiz(child_id, quiz_id):
                     except (ValueError, TypeError):
                         continue
             else:
-                # Single selection (backward compatibility)
                 try:
                     opt_idx = int(submitted_answer)
                     if 0 <= opt_idx < len(options):
@@ -1352,7 +1330,6 @@ def submit_quiz(child_id, quiz_id):
                 except (ValueError, TypeError):
                     continue
 
-            # Extract option texts from selected options
             selected_texts = []
             for option in selected_options:
                 if isinstance(option, dict):
@@ -1362,22 +1339,18 @@ def submit_quiz(child_id, quiz_id):
                 else:
                     selected_texts.append(str(option))
 
-            # Check for wrong selections (any selected option not in correct answers)
             has_wrong_selection = any(text not in correct_answers for text in selected_texts)
 
             if not has_wrong_selection and selected_texts:
-                # No wrong selections - award partial or full credit
                 correct_selections = [text for text in selected_texts if text in correct_answers]
                 
                 if len(correct_answers) == 1:
-                    # Single correct answer - full credit if correct
                     if len(correct_selections) == 1:
                         score += question_marks
                 else:
-                    # Multiple correct answers - partial credit based on proportion
                     partial_score = (len(correct_selections) / len(correct_answers)) * question_marks
                     score += partial_score
-        # Save quiz attempt to history
+        
         print([child_id, quiz_id, score])
         quiz_history = QuizHistory(
             child_id=child_id,
@@ -1389,32 +1362,35 @@ def submit_quiz(child_id, quiz_id):
         db.session.add(quiz_history)
         db.session.commit()
 
-        # Update child's points based on quiz performance
         child = Child.query.get(child_id)
         if child:
-            # Check if this is a reattempt by looking at previous quiz history for this child and quiz
+            quiz_total_points = quiz.points or 0
+            performance_percentage = score / total_score if total_score > 0 else 0
+            earned_points = quiz_total_points * performance_percentage
+            
             previous_attempts = QuizHistory.query.filter_by(
                 child_id=child_id, 
                 quiz_id=quiz_id
             ).filter(QuizHistory.quiz_history_id != quiz_history.quiz_history_id).all()
             
             if not previous_attempts:
-                # First attempt - award full score as points
-                points_to_add = score
+                points_to_add = earned_points
             else:
-                # Reattempt - find the highest previous score
                 highest_previous_score = max(attempt.score for attempt in previous_attempts)
+                previous_performance_percentage = highest_previous_score / total_score if total_score > 0 else 0
+                previous_earned_points = quiz_total_points * previous_performance_percentage
                 
-                # Only award points if the new score is better than previous best
-                if score > highest_previous_score:
-                    points_to_add = score - highest_previous_score
+                if earned_points > previous_earned_points:
+                    points_to_add = earned_points - previous_earned_points
                 else:
                     points_to_add = 0
             
-            # Update child's total points
             if points_to_add > 0:
                 child.points = (child.points or 0) + points_to_add
                 db.session.commit()
+                
+                # Check and award any new badges after points update
+                check_and_award_badges(child_id)
 
         return jsonify({"score": score, "total_score": total_score}), 200
 
@@ -1427,19 +1403,15 @@ def submit_quiz(child_id, quiz_id):
 
 def get_child_quiz_history(curriculum_id, lesson_id, quiz_id, quiz_history_id):
     try:
-        # Validate quiz history exists
         quiz_history = QuizHistory.query.get(quiz_history_id)
         if not quiz_history:
             return jsonify({"error": "Quiz history not found"}), 404
-        # Validate quiz exists
         quiz = Quiz.query.get(quiz_id)
         if not quiz:
             return jsonify({"error": "Quiz not found"}), 404
-        # Validate curriculum exists
         curriculum = Skill.query.get(curriculum_id)
         if not curriculum:
             return jsonify({"error": "Curriculum not found"}), 404
-        # Validate lesson exists and belongs to curriculum
         lesson = Lesson.query.filter_by(
             lesson_id=lesson_id, skill_id=curriculum_id
         ).first()
@@ -1450,9 +1422,8 @@ def get_child_quiz_history(curriculum_id, lesson_id, quiz_id, quiz_history_id):
                 ),
                 404,
             )
-        # Format questions with index
         questions_data = []
-        if quiz.questions:  # questions is stored as JSON
+        if quiz.questions:
             for idx, question in enumerate(quiz.questions):
                 question_data = {
                     "question_index": idx + 1,
@@ -1461,7 +1432,6 @@ def get_child_quiz_history(curriculum_id, lesson_id, quiz_id, quiz_history_id):
                     "marks": question.get("marks", 1),
                 }
                 questions_data.append(question_data)
-        # Prepare response data
         response_data = {
             "curriculum": {
                 "curriculum_id": curriculum.skill_id,
@@ -1520,22 +1490,18 @@ def update_child_profile(child_id):
         if not data:
             return jsonify({"error": "No data provided"}), 400
 
-        # Check if at least one field is provided
         allowed_fields = ["name", "email", "dob", "school"]
         if not any(field in data for field in allowed_fields):
             return jsonify({"error": "At least one field must be provided"}), 400
 
-        # Update name if provided
         if "name" in data:
             if not data["name"] or not data["name"].strip():
                 return jsonify({"error": "Name cannot be empty"}), 400
             child.name = data["name"].strip()
 
-        # Update email if provided
         if "email" in data:
             email = data["email"]
-            if email:  # If email is not empty, validate it
-                # Check if email is already taken by another child
+            if email:
                 existing_child = Child.query.filter(
                     Child.email_id == email, Child.child_id != child_id
                 ).first()
@@ -1546,15 +1512,13 @@ def update_child_profile(child_id):
                     )
                 child.email_id = email
             else:
-                child.email_id = None  # Allow setting email to null
+                child.email_id = None
 
-        # Update date of birth if provided
         if "dob" in data:
             dob_str = data["dob"]
             if dob_str:
                 try:
                     dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
-                    # Validate age (8-14 years old)
                     age = age_calc(dob)
                     if age < 8 or age > 14:
                         return (
@@ -1572,9 +1536,8 @@ def update_child_profile(child_id):
             else:
                 return jsonify({"error": "Date of birth cannot be empty"}), 400
 
-        # Update school if provided
         if "school" in data:
-            child.school = data["school"]  # Allow school to be empty/null
+            child.school = data["school"]
 
         db.session.commit()
 
@@ -1599,7 +1562,6 @@ def change_child_password(child_id):
         new_password = data.get("new_password")
         confirm_password = data.get("confirm_password")
 
-        # Validate required fields
         if not all([current_password, new_password, confirm_password]):
             return (
                 jsonify(
@@ -1611,7 +1573,6 @@ def change_child_password(child_id):
                 400,
             )
 
-        # Verify current password
         if not check_password_hash(child.password, current_password):
             return (
                 jsonify(
@@ -1620,7 +1581,6 @@ def change_child_password(child_id):
                 400,
             )
 
-        # Validate new password matches confirm password
         if new_password != confirm_password:
             return (
                 jsonify(
@@ -1632,7 +1592,6 @@ def change_child_password(child_id):
                 400,
             )
 
-        # Validate new password length (optional - add your own requirements)
         if len(new_password) < 4:
             return (
                 jsonify(
@@ -1644,7 +1603,6 @@ def change_child_password(child_id):
                 400,
             )
 
-        # Ensure new password is different from current password
         if check_password_hash(child.password, new_password):
             return (
                 jsonify(
@@ -1656,7 +1614,6 @@ def change_child_password(child_id):
                 400,
             )
 
-        # Hash and update the new password
         child.password = generate_password_hash(new_password)
         db.session.commit()
 
@@ -1674,11 +1631,6 @@ import base64
 
 
 def child_profile_image(child_id):
-    """
-    Handle both GET and POST requests for child profile images.
-    GET: Retrieves profile image as a Base64 Data URL.
-    POST: Uploads/updates profile image from a Base64 Data URL.
-    """
     try:
         child = Child.query.get(child_id)
         if not child:
@@ -1691,10 +1643,8 @@ def child_profile_image(child_id):
             
             pic = data.get('profile_image') if (data.get('profile_image') != '') else None
             
-            # Validate base64 if provided
             if pic:
                 try:
-                    # Test if it's valid base64 (optional validation)
                     base64.b64decode(pic)
                 except Exception:
                     return jsonify({'status': 'error', 'message': 'Invalid base64 image'}), 400
@@ -1725,8 +1675,6 @@ def child_profile_image(child_id):
         return jsonify({"status": "error", "message": "Database error occurred"}), 500
 
 def get_child_badges(child_id):
-    """Retrieve all badges earned by a child.
-    """
     try:
         child = Child.query.get(child_id)
         if not child:
