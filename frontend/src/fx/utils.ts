@@ -51,6 +51,10 @@ export function flattenObject(obj: AnyObject, parentKey = '', result: AnyObject 
   return result;
 }
 
+
+export function logout() {
+  localStorage.removeItem('authToken');
+}
 const BACKEND_URL = "http://localhost:5000/"
 export function getBackendURL(slug: string): string {
   return `${BACKEND_URL}${slug}`

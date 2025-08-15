@@ -29,7 +29,7 @@ the body used:
   "email": "ub123@gmail.com",
   "password": "abcdef",
   "username": "ubbbbbbb",
-  "dob": "2009-09-09",
+  "dob": "2015-09-09",
   "school": "sphs",
   "profile_image": ""
 }

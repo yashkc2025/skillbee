@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Card from "@/components/Card.vue";
 import HorizontalCardItem from "@/components/HorizontalCardItem.vue";
+import { fixImage } from "../../../fx/utils";
 
 interface BadgeType {
   label: string;
@@ -15,9 +16,12 @@ const props = defineProps<{
 <template>
   <div>
     <Card title="🏅 Badges" direction="row" :isFitToContent="true">
+      <div v-if="props.badges.length === 0">
+        You're on your way to your first badge — keep trying!
+      </div>
       <HorizontalCardItem v-for="(s, i) in props.badges" :key="i">
         <div class="badge-parent">
-          <img :src="s.image" :alt="s.label" />
+          <img :src="fixImage(s.image)" :alt="s.label" />
           <span class="skill-card">{{ s.label }}</span>
         </div>
       </HorizontalCardItem>

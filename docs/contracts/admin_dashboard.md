@@ -304,16 +304,11 @@
 
 #### 🧾 Query Params
 
-```ts
-{
-  skill_id?: number
-}
-```
 
 #### 🧾 Body
 
 ```ts
-{
+{ skill_id: number
   title: string;
   content: JSON;
   description: string;

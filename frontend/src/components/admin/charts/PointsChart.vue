@@ -40,6 +40,8 @@ const chartRef = ref<ECRef>();
 const chartData = ref();
 const option = ref();
 
+console.log(props.childId);
+
 onMounted(async () => {
   const data: ProfileType = await fetchData(getBackendURL("children/profile"), {
     id: props.childId,

@@ -36,6 +36,8 @@ from .controllers import (
     child_loginc,
     get_auser,
     get_child_dashboard_stats,
+    get_child_heatmap,
+    get_leaderboard,
     get_user_skill_progress,
     get_user_badges,
     get_curriculums_for_child,
@@ -51,11 +53,13 @@ from .controllers import (
     get_activity_submission,
     get_quiz_questions,
     submit_quiz,
+    get_child_quiz_history,
     get_quiz_history,
     get_child_profile_controller,
     update_child_profile,
     change_child_password,
     child_profile_image,
+    get_child_badges,
     get_children,
     get_parents,
     get_lessons,
@@ -238,15 +242,26 @@ def child_login():
 
 
 @api.route("/auth/get_user", methods=["GET"])
-@token_required()
-def get_user(current_user=None, role=None):
-    return get_auser()
+@token_required(allowed_roles=["admin", "parent", "child"])
+def get_user(current_user, role):
+    return get_auser(current_user, role)
 
 
 @api.route("/child_dashboard_stats", methods=["GET"])
 @token_required(allowed_roles=["child"])
-def child_dashboard_stats(current_user=None, role=None):
-    return get_child_dashboard_stats()
+def child_dashboard_stats(current_user, role):
+    return get_child_dashboard_stats(current_user.child_id)
+
+@api.route("/child_heatmap", methods=["GET"])
+@token_required(allowed_roles=["child"])
+def child_heatmap(current_user, role):
+    return get_child_heatmap(current_user.child_id)
+
+@api.route("/child_leaderboard", methods=["GET"])
+@token_required(allowed_roles=["child"])
+def child_leaderboard(current_user, role):
+    return get_leaderboard(current_user.child_id)
+
 
 
 @api.route("/children", methods=["GET"])
@@ -258,7 +273,7 @@ def get_child(current_user, role):
 @api.route("/parents", methods=["GET"])
 @token_required(allowed_roles=["admin"])
 def get_parent(current_user, role):
-    return get_parents(current_user, role)
+    return get_parents(current_user.admin_id, role)
 
 
 @api.route("/lessons", methods=["GET"])
@@ -394,15 +409,15 @@ def delete_quizzes(current_user, role):
 
 
 @api.route("/children/profile", methods=["GET"])
-@token_required(allowed_roles=["admin", "parent"])
+@token_required(allowed_roles=["admin", "parent", "child"])
 def children_profile(current_user, role):
     return admin_child_profile(current_user, role)
 
 
 @api.route("/admin/age_distribution_chart", methods=["GET"])
-@token_required(allowed_roles=["admin"])
+@token_required(allowed_roles=["admin", "child"])
 def get_age_distribution_chart(current_user, role):
-    return get_age_group_distribution_chart(current_user.admin_id, role)
+    return get_age_group_distribution_chart()
 
 
 @api.route("/admin/learning_funnel_chart", methods=["GET"])
@@ -431,8 +446,8 @@ def get_active_users(current_user, role):
 
 @api.route("/feedback", methods=["POST"])
 @token_required(allowed_roles=["parent"])
-def feedback():
-    return post_feedback()
+def feedback(current_user, role):
+    return post_feedback(current_user.parent_id, role)
 
 
 @api.route("/parent/update_personal_details", methods=["PUT"])
@@ -447,10 +462,10 @@ def parent_password():
     return update_parent_password()
 
 
-@api.route("/api/child/curriculum/<int:curriculum_id>/lessons", methods=["GET"])
+@api.route("/api/child/curriculum/<int:skill_id>/lessons", methods=["GET"])
 @token_required(allowed_roles=["child"])
-def get_skill_lessons_route(curriculum_id, current_user, role):
-    return get_skill_lessons(current_user.child_id, curriculum_id)
+def get_skill_lessons_route(skill_id, current_user, role):
+    return get_skill_lessons(current_user.child_id, skill_id)
 
 
 @api.route("/api/child/lesson/<int:lesson_id>", methods=["GET"])
@@ -516,6 +531,13 @@ def get_quiz_questions_route(curriculum_id, lesson_id, quiz_id, current_user, ro
 def submit_quiz_route(quiz_id, current_user, role):
     return submit_quiz(current_user.child_id, quiz_id)
 
+@api.route(
+    "/api/child/curriculum/<int:curriculum_id>/lesson/<int:lesson_id>/quiz/<int:quiz_id>/quiz_history/<int:quiz_history_id>",
+    methods=["GET"],
+)
+@token_required(allowed_roles=["child"])
+def get_quiz_history_route_with_history_id(curriculum_id, lesson_id, quiz_id, quiz_history_id, current_user, role):
+    return get_child_quiz_history(curriculum_id, lesson_id, quiz_id, quiz_history_id)
 
 @api.route("/api/child/quiz/<int:quiz_id>/history", methods=["GET"])
 @token_required(allowed_roles=["child"])
@@ -546,23 +568,27 @@ def change_child_password_route(current_user, role):
 def child_profile_image_route(current_user, role):
     return child_profile_image(current_user.child_id)
 
+@api.route("/child_badges", methods=["GET"])
+@token_required(allowed_roles=["child"])
+def child_badges(current_user, role):
+    return get_child_badges(current_user.child_id)
 
 @api.route("/skill_categories", methods=["GET"])
 @token_required(allowed_roles=["child"])
-def get_skill_categories(current_user=None, role=None):
-    return get_user_skill_progress()
+def get_skill_categories(current_user, role):
+    return get_user_skill_progress(current_user.child_id)
 
 
 @api.route("/user_badges", methods=["GET"])
 @token_required(allowed_roles=["child"])
 def user_badges(current_user, role):
-    return get_user_badges()
+    return get_user_badges(current_user.child_id)
 
 
 @api.route("/api/child/<int:child_id>/curriculums", methods=["GET"])
 @token_required(allowed_roles=["child"])
-def get_curr(current_user=None, role=None):
-    return get_curriculums_for_child()
+def get_curr(child_id, current_user, role):
+    return get_curriculums_for_child(current_user.child_id, role, child_id)
 
 
 @api.route("/skills", methods=["GET"])

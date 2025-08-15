@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import sitemap from "../../router/sitemap.json";
+import { logout } from "../../fx/utils";
 
 const navOptions = [
   {
@@ -30,7 +31,7 @@ const navOptions = [
       <a :href="n.link" class="nav-items" v-for="n in navOptions" :key="n.label" tabindex="0">
         {{ n.label }}
       </a>
-      <a class="danger" href="/" tabindex="0">🚪 Logout</a>
+      <a class="danger" href="/" @click="logout" tabindex="0">🚪 Logout</a>
     </section>
   </div>
 </template>
