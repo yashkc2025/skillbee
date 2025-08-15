@@ -33,7 +33,7 @@ async function createLesson() {
     image: image.value,
     description: description.value,
     skill_id: curriculum_id.value,
-  });
+  }, "/admin/lessons");
 }
 </script>
 

@@ -348,13 +348,13 @@ def admin_password(current_user, role):
 
 @api.route("/admin/block_children", methods=["PUT"])
 @token_required(allowed_roles=["admin"])
-def block_children():
+def block_children(current_user, role):
     return block_child()
 
 
 @api.route("/admin/unblock_children", methods=["PUT"])
 @token_required(allowed_roles=["admin"])
-def unblock_children():
+def unblock_children(current_user, role):
     return unblock_child()
 
 

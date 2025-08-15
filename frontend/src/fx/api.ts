@@ -44,7 +44,7 @@ export async function submitForm(address: string, event) {
   }
 }
 
-export async function postData(address: string, data: Object) {
+export async function postData(address: string, data: Object, redirectURL?: string) {
   const toast = useToast();
   const token = localStorage.getItem("authToken");
 
@@ -68,6 +68,10 @@ export async function postData(address: string, data: Object) {
 
       toast.success(message);
 
+      if (redirectURL) {
+        window.location.href = redirectURL
+      }
+
       if (responseData.redirect) {
         window.location.href = responseData.redirect;
       }
@@ -82,7 +86,7 @@ export async function postData(address: string, data: Object) {
   }
 }
 
-export async function updateData(address: string, data: Object) {
+export async function updateData(address: string, data: Object, redirectURL?: string) {
   const toast = useToast();
   const token = localStorage.getItem("authToken");
 
@@ -116,6 +120,9 @@ export async function updateData(address: string, data: Object) {
 
       toast.success(message);
 
+      if (redirectURL) {
+        window.location.href = redirectURL
+      }
 
       if (responseData.redirect) {
         window.location.href = responseData.redirect;

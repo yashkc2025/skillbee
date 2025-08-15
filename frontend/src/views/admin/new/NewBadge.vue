@@ -17,12 +17,16 @@ async function newBadge() {
     return;
   }
 
-  postData(getBackendURL("admin/badge"), {
-    title: title.value,
-    image: image.value,
-    points: points.value,
-    description: description.value,
-  });
+  postData(
+    getBackendURL("admin/badge"),
+    {
+      title: title.value,
+      image: image.value,
+      points: points.value,
+      description: description.value,
+    },
+    "/admin/badges"
+  );
 }
 </script>
 

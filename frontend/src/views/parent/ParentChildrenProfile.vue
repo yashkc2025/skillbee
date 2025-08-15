@@ -197,12 +197,12 @@ async function sendFeedback() {
           :badges="profile.achievements.badges"
           v-if="profile?.achievements.badges"
         />
-        <button class="button-admin" v-if="profile?.info.status === 'Active'">
+        <!-- <button class="button-admin" v-if="profile?.info.status === 'Active'">
           Block User
         </button>
         <button class="button-admin" v-if="profile?.info.status !== 'Active'">
           Unblock User
-        </button>
+        </button> -->
       </div>
       <div class="second">
         <CardV2 label-title="Skills" label-image="bi bi-bar-chart">
