@@ -45,15 +45,19 @@ function viewKids() {
 }
 
 function tableEntries() {
-  parents.value.forEach((p) => {
-    p.blocked = <span class="chip pointer">{p.blocked ? "Active" : "Blocked"}</span>;
+  const c = parents.value.map((p) => ({
+    id: p.id,
+    name: p.name,
+    email: p.email,
+    blocked: <span class="chip pointer">{p.blocked ? "Active" : "Blocked"}</span>,
     // p.view_children = <i class="bi bi-patch-plus pointer" onClick={() => viewKids()}></i>;
-  });
+  }));
+
   if (props.maxItems) {
-    return parents.value.slice(0, props.maxItems);
+    return c.slice(0, props.maxItems);
   }
 
-  return parents.value;
+  return c;
 }
 </script>
 
