@@ -3,13 +3,17 @@ import sitemap from "../../router/sitemap.json";
 import { useRouter } from "vue-router";
 import { logout } from "../../fx/utils";
 
-const router = useRouter()
+const router = useRouter();
 
 const navOptions = [
   // {
   //   label: "Dashboard",
   //   link: sitemap.parent.dashboard,
   // },
+  {
+    label: "Child Activities",
+    link: sitemap.parent.activity.list,
+  },
   {
     label: "Settings",
     link: sitemap.parent.settings,

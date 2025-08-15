@@ -2,23 +2,32 @@
 import CardV2 from "@/components/CardV2.vue";
 import InputComponent from "@/components/InputComponent.vue";
 import { getBackendURL } from "@/fx/utils";
+import { ref, onMounted } from "vue";
 import AdminAppLayout from "@/layouts/AdminAppLayout.vue";
-import { ref } from "vue";
 import { postData } from "@/fx/api";
+import { fetchData, updateData } from "@/fx/api";
 
 const email = ref("");
 const oldPassword = ref("");
 const newPassword = ref("");
 const confirmPassword = ref("");
 
-async function updateEmail() {
-  postData(getBackendURL(""), {
-    email: email.value,
+onMounted(async () => {
+  const data = await fetchData(getBackendURL("/settings"));
+
+  if (data) {
+    email.value = data.email_id;
+  }
+});
+
+async function updateSettings() {
+  updateData(getBackendURL("/settings"), {
+    email_id: email.value,
   });
 }
 
 async function updatePassword() {
-  postData(getBackendURL(""), {
+  updateData(getBackendURL("/admin/update_password"), {
     oldPassword: oldPassword.value,
     newPassword: newPassword.value,
     confirmPassword: confirmPassword.value,
@@ -34,7 +43,7 @@ async function updatePassword() {
       </p>
       <CardV2 label-title="Change Email" label-image="bi bi-envelope">
         <template #content class="form">
-          <form @submit.prevent="updateEmail" class="form">
+          <form @submit.prevent="updateSettings" class="form">
             <InputComponent
               icon="bi bi-envelope"
               name="email"

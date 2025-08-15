@@ -1,9 +1,9 @@
 import { useToast } from "vue-toastification";
 
-const token = localStorage.getItem("authToken");
 
 export async function submitForm(address: string, event) {
   const toast = useToast();
+  const token = localStorage.getItem("authToken");
 
   event.preventDefault(); // Prevents full page reload
 
@@ -46,6 +46,7 @@ export async function submitForm(address: string, event) {
 
 export async function postData(address: string, data: Object) {
   const toast = useToast();
+  const token = localStorage.getItem("authToken");
 
   try {
     const response = await fetch(address, {
@@ -83,6 +84,7 @@ export async function postData(address: string, data: Object) {
 
 export async function updateData(address: string, data: Object) {
   const toast = useToast();
+  const token = localStorage.getItem("authToken");
 
   try {
     const response = await fetch(address, {
@@ -94,6 +96,15 @@ export async function updateData(address: string, data: Object) {
       body: JSON.stringify(data), // Convert the data object to a JSON string
       credentials: "include",
     });
+    if (response.status >= 400) {
+      const data = await response.json();
+      if (data.error) {
+        toast.error(data.error);
+      }
+      if (data.message) {
+        toast.error(data.message);
+      }
+    }
 
     if (response.status === 200 || response.status === 201) {
       const responseData = await response.json();
@@ -122,6 +133,8 @@ export async function updateData(address: string, data: Object) {
 }
 
 export async function deleteData(address: string, data: Object) {
+  const token = localStorage.getItem("authToken");
+
   try {
     const response = await fetch(address, {
       method: "DELETE",
@@ -155,6 +168,7 @@ export async function deleteData(address: string, data: Object) {
 }
 
 export async function fetchData(address: string, q?: Object) {
+  const token = localStorage.getItem("authToken");
   const toast = useToast();
 
   const queryString = new URLSearchParams(q).toString();
@@ -179,6 +193,8 @@ export async function fetchData(address: string, q?: Object) {
 }
 
 export async function downloadFile(address: string) {
+  const token = localStorage.getItem("authToken");
+
   const toast = useToast();
 
   const response = await fetch(address, {
