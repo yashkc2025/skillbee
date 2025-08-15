@@ -439,7 +439,7 @@ const handleLogin = async () => {
   } else if (selectedUserType.value === "Child") {
     url = base_url + "/auth/children_login";
     payload = {
-      username: username,
+      email_or_username: username,
       password,
     };
   } else if (selectedUserType.value === "Admin") {

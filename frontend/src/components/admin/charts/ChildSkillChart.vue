@@ -42,14 +42,14 @@ type SkillData = {
   skill_id: string;
   skill_name: string;
   lesson_completed_count: number;
-  lesson_started_count: number;
+  // lesson_started_count: number;
   quiz_attempted_count: number;
 };
 
 type TransformedSkillData = {
   skill_name: string[];
   total_lesson_completed_count: number[];
-  total_lesson_started_count: number[];
+  // total_lesson_started_count: number[];
   total_quiz_attempted_count: number[];
 };
 
@@ -59,7 +59,7 @@ function transformSkillData(data: SkillData[]): TransformedSkillData {
   return {
     skill_name: joinedData.map((x) => x.skill_name),
     total_lesson_completed_count: joinedData.map((x) => x.lesson_completed_count),
-    total_lesson_started_count: joinedData.map((x) => x.lesson_started_count),
+    // total_lesson_started_count: joinedData.map((x) => x.lesson_started_count),
     total_quiz_attempted_count: joinedData.map((x) => x.quiz_attempted_count),
   };
 }
@@ -102,12 +102,12 @@ onMounted(async () => {
         name: "Count",
       },
       series: [
-        {
-          name: "Lessons Started",
-          type: "bar",
-          data: chartData.value.total_lesson_started_count,
-          barGap: 0,
-        },
+        // {
+        //   name: "Lessons Started",
+        //   type: "bar",
+        //   data: chartData.value.total_lesson_started_count,
+        //   barGap: 0,
+        // },
         {
           name: "Lessons Completed",
           type: "bar",

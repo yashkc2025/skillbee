@@ -34,7 +34,7 @@ export type ProfileType = {
   skills_progress: Array<{
     skill_id: string;
     skill_name: string;
-    lesson_started_count: number;
+    // lesson_started_count: number;
     lesson_completed_count: number;
     quiz_attempted_count: number;
   }>;
