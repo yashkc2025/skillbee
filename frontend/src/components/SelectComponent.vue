@@ -1,22 +1,32 @@
 <script setup lang="ts">
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void;
+  (e: "update:modelValue", value: string): void;
 }>();
 
-const props = withDefaults(defineProps<{
-  modelValue: string;
-  name: string;
-  placeholder: string;
-  icon: string;
-  options: { label: string; value: string }[];
-}>(), {});
+const props = withDefaults(
+  defineProps<{
+    required: boolean;
+    modelValue: string;
+    name: string;
+    placeholder: string;
+    icon: string;
+    options: { label: string; value: string | number }[];
+  }>(),
+  {
+    required: false,
+  }
+);
 </script>
 
 <template>
   <div class="input-wrapper">
     <i :class="icon"></i>
-    <select :name="name" :value="modelValue"
-      @change="(e) => emit('update:modelValue', (e.target as HTMLSelectElement).value)">
+    <select
+      :name="name"
+      :value="modelValue"
+      :required
+      @change="(e) => emit('update:modelValue', (e.target as HTMLSelectElement).value)"
+    >
       <option disabled value="">{{ placeholder }}</option>
       <option v-for="option in options" :key="option.value" :value="option.value">
         {{ option.label }}
@@ -50,7 +60,7 @@ select {
   border-radius: var(--border-radius);
   outline: none;
   font-size: var(--font-sm);
-  font-family: 'DMSans';
+  font-family: "DMSans";
   appearance: none;
   /* Remove native arrow in some browsers */
   background-color: white;

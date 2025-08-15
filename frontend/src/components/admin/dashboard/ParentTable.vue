@@ -1,72 +1,59 @@
 <script setup lang="tsx">
-const props = withDefaults(defineProps<{
-  maxItems?: number;
-  showExpand?: boolean;
-}>(), {
-  showExpand: false,
-})
+const props = withDefaults(
+  defineProps<{
+    maxItems?: number;
+    showExpand?: boolean;
+  }>(),
+  {
+    showExpand: false,
+  }
+);
 
 import CardV2 from "@/components/CardV2.vue";
 import InputComponent from "@/components/InputComponent.vue";
 import TableComponent from "@/components/TableComponent.vue";
 import { useRouter } from "vue-router";
-import sitemap from "@/router/sitemap.json"
+import sitemap from "@/router/sitemap.json";
+import { onMounted } from "vue";
+import { fetchData } from "@/fx/api";
+import { getBackendURL } from "@/fx/utils";
+import { ref } from "vue";
 
-const parents = [
-  {
-    id: 1,
-    name: "Kiran Kumar",
-    email: "kiran.kumar@app.com",
-    blocked: false,
-  },
-  {
-    id: 2,
-    name: "Sunita Sharma",
-    email: "sunita.sharma@app.com",
-    blocked: false,
-  },
-  {
-    id: 3,
-    name: "Ravi Reddy",
-    email: "ravi.reddy@app.com",
-    blocked: true,
-  },
-  {
-    id: 4,
-    name: "Neha Mehta",
-    email: "neha.mehta@app.com",
-    blocked: false,
-  },
-  {
-    id: 5,
-    name: "Anil Verma",
-    email: "anil.verma@app.com",
-    blocked: false,
-  },
-];
+type ParemtType = {
+  id: number;
+  name: string;
+  email: string;
+  blocked: boolean;
+};
+const parents = ref<ParemtType[]>([]);
 
+onMounted(async () => {
+  const data = await fetchData(getBackendURL("parents"));
 
-const parentLabel = ['ID', 'Name', 'Email', 'Status', 'Children']
+  parents.value = data;
+});
 
-const router = useRouter()
+const parentLabel = ["ID", "Name", "Email", "Status"];
+
+const router = useRouter();
 function expandTable() {
-  router.push(sitemap.admin.user_management.parent)
+  router.push(sitemap.admin.user_management.parent);
 }
 
 function viewKids() {
-  router.push(sitemap.admin.user_management.children)
+  router.push(sitemap.admin.user_management.children);
 }
 
 function tableEntries() {
-  parents.forEach((p) => {
-    p.blocked = <span class="chip pointer">{p.blocked ? "Blocked" : "Active"}</span>
-    p.view_children = <i class="bi bi-patch-plus pointer" onClick={() => viewKids()}></i>
-  })
+  parents.value.forEach((p) => {
+    p.blocked = <span class="chip pointer">{p.blocked ? "Active" : "Blocked"}</span>;
+    // p.view_children = <i class="bi bi-patch-plus pointer" onClick={() => viewKids()}></i>;
+  });
   if (props.maxItems) {
-    return parents.slice(0, props.maxItems)
+    return parents.value.slice(0, props.maxItems);
   }
 
-  return parents
+  return parents.value;
 }
 </script>
 
@@ -74,7 +61,11 @@ function tableEntries() {
   <CardV2 label-title="Parents" label-image="bi bi-person">
     <template #top-content>
       <div class="table-header">
-        <InputComponent icon="bi bi-search" name="search" placeholder="Search for a parent" />
+        <InputComponent
+          icon="bi bi-search"
+          name="search"
+          placeholder="Search for a parent"
+        />
         <i class="bi bi-arrows-angle-expand" @click="expandTable" v-if="showExpand"></i>
       </div>
     </template>
@@ -91,7 +82,7 @@ function tableEntries() {
   gap: var(--size-xs);
 }
 
-.table-header>i {
+.table-header > i {
   font-size: var(--font-sm);
   font-weight: 500;
   cursor: pointer;

@@ -505,6 +505,280 @@ def test_admin_login_missing_fields():
     data = response.get_json()
     assert data["error"] == "Missing email or password"
 
+#  Test for CRUD of activities
+
+def test_create_activity_success():
+    tester = app.test_client()
+    token = "607a510f-c2ef-4568-99dc-f7ed020c4139"  # Admin Token
+
+    response = tester.post('/admin/activity',
+        json={
+            "title": "Test Activity",
+            "description": "Do this",
+            "image": "",
+            "instructions": "Step 1, Step 2",
+            "difficulty": "Easy",
+            "answer_format": "text",
+            "lesson_id": 1
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code in (201, 401)
+ 
+
+def test_update_activity():
+        tester = app.test_client()
+        token = "607a510f-c2ef-4568-99dc-f7ed020c4139"
+        response = tester.put('/admin/activity', json={
+            "id": 1,
+            "image": "",
+            "title": "Updated Activity",
+            "description": "Do this",
+            "instructions": "Step 1, Step 2",
+            "difficulty": "Easy",
+            "lesson_id": 1 
+        },
+        headers={"Authorization": f"Bearer {token}"})
+        assert response.status_code in (200, 401)
+        data = response.get_json()
+        assert "message" in data or "error" in data
+
+def test_delete_activity():
+    tester = app.test_client()
+    token = "607a510f-c2ef-4568-99dc-f7ed020c4139"  
+    response = tester.delete(
+        '/admin/activity',
+        json={"id": 1},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code in (200, 404)
+    data = response.get_json()
+    assert "message" in data or "error" in data
+
+
+
+# Tests for lessons
+
+def test_get_all_lessons():
+    tester = app.test_client()
+    token = "9f504415-5b14-4caf-839f-907f615dec38"
+    response = tester.get('/lessons', headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+
+def test_create_lesson():
+    tester = app.test_client()
+    token = "74272d81-74fd-446d-910c-71162118a4ad"
+    response = tester.post('/admin/lesson', json={
+        "skill_id": 1,
+        "title": "New Lesson",
+        "content": {},
+        "image": "",
+        "description": "Intro to Something"
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code in (201, 400, 404)
+    data = response.get_json()
+    assert "id" in data or "error" in data
+
+def test_update_lesson():
+    tester = app.test_client()
+    token = "74272d81-74fd-446d-910c-71162118a4ad"
+    response = tester.put('/admin/lesson', json={
+        "id": 1,
+        "title": "Updated Lesson"
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code in (200, 404)
+    data = response.get_json()
+    assert "message" in data or "error" in data
+
+def test_delete_lesson():
+    tester = app.test_client()
+    token = "74272d81-74fd-446d-910c-71162118a4ad"
+    response = tester.delete('/admin/lesson', json={"id": 1},
+                             headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code in (200, 404)
+    data = response.get_json()
+    assert "message" in data or "error" in data
+
+
+#  QUIZ
+
+
+def test_get_all_activities():
+    tester = app.test_client()
+    token = "9f504415-5b14-4caf-839f-907f615dec38"
+    response = tester.get('/activities', headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+
+
+def test_create_quiz():
+    tester = app.test_client()
+    token = "74272d81-74fd-446d-910c-71162118a4ad"
+    response = tester.post('/admin/quiz', json={
+        "title": "Test Quiz",
+        "description": "Quiz Desc",
+        "difficulty": "Easy",
+        "points": 10,
+        "lesson_id": 1,
+        "time_duration": 60,
+        "image": "",
+        "questions": [{
+            "question": "Sample Q?",
+            "options": [
+                {"text": "A", "isCorrect": False},
+                {"text": "B", "isCorrect": True}
+            ]
+        }]
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code in (201, 400, 404)
+    data = response.get_json()
+    assert "id" in data or "error" in data
+
+def test_update_quiz():
+    tester = app.test_client()
+    token = "74272d81-74fd-446d-910c-71162118a4ad"
+    response = tester.put('/admin/quiz', json={
+        "id": 1,
+        "title": "Updated Quiz Title"
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code in (200, 404)
+    data = response.get_json()
+    assert "message" in data or "error" in data
+
+def test_delete_quiz():
+    tester = app.test_client()
+    token = "74272d81-74fd-446d-910c-71162118a4ad"
+    response = tester.delete('/admin/quiz', json={"id": 1},
+                             headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code in (200, 404)
+    data = response.get_json()
+    assert "message" in data or "error" in data
+
+
+
+def test_get_all_skills():
+    tester = app.test_client()
+    token = "9f504415-5b14-4caf-839f-907f615dec38"
+    response = tester.get('/skills', headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+
+
+
+
+
+# badges
+
+
+def test_get_all_badges():
+    tester = app.test_client()
+    token = "9f504415-5b14-4caf-839f-907f615dec38"
+    response = tester.get('/badges', headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+
+def test_create_badge():
+    tester = app.test_client()
+    token = "74272d81-74fd-446d-910c-71162118a4ad"
+    response = tester.post('/admin/badge', json={
+        "name": "Achievement Unlocked",
+        "description": "Awarded for something",
+        "image": ""
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code in (201, 400)
+    data = response.get_json()
+    assert "id" in data or "error" in data
+
+
+def test_delete_badge():
+    tester = app.test_client()
+    token = "74272d81-74fd-446d-910c-71162118a4ad"
+    response = tester.delete('/admin/badge', json={"id": 1},
+                             headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code in (200, 404)
+    data = response.get_json()
+    assert "message" in data or "error" in data
+
+
+
+
+# tests for parents
+
+def test_get_all_parents():
+    tester = app.test_client()
+    token = "74272d81-74fd-446d-910c-71162118a4ad"   # admin token
+    response = tester.get('/parents', headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+    for parent in data:
+        assert "id" in parent
+        assert "name" in parent
+        assert "email" in parent
+        assert "blocked" in parent
+
+
+def test_post_feedback_quiz():
+    tester = app.test_client()
+    token = "f84977fb-63e9-49f6-8bb6-125ddacd97c4"  #parent token
+
+    response = tester.post('/feedback',
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "skill_type": "Quiz",
+            "id": 1,  
+            "text": "Very helpful quiz!"
+        }
+    )
+    assert response.status_code in (200, 404) 
+    data = response.get_json()
+    assert "message" in data or "error" in data
+
+def test_post_feedback_invalid_type():
+    tester = app.test_client()
+    token = "f84977fb-63e9-49f6-8bb6-125ddacd97c4"
+
+    response = tester.post('/feedback',
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "skill_type": "InvalidType",
+            "id": 1,
+            "text": "Should fail"
+        }
+    )
+
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "error" in data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Testing functions for child API endpoints
 

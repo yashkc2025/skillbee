@@ -1,6 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import DemoView from '@/views/DemoView.vue'
-import LandingPage from '@/views/LandingPage.vue'
 import ChildDashboard from '@/views/child/ChildDashboard.vue'
 import ChildLessons from '@/views/child/ChildLessons.vue'
 import ChildCurriculum from '@/views/child/ChildCurriculums.vue'
@@ -29,6 +27,11 @@ import ParentSettings from '@/views/parent/ParentSettings.vue'
 import ParentChildrenProfile from '@/views/parent/ParentChildrenProfile.vue'
 import ChildrenProfile from '@/views/admin/ChildrenProfile.vue'
 import NewQuiz from '@/views/admin/new/NewQuiz.vue'
+import EditLesson from '@/views/admin/edit/EditLesson.vue'
+import EditQuiz from '@/views/admin/edit/EditQuiz.vue'
+import EditActivity from '@/views/admin/edit/EditActivity.vue'
+
+export const base_url = 'http://127.0.0.1:5000/'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -74,6 +77,12 @@ const router = createRouter({
     {
       path: sitemap.child_app.curriculum.attempt,
       name: 'child_quiz_attempt',
+      component: ChildQuizQuestions,
+      props: true
+    },
+    {
+      path: sitemap.child_app.curriculum.attempt_history,
+      name: 'child_quiz_attempt_history',
       component: ChildQuizQuestions,
       props: true
     },
@@ -179,6 +188,24 @@ const router = createRouter({
       path: sitemap.admin.new.quiz,
       name: 'new_quiz',
       component: NewQuiz
+    },
+    {
+      path: sitemap.admin.edit.lesson,
+      name: "edit_lesson",
+      component: EditLesson,
+      props: true
+    },
+    {
+      path: sitemap.admin.edit.activity,
+      name: "edit_activity",
+      component: EditActivity,
+      props: true
+    },
+    {
+      path: sitemap.admin.edit.quiz,
+      name: "edit_quiz",
+      component: EditQuiz,
+      props: true
     },
     {
       path: sitemap.parent.dashboard,

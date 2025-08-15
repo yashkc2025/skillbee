@@ -1,11 +1,17 @@
 <script setup lang="ts">
+const props = defineProps({
+  id: {
+    type: Number,
+    required: true,
+  },
+});
 import CardV2 from "@/components/CardV2.vue";
 import InputComponent from "@/components/InputComponent.vue";
 import AdminAppLayout from "@/layouts/AdminAppLayout.vue";
 import SelectComponent from "@/components/SelectComponent.vue";
 import { ref } from "vue";
 import { onMounted } from "vue";
-import { fetchData, postData } from "@/fx/api";
+import { fetchData, updateData } from "@/fx/api";
 import { getBackendURL, type OptionsType } from "@/fx/utils";
 
 const title = ref("");
@@ -15,25 +21,50 @@ const description = ref("");
 const curriculum_id = ref("");
 const curriculumSelectRef = ref<InstanceType<typeof SelectComponent> | null>(null);
 
+interface LessonInterface {
+  content: string
+  description: string
+  id: number
+  skill_id: string
+  title: string
+}
+
 
 const curriculumDetails = ref<OptionsType[]>([]);
+const lessonDetails = ref<LessonInterface>()
 
 onMounted(async () => {
   const curr = await fetchData(getBackendURL("skills"));
+  lessonDetails.value = await fetchData(getBackendURL(`/admin/lesson/${props.id}`))
+
   curriculumDetails.value = curr.map((c) => ({
     label: c.name,
     value: c.id,
   }));
+
+  if (lessonDetails.value){
+    title.value = lessonDetails.value.title
+    content.value = lessonDetails.value.content
+    description.value = lessonDetails.value.description
+    curriculum_id.value = lessonDetails.value.skill_id
+  }
 });
 
-async function createLesson() {
-  await postData(getBackendURL("admin/lesson"), {
+async function updateLesson() {
+  const data = {
+    id : props.id,
     title: title.value,
     content: content.value,
-    image: image.value,
     description: description.value,
-    skill_id: curriculum_id.value,
-  });
+    curriculum_id: curriculum_id.value,
+  };
+
+  // Only add `image` if it's not empty
+  if (image.value && image.value.trim() !== "") {
+    data.image = image.value;
+  }
+
+  await updateData(getBackendURL("admin/lesson"), data);
 }
 </script>
 
@@ -41,7 +72,7 @@ async function createLesson() {
   <AdminAppLayout>
     <div class="outer">
       <p class="intro">
-        <span class="darken">New Lesson</span>
+        <span class="darken">Update Lesson</span>
       </p>
       <CardV2 label-title="Metadata" label-image="bi bi-book">
         <template #content class="form">
@@ -86,8 +117,8 @@ async function createLesson() {
               placeholder="Select a curriculum"
               :options="curriculumDetails"
             />
-            <button type="button" class="button-admin" @click="createLesson">
-              Create
+            <button type="button" class="button-admin" @click="updateLesson">
+              Update
             </button>
           </div>
         </template>

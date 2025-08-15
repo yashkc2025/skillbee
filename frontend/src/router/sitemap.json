@@ -23,6 +23,7 @@
       "lessons": "/child/curriculum/:curriculumId/lessons",
       "quizzes": "/child/curriculum/:curriculumId/lesson/:lessonId/quizzes",
       "attempt": "/child/curriculum/:curriculumId/lesson/:lessonId/quiz/:quizId/attempt",
+      "attempt_history": "/child/curriculum/:curriculumId/lesson/:lessonId/quiz/:quizId/history/:quizHistoryId",
       "activities": "/child/curriculum/:curriculumId/lesson/:lessonId/activities"
     },
     "achievements": "/stats",
@@ -51,6 +52,12 @@
       "quiz": "/admin/new/quiz",
       "activity": "/admin/new/activity",
       "badge": "/admin/new/badge"
+    },
+    "edit": {
+      "lesson": "/admin/edit/lesson/:id",
+      "quiz": "/admin/edit/quiz/:id",
+      "activity": "/admin/edit/activity/:id",
+      "badge": "/admin/edit/badge/:id"
     }
   },
   "parent": {
