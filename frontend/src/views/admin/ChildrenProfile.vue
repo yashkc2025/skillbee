@@ -16,6 +16,7 @@ import PointsChart from "@/components/admin/charts/PointsChart.vue";
 import { fetchData, postData } from "@/fx/api";
 import { onMounted } from "vue";
 import ChildSkillChart from "@/components/admin/charts/ChildSkillChart.vue";
+import { updateData } from "../../fx/api";
 
 export type ProfileType = {
   info: {
@@ -122,14 +123,14 @@ function tableEntries() {
 }
 
 async function blockChild() {
-  await postData("", {
-    children_id: profile.value?.info.child_id,
+  await updateData(getBackendURL("admin/block_children"), {
+    id: profile.value?.info.child_id,
   });
 }
 
 async function unBlockChild() {
-  await postData("", {
-    children_id: profile.value?.info.child_id,
+  await updateData(getBackendURL("admin/unblock_children"), {
+    id: profile.value?.info.child_id,
   });
 }
 </script>
@@ -164,10 +165,18 @@ async function unBlockChild() {
           :badges="profile.achievements.badges"
           v-if="profile?.achievements.badges"
         />
-        <button class="button-admin" v-if="profile?.info.status === 'Active'">
+        <button
+          class="button-admin"
+          v-if="profile?.info.status === 'Active'"
+          @click="blockChild"
+        >
           Block User
         </button>
-        <button class="button-admin" v-if="profile?.info.status !== 'Active'">
+        <button
+          class="button-admin"
+          v-if="profile?.info.status !== 'Active'"
+          @click="unBlockChild"
+        >
           Unblock User
         </button>
       </div>

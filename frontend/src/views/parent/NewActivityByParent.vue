@@ -64,7 +64,7 @@ async function newActivity() {
     lesson_id: lesson.value,
     answer_format : answerFormat.value,
     child_id : childId.value
-  });
+  }, "/parent/activity");
 }
 </script>
 

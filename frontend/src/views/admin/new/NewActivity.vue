@@ -51,7 +51,7 @@ async function newActivity() {
     point: point.value,
     lesson_id: lesson.value,
     answer_format : answerFormat.value
-  });
+  }, "/admin/activities");
 }
 </script>
 

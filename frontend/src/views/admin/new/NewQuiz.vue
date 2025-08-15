@@ -73,7 +73,7 @@ async function createQuiz() {
   };
 
   console.log("Submitting Quiz:", payload);
-  postData(getBackendURL("admin/quiz"), payload);
+  postData(getBackendURL("admin/quiz"), payload, "/admin/quiz");
 }
 </script>
 

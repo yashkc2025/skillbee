@@ -115,7 +115,7 @@ async function updateQuiz() {
   }
 
   console.log("Submitting Quiz:", payload);
-  await updateData(getBackendURL("admin/quiz"), payload);
+  await updateData(getBackendURL("admin/quiz"), payload, "/admin/quiz");
 }
 </script>
 
