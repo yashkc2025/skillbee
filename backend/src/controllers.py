@@ -28,7 +28,6 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import and_, func, case, cast, Integer
 import time
 import base64
-from .decorators import only_admin, only_admin_or_parent, only_parent
 
 # import imghdr
 
@@ -338,6 +337,9 @@ def child_loginc(request):
     if not child or not check_password_hash(child.password, password):
         return jsonify({"error": "Invalid email or password"}), 401
 
+    # Update streak and last_login
+    update_child_streak(child)
+
     token = str(uuid.uuid4())
     session_info = {
         "child_id": child.child_id,
@@ -368,6 +370,75 @@ def child_loginc(request):
         return jsonify({"error": "Database error occurred", "details": str(e)}), 500
 
 
+def update_child_streak(child):
+    """
+    Update child's streak based on login activity.
+    Streak increments if child logs in on consecutive days.
+    """
+    now = datetime.now()
+    today = now.date()
+    
+    if child.last_login:
+        last_login_date = child.last_login.date()
+        days_diff = (today - last_login_date).days
+        
+        if days_diff == 1:
+            # Consecutive day - increment streak
+            child.streak = (child.streak or 0) + 1
+        elif days_diff > 1:
+            # Missed days - reset streak
+            child.streak = 1
+        # If days_diff == 0 (same day), keep current streak unchanged
+    else:
+        # First login ever
+        child.streak = 1
+    
+    # Update last_login to current time
+    child.last_login = now
+    
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        print(f"Error updating child streak: {e}")
+
+
+def update_child_activity_streak(child):
+    """
+    Update child's streak based on learning activity (lessons, quizzes, etc.).
+    This updates the last_login to track daily activity.
+    """
+    now = datetime.now()
+    today = now.date()
+    
+    # Only update if this is the first activity of the day
+    if child.last_login:
+        last_activity_date = child.last_login.date()
+        if last_activity_date < today:
+            # New day of activity
+            days_diff = (today - last_activity_date).days
+            
+            if days_diff == 1:
+                # Consecutive day - increment streak
+                child.streak = (child.streak or 0) + 1
+            elif days_diff > 1:
+                # Missed days - reset streak  
+                child.streak = 1
+            
+            # Update last activity (last_login) to today
+            child.last_login = now
+    else:
+        # First activity ever
+        child.streak = 1
+        child.last_login = now
+    
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        print(f"Error updating child activity streak: {e}")
+
+
 
 def get_auser(current_user, role):
     # this is according to auth.md and fetches the details of users from the session id as authorisation bearer BUT it returns full profile info
@@ -384,7 +455,7 @@ def get_auser(current_user, role):
                             current_user.dob.isoformat() if current_user.dob else None
                         ),
                         "school": current_user.school,
-                        "profile_image": None,
+                        "profile_image": current_user.profile_image if current_user.profile_image else None,
                         "name": current_user.name,
                     }
                 }
@@ -400,7 +471,7 @@ def get_auser(current_user, role):
                         "role": "parent",
                         "name": current_user.name,
                         "email": current_user.email_id,
-                        "profile_image": None,
+                        "profile_image": current_user.profile_image if current_user.profile_image else None,
                     }
                 }
             ),
@@ -662,7 +733,7 @@ def get_curriculums_for_child(child_id):
                 "curriculum_id": skill.skill_id,
                 "name": skill.name,
                 "description": skill.description,
-                "image": None,
+                "image": (skill.image if skill.image else None),
                 "progress_status": progress,
             }
         )
@@ -738,7 +809,7 @@ def get_skill_lessons(child_id, skill_id):
             )
 
             if lesson.image:
-                image_base64 = base64.b64encode(lesson.image).decode("utf-8")
+                image_base64 = lesson.image
             else:
                 image_base64 = ""
 
@@ -867,7 +938,7 @@ def get_lesson_activities(child_id, lesson_id):
         activities_data = []
         for activity in activities:
             if activity.image:
-                image_base64 = base64.b64encode(activity.image).decode("utf-8")
+                image_base64 = activity.image
             else:
                 image_base64 = ""
 
@@ -1251,49 +1322,73 @@ def submit_quiz(child_id, quiz_id):
         total_questions = len(quiz.questions)
         total_score = sum(q.get("marks", 1) for q in quiz.questions)
 
-        option_index = question_index = len(answers)
         # Process each submitted answer
-        for q_idx_str, submitted_o_idx_str in answers.items():
+        for q_idx_str, submitted_answer in answers.items():
             try:
-                # Convert string indices to integers
+                # Convert question index to integer
                 q_idx = int(q_idx_str)
-                submitted_o_idx = int(submitted_o_idx_str)
             except (ValueError, TypeError):
                 continue
 
-            # Validate question index (1-based indexing)
-            if question_index < 1 or question_index > total_questions:
+            # Validate question index (0-based indexing)
+            if q_idx < 0 or q_idx >= total_questions:
                 continue
 
-            array_index = question_index - 1
-
-            question_data = quiz.questions[array_index]
-            answer_data = quiz.answers[array_index]
+            question_data = quiz.questions[q_idx]
+            answer_data = quiz.answers[q_idx]
 
             options = question_data.get("options", [])
             question_marks = question_data.get("marks", 1)
-            correct_answer = answer_data.get("correct_answer", "")
+            correct_answers = answer_data.get("correct_answers", [])
 
-            # Validate option index (0-based indexing)
-            if option_index < 0 or option_index >= len(options):
-                continue  # Skip invalid option index
-
-            # Get selected option
-            selected_option = options[option_index]
-
-            # Extract option text (handle both string and dict formats)
-            if isinstance(selected_option, dict):
-                selected_option_text = selected_option.get("text", "")
-            elif isinstance(selected_option, str):
-                selected_option_text = selected_option
+            # Handle both single selection and multiple selection formats
+            if isinstance(submitted_answer, list):
+                # Multiple selections (for multiple choice questions)
+                selected_options = []
+                for opt_idx in submitted_answer:
+                    try:
+                        opt_idx = int(opt_idx)
+                        if 0 <= opt_idx < len(options):
+                            selected_options.append(options[opt_idx])
+                    except (ValueError, TypeError):
+                        continue
             else:
-                selected_option_text = str(selected_option)
+                # Single selection (backward compatibility)
+                try:
+                    opt_idx = int(submitted_answer)
+                    if 0 <= opt_idx < len(options):
+                        selected_options = [options[opt_idx]]
+                    else:
+                        continue
+                except (ValueError, TypeError):
+                    continue
 
-            # Check if selected option is correct (single correct answer)
-            if selected_option_text == correct_answer:
-                score += question_marks
+            # Extract option texts from selected options
+            selected_texts = []
+            for option in selected_options:
+                if isinstance(option, dict):
+                    selected_texts.append(option.get("text", ""))
+                elif isinstance(option, str):
+                    selected_texts.append(option)
+                else:
+                    selected_texts.append(str(option))
+
+            # Check for wrong selections (any selected option not in correct answers)
+            has_wrong_selection = any(text not in correct_answers for text in selected_texts)
+
+            if not has_wrong_selection and selected_texts:
+                # No wrong selections - award partial or full credit
+                correct_selections = [text for text in selected_texts if text in correct_answers]
+                
+                if len(correct_answers) == 1:
+                    # Single correct answer - full credit if correct
+                    if len(correct_selections) == 1:
+                        score += question_marks
+                else:
+                    # Multiple correct answers - partial credit based on proportion
+                    partial_score = (len(correct_selections) / len(correct_answers)) * question_marks
+                    score += partial_score
         # Save quiz attempt to history
-        print([child_id, quiz_id, score])
         quiz_history = QuizHistory(
             child_id=child_id,
             quiz_id=quiz_id,
@@ -1303,6 +1398,33 @@ def submit_quiz(child_id, quiz_id):
         )
         db.session.add(quiz_history)
         db.session.commit()
+
+        # Update child's points based on quiz performance
+        child = Child.query.get(child_id)
+        if child:
+            # Check if this is a reattempt by looking at previous quiz history for this child and quiz
+            previous_attempts = QuizHistory.query.filter_by(
+                child_id=child_id, 
+                quiz_id=quiz_id
+            ).filter(QuizHistory.quiz_history_id != quiz_history.quiz_history_id).all()
+            
+            if not previous_attempts:
+                # First attempt - award full score as points
+                points_to_add = score
+            else:
+                # Reattempt - find the highest previous score
+                highest_previous_score = max(attempt.score for attempt in previous_attempts)
+                
+                # Only award points if the new score is better than previous best
+                if score > highest_previous_score:
+                    points_to_add = score - highest_previous_score
+                else:
+                    points_to_add = 0
+            
+            # Update child's total points
+            if points_to_add > 0:
+                child.points = (child.points or 0) + points_to_add
+                db.session.commit()
 
         return jsonify({"score": score, "total_score": total_score}), 200
 
@@ -1623,7 +1745,7 @@ def get_child_badges(child_id):
         response = []
         for badge in badges:
             if badge.image:
-                image_base64 = base64.b64encode(badge.image).decode("utf-8")
+                image_base64 = badge.image
             else:
                 image_base64 = ""
             response.append(
@@ -1650,7 +1772,7 @@ def get_children(current_user, role):
     response = []
     for child in children:
         if child.profile_image:
-            image_base64 = base64.b64encode(child.profile_image).decode("utf-8")
+            image_base64 = child.profile_image
         else:
             image_base64 = ""
 
@@ -2482,10 +2604,16 @@ def update_activity(current_user, role):
     answer_format = data.get("answer_format")
 
     if image is not None:
-        try:
-            activity.image = base64.b64decode(image) if image else None
-        except Exception:
-            return jsonify({"error": "Invalid base64 image format"}), 400
+        # Validate base64 if provided, but store as string
+        if image:
+            try:
+                # Test if it's valid base64 (validation only)
+                base64.b64decode(image)
+                activity.image = image  # Store base64 string directly
+            except Exception:
+                return jsonify({"error": "Invalid base64 image format"}), 400
+        else:
+            activity.image = None
 
     if title is not None:
         activity.name = title
@@ -2554,10 +2682,16 @@ def update_quiz(current_user, role):
     lesson_id = data.get("lesson_id")
 
     if image_base64 is not None:
-        try:
-            quiz.image = base64.b64decode(image_base64) if image_base64 else None
-        except Exception:
-            return jsonify({"error": "Invalid base64 image"}), 400
+        # Validate base64 if provided, but store as string
+        if image_base64:
+            try:
+                # Test if it's valid base64 (validation only)
+                base64.b64decode(image_base64)
+                quiz.image = image_base64  # Store base64 string directly
+            except Exception:
+                return jsonify({"error": "Invalid base64 image"}), 400
+        else:
+            quiz.image = None
 
     if title is not None:
         quiz.quiz_name = title
@@ -2667,10 +2801,16 @@ def update_lesson(current_user, role):
             )
 
     if image_base64 is not None:
-        try:
-            lesson.image = base64.b64decode(image_base64) if image_base64 else None
-        except Exception:
-            return jsonify({"error": "Invalid base64 image format"}), 400
+        # Validate base64 if provided, but store as string
+        if image_base64:
+            try:
+                # Test if it's valid base64 (validation only)
+                base64.b64decode(image_base64)
+                lesson.image = image_base64  # Store base64 string directly
+            except Exception:
+                return jsonify({"error": "Invalid base64 image format"}), 400
+        else:
+            lesson.image = None
 
     db.session.commit()
 

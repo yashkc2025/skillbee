@@ -204,52 +204,47 @@ def token_required(allowed_roles=None):
 
     return decorator
 
+### Dummy Data Route ###
 
 @api.route("/dummyData", methods=["GET"])
 def dummyData():
     createDummyData()
     return "Dummy data has been created!"
 
+### User Registration Routes ###
 
 @api.route("/auth/parent_register", methods=["POST"])
 def parent_register():
     return parent_regisc(request)
 
-
 @api.route("/auth/children_register", methods=["POST"])
 def child_register():
     return child_regisc(request)
-
-
-@api.route("/auth/admin_login", methods=["POST"])
-def admin_login():
-    return admin_loginc()
-
 
 @api.route("/auth/admin_create", methods=["POST"])
 def admin_create_route():
     return admin_create()
 
+### User Login Routes ###
+
+@api.route("/auth/admin_login", methods=["POST"])
+def admin_login():
+    return admin_loginc()
 
 @api.route("/auth/parent_login", methods=["POST"])
 def parent_login():
     return parent_loginc(request)
 
-
 @api.route("/auth/children_login", methods=["POST"])
 def child_login():
     return child_loginc(request)
-
-@api.route('/auth/get_user',methods=['GET'])
-@token_required()
-def get_user(current_user, role):
-    return get_auser(current_user, role)
 
 @api.route("/auth/get_user", methods=["GET"])
 @token_required(allowed_roles=["admin", "parent", "child"])
 def get_user(current_user, role):
     return get_auser(current_user, role)
 
+### Children Dashboard Routes ###
 
 @api.route("/child_dashboard_stats", methods=["GET"])
 @token_required(allowed_roles=["child"])
@@ -266,7 +261,7 @@ def child_heatmap(current_user, role):
 def child_leaderboard(current_user, role):
     return get_leaderboard(current_user.child_id)
 
-
+### Admin and Parent Routes ###
 
 @api.route("/children", methods=["GET"])
 @token_required(allowed_roles=["admin", "parent"])
@@ -465,20 +460,17 @@ def update_parent_details():
 def parent_password():
     return update_parent_password()
 
-@api.route('/api/child/curriculums', methods=['GET'])
+### Children Routes ###
+
+@api.route('/api/child/<int:child_id>/curriculums', methods=['GET'])
 @token_required(allowed_roles=["child"])
-def get_curr(current_user, role):
+def get_curr(current_user, role, child_id):
     return get_curriculums_for_child(current_user.child_id)
 
 @api.route('/api/child/curriculum/<int:curriculum_id>/lessons', methods=['GET'])
 @token_required(allowed_roles=['child'])
 def get_skill_lessons_route(curriculum_id, current_user, role):
     return get_skill_lessons(current_user.child_id, curriculum_id)
-
-@api.route("/api/child/curriculum/<int:skill_id>/lessons", methods=["GET"])
-@token_required(allowed_roles=["child"])
-def get_skill_lessons_route(skill_id, current_user, role):
-    return get_skill_lessons(current_user.child_id, skill_id)
 
 
 @api.route("/api/child/lesson/<int:lesson_id>", methods=["GET"])
