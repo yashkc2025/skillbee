@@ -25,7 +25,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta
 import uuid
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy import and_, func, case, cast, Integer
+from sqlalchemy import and_, func, case, cast, Integer, distinct
 import time
 import base64
 from .decorators import only_admin, only_admin_or_parent, only_parent
@@ -569,15 +569,27 @@ def get_user_skill_progress(child_id):
     
     response = []
     for skill in skills:
-        total_lessons = Lesson.query.filter_by(skill_id=skill.skill_id).count()
+        # I want total_lessons_quizzes as count of all lessons and quizzes in each lesson of a skill
+        # total_lessons_quizzes = 
+        total_lessons = Lesson.query.filter_by(skill_id=skill.skill_id).count() + Quiz.query.join(Lesson).filter(Lesson.skill_id == skill.skill_id).count()
         completed = (
             LessonHistory.query.join(Lesson)
             .filter(
                 Lesson.skill_id == skill.skill_id, LessonHistory.child_id == child_id
             )
             .count()
+        ) + (
+            db.session.query(func.count(distinct(QuizHistory.quiz_id))) # This is the key change
+            .join(Quiz)
+            .join(Lesson)
+            .filter(
+                Lesson.skill_id == skill.skill_id,
+                QuizHistory.child_id == child_id,
+            )
+            .scalar() # Use .scalar() to get the single count value
         )
         percent = int((completed / total_lessons) * 100) if total_lessons else 0
+        print(f"Skill: {skill.name}, Total Lessons: {total_lessons}, Completed: {completed}, Percentage: {percent}%")
         response.append(
             {
                 "name": skill.name,

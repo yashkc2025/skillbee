@@ -107,8 +107,10 @@ async function fetchDashboardData() {
     skillTypes.value = skillsData.map((skill: any) => ({
       skill_id: skill.id,
       label: skill.name,
-      progress: skill.progress_status,
+      progress: skill.percentage_completed,
     }));
+
+    console.log("Skill Types:", skillTypes.value);
 
     // Badges
     const badgesResponse = await fetch(`${base_url}user_badges`, {
