@@ -865,7 +865,6 @@ def get_lesson_details(child_id, lesson_id):
             "lesson_id": lesson.lesson_id,
             "title": lesson.title,
             "content": lesson.content,
-            "image": lesson.image,
             "completed_at": (
                 lesson_history.created_at.isoformat() if lesson_history else None
             ),
@@ -989,7 +988,6 @@ def get_activity_details(child_id, activity_id):
             "activity_id": activity.activity_id,
             "name": activity.name,
             "description": activity.description,
-            "image": activity.image,
             "answer_format": activity.answer_format,
             "completed_at": (
                 activity_history.created_at.isoformat() if activity_history else None
