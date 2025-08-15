@@ -1,67 +1,35 @@
 <template>
   <ChildAppLayout>
     <div class="activities" :class="{ 'blur-bg': selectedActivity }">
-      <AnimatedHeader
-        v-model="searchInput"
-        :heading-messages="[
-          `🎉 Let’s play the ${lesson.name} activity from ${curriculum.name}! 🌟`,
-          '✨ Tap an activity to see details and upload your work! 🚀',
-        ]"
-        :placeholder-messages="['Type to find a activity… 🕵️‍♂️']"
-        :typing-speed="50"
-        :pause-duration="1500"
-      />
+      <AnimatedHeader v-model="searchInput" :heading-messages="[
+        `🎉 Let’s play the ${lesson.name} activity from ${curriculum.name}! 🌟`,
+        '✨ Tap an activity to see details and upload your work! 🚀',
+      ]" :placeholder-messages="['Type to find a activity… 🕵️‍♂️']" :typing-speed="50" :pause-duration="1500" />
 
       <div v-if="!isLoading && !error">
         <div class="card-item">
           <div v-for="activity in filteredActivities" :key="activity.activity_id">
-            <ModuleCard
-              @click="openActivity(activity)"
-              :image="activity.image"
-              :name="activity.name"
-              :description="activity.description"
-              :show-buttons="true"
-              :primary-label="
-                activity.progress_status === 100 ? '📤 Reupload' : '📤 Upload'
-              "
-              secondary-label="📜 History"
-              :progress-status="activity.progress_status"
-              not-started-label="🔍 Let's Explore!"
-              completed-label="🏆 Activity Mastered!"
-              @primary="uploadActivity(activity.activity_id)"
-              @secondary="openActivitySubmissions(activity)"
-            >
-              <p
-                class="card-activity-difficulty"
-                :style="{ color: getDifficultyStyle(activity.difficulty).color }"
-              >
+            <ModuleCard @click="openActivity(activity)" :image="activity.image" :name="activity.name"
+              :description="activity.description" :show-buttons="true" :primary-label="activity.progress_status === 100 ? '📤 Reupload' : '📤 Upload'
+                " secondary-label="📜 History" :progress-status="activity.progress_status"
+              not-started-label="🔍 Let's Explore!" completed-label="🏆 Activity Mastered!"
+              @primary="uploadActivity(activity.activity_id)" @secondary="openActivitySubmissions(activity)">
+              <p class="card-activity-difficulty" :style="{ color: getDifficultyStyle(activity.difficulty).color }">
                 Difficulty:
                 {{ activity.difficulty || "Unknown" }}
               </p>
             </ModuleCard>
           </div>
         </div>
-        <input
-          type="file"
-          ref="fileInput"
-          class="hidden"
-          accept=".jpg,.jpeg,.png,.pdf"
-          @change="handleFileUpload"
-        />
+        <input type="file" ref="fileInput" class="hidden" accept=".jpg,.jpeg,.png,.pdf" @change="handleFileUpload" />
 
         <p v-if="activities.length === 0" class="empty-result">
           No activities in this lesson yet. Please check back later.
         </p>
-        <p
-          v-if="filteredActivities.length === 0 && activities.length > 0"
-          class="empty-result"
-        >
+        <p v-if="filteredActivities.length === 0 && activities.length > 0" class="empty-result">
           No activities found matching your search. Please try a different keyword.
         </p>
-        <p
-          v-if="filteredActivities.length !== 0 && activities.length !== 0"
-          class="empty-result"
-        >
+        <p v-if="filteredActivities.length !== 0 && activities.length !== 0" class="empty-result">
           Tip: Click on an activity to view details and upload your work!
         </p>
       </div>
@@ -73,10 +41,7 @@
       </div>
     </div>
 
-    <div
-      :class="['activity-contents', { 'show-content': selectedActivity }]"
-      v-if="selectedActivity"
-    >
+    <div :class="['activity-contents', { 'show-content': selectedActivity }]" v-if="selectedActivity">
       <h2 class="activity-name">🎯 {{ selectedActivity?.name }}</h2>
       <button class="back-btn" @click="closePanel">🔙 Back to Activities</button>
 
@@ -84,11 +49,7 @@
         <h3>📚 Your Activity History</h3>
         <div v-if="isHistoryLoading" class="loading-state">Loading history...</div>
         <div v-else-if="activityHistory.length > 0">
-          <div
-            v-for="history in activityHistory"
-            :key="history.activity_history_id"
-            class="history-card"
-          >
+          <div v-for="history in activityHistory" :key="history.activity_history_id" class="history-card">
             <div class="view-submission-btn-wrap">
               <div class="submission-datetime">
                 🗓️ {{ formatDateTime(history.submitted_at) }}
@@ -104,10 +65,7 @@
               <div v-if="history.feedback?.parent" class="feedback-parent">
                 <span>👨‍👩‍👧 <b>Parent:</b> {{ history.feedback.parent }}</span>
               </div>
-              <div
-                v-if="!history.feedback?.admin && !history.feedback?.parent"
-                class="no-feedback"
-              >
+              <div v-if="!history.feedback?.admin && !history.feedback?.parent" class="no-feedback">
                 <span>📝 No feedback yet.</span>
               </div>
             </div>
@@ -122,9 +80,7 @@
         <p class="activity-description">📝 {{ selectedActivity?.description }}</p>
         <p class="activity-difficulty">
           💪 Difficulty:
-          <span
-            :style="{ color: getDifficultyStyle(selectedActivity?.difficulty).color }"
-          >
+          <span :style="{ color: getDifficultyStyle(selectedActivity?.difficulty).color }">
             {{ getDifficultyStyle(selectedActivity?.difficulty).emoji }}
             {{ selectedActivity?.difficulty || "Unknown" }}
           </span>
@@ -134,16 +90,10 @@
             🎉 Activity Completed! You can re-upload your work if needed.
           </p>
           <div class="content-buttons">
-            <AppButton
-              type="primary"
-              @click="uploadActivity(selectedActivity.activity_id)"
-            >
+            <AppButton type="primary" @click="uploadActivity(selectedActivity.activity_id)">
               {{ selectedActivity.progress_status === 0 ? "📤 Upload" : "📤 Reupload" }}
             </AppButton>
-            <AppButton
-              type="secondary"
-              @click="openActivitySubmissions(selectedActivity)"
-            >
+            <AppButton type="secondary" @click="openActivitySubmissions(selectedActivity)">
               📜 History
             </AppButton>
           </div>

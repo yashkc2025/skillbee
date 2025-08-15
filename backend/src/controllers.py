@@ -950,6 +950,7 @@ def get_lesson_activities(child_id, lesson_id):
                     "name": activity.name,
                     "description": activity.description,
                     "image": image_base64,
+                    "difficulty": activity.difficulty,
                     "progress_status": (
                         100 if activity.activity_id in completed_activities else 0
                     ),
@@ -988,6 +989,7 @@ def get_activity_details(child_id, activity_id):
             "activity_id": activity.activity_id,
             "name": activity.name,
             "description": activity.description,
+            "difficulty": activity.difficulty,
             "answer_format": activity.answer_format,
             "completed_at": (
                 activity_history.created_at.isoformat() if activity_history else None
