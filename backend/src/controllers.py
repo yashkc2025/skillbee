@@ -296,6 +296,9 @@ def parent_loginc(request):
     if not parent or not check_password_hash(parent.password, password):
         return jsonify({"error": "Invalid email or password"}), 401
 
+    if parent.is_blocked == 1:
+        return jsonify({"error": "You have been blocked"}), 401
+
     token = str(uuid.uuid4())
     session_info = {
         "parent_id": parent.parent_id,

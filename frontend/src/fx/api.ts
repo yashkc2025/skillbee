@@ -1,49 +1,5 @@
 import { useToast } from "vue-toastification";
 
-
-export async function submitForm(address: string, event) {
-  const toast = useToast();
-  const token = localStorage.getItem("authToken");
-
-  event.preventDefault(); // Prevents full page reload
-
-  const formData = new FormData(event.target); // Collects all form data
-
-  try {
-    const response = await fetch(address, {
-      method: "POST",
-      body: formData,
-      credentials: "include",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-      }
-    });
-
-    if (response.status >= 200 && response.status < 300) {
-      const data = await response.json();
-      if (data.redirect) {
-        window.location.href = data.redirect;
-      }
-      if (data.message) {
-        toast.success(data.message);
-      }
-    } else if (response.status >= 400) {
-      const data = await response.json();
-      if (data.error) {
-        toast.error(data.error);
-      }
-      if (data.message) {
-        toast.error(data.message);
-      }
-    } else {
-      return response;
-    }
-  } catch (error) {
-    console.error("Error submitting form:", error);
-    throw error;
-  }
-}
-
 export async function postData(address: string, data: Object, redirectURL?: string) {
   const toast = useToast();
   const token = localStorage.getItem("authToken");

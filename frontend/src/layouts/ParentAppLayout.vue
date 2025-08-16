@@ -1,5 +1,18 @@
 <script setup lang="ts">
-import ParentNavbar from "@/components/parent/ParentNavbar.vue"
+import ParentNavbar from "@/components/parent/ParentNavbar.vue";
+import { onMounted } from "vue";
+import { fetchData } from "../fx/api";
+import { getBackendURL, logout } from "../fx/utils";
+
+onMounted(async () => {
+  const userData = await fetchData(getBackendURL("auth/get_user"));
+  if (userData) {
+    console.log(userData);
+    if (userData.user.role !== "parent") {
+      logout();
+    }
+  }
+});
 </script>
 
 <template>
@@ -33,10 +46,9 @@ import ParentNavbar from "@/components/parent/ParentNavbar.vue"
   justify-content: center;
   align-items: center;
   font-family: "DMSans";
-
 }
 
-.app-layout>div {
+.app-layout > div {
   /* background-color: blue; */
   /* max-width: 1200px; */
   width: 100%;

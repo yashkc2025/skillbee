@@ -1,5 +1,18 @@
 <script setup lang="ts">
 import AdminNavbar from "@/components/admin/AdminNavbar.vue";
+import { onMounted } from "vue";
+import { fetchData } from "../fx/api";
+import { getBackendURL, logout } from "../fx/utils";
+
+onMounted(async () => {
+  const userData = await fetchData(getBackendURL("auth/get_user"));
+  if (userData) {
+    console.log(userData);
+    if (userData.user.role !== "admin") {
+      logout();
+    }
+  }
+});
 </script>
 
 <template>

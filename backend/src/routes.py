@@ -375,13 +375,13 @@ def unblock_children(current_user, role):
 
 @api.route("/admin/block_parent", methods=["PUT"])
 @token_required(allowed_roles=["admin"])
-def block_parents():
+def block_parents(current_user, role):
     return block_parent()
 
 
 @api.route("/admin/unblock_parent", methods=["PUT"])
 @token_required(allowed_roles=["admin"])
-def unblock_parents():
+def unblock_parents(current_user, role):
     return unblock_parent()
 
 

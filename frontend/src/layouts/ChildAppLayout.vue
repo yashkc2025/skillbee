@@ -1,5 +1,19 @@
 <script setup lang="ts">
 import ChildNavbar from "@/components/child/ChildNavbar.vue";
+import { onMounted } from "vue";
+import { getBackendURL, logout } from "../fx/utils";
+import { fetchData } from "../fx/api";
+
+onMounted(async () => {
+  const userData = await fetchData(getBackendURL("auth/get_user"));
+
+  if (userData) {
+    console.log(userData);
+    if (userData.user.role !== "child") {
+      logout();
+    }
+  }
+});
 </script>
 
 <template>
@@ -35,7 +49,7 @@ import ChildNavbar from "@/components/child/ChildNavbar.vue";
   align-items: center;
 }
 
-.app-layout>div {
+.app-layout > div {
   /* background-color: blue; */
   /* max-width: 1200px; */
   width: 100%;

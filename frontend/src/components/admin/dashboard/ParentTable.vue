@@ -18,6 +18,7 @@ import { onMounted } from "vue";
 import { fetchData } from "@/fx/api";
 import { getBackendURL } from "@/fx/utils";
 import { ref } from "vue";
+import { updateData } from "../../../fx/api";
 
 type ParemtType = {
   id: number;
@@ -49,7 +50,11 @@ function tableEntries() {
     id: p.id,
     name: p.name,
     email: p.email,
-    blocked: <span class="chip pointer">{p.blocked ? "Blocked" : "Active"}</span>,
+    blocked: (
+      <span class="chip pointer" onClick={() => blockParent(p.id, p.blocked)}>
+        {p.blocked ? "Blocked" : "Active"}
+      </span>
+    ),
     // p.view_children = <i class="bi bi-patch-plus pointer" onClick={() => viewKids()}></i>;
   }));
 
@@ -58,6 +63,15 @@ function tableEntries() {
   }
 
   return c;
+}
+
+async function blockParent(id, state) {
+  console.log("Clciked");
+  if (state === false) {
+    await updateData(getBackendURL("/admin/block_parent"), { id }, "/admin");
+  } else if (state === true) {
+    await updateData(getBackendURL("/admin/unblock_parent"), { id }, "/admin");
+  }
 }
 </script>
 
