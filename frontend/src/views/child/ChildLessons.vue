@@ -1,16 +1,10 @@
 <template>
   <ChildAppLayout>
     <div class="lessons" :class="{ 'blur-bg': selectedLesson }">
-      <AnimatedHeader
-        v-model="searchInput"
-        :heading-messages="[
-          `🎉 Let’s discover the lessons in ${curriculum.name}! 🌟`,
-          '✨ Tap the card to start your learning adventure! 🚀',
-        ]"
-        :placeholder-messages="['Type to find a lesson… 🕵️‍♂️']"
-        :typing-speed="50"
-        :pause-duration="1500"
-      />
+      <AnimatedHeader v-model="searchInput" :heading-messages="[
+        `🎉 Let’s discover the lessons in ${curriculum.name}! 🌟`,
+        '✨ Tap the card to start your learning adventure! 🚀',
+      ]" :placeholder-messages="['Type to find a lesson… 🕵️‍♂️']" :typing-speed="50" :pause-duration="1500" />
 
       <div v-if="isLoading" class="loading-state">
         Available lessons are visible below...
@@ -24,34 +18,23 @@
       <div v-else>
         <div class="card-item">
           <div v-for="lesson in filteredLessons" :key="lesson.lesson_id">
-            <ModuleCard
-              @click="openLesson(lesson)"
-              :image="lesson.image"
-              :name="lesson.title"
-              :description="lesson.description"
-              primary-label="📝 Activities"
-              secondary-label="✍️ Quizzes"
-              @primary="
+            <ModuleCard @click="openLesson(lesson)" :image="lesson.image" :name="lesson.title"
+              :description="lesson.description" primary-label="📝 Activities" secondary-label="✍️ Quizzes" @primary="
                 goToActivities(
                   curriculum.curriculum_id,
                   curriculum.name,
                   lesson.lesson_id,
                   lesson.title
                 )
-              "
-              @secondary="
-                goToQuizzes(
-                  curriculum.curriculum_id,
-                  curriculum.name,
-                  lesson.lesson_id,
-                  lesson.title
-                )
-              "
-              :progress-status="lesson.progress_status"
-              :show-buttons="true"
-              not-started-label="📚 New Lesson!"
-              completed-label="✅ Lesson Complete!"
-            />
+                " @secondary="
+                  goToQuizzes(
+                    curriculum.curriculum_id,
+                    curriculum.name,
+                    lesson.lesson_id,
+                    lesson.title
+                  )
+                  " :progress-status="lesson.progress_status" :show-buttons="true" not-started-label="📚 New Lesson!"
+              completed-label="✅ Lesson Complete!" />
           </div>
         </div>
         <p v-if="lessons.length === 0" class="empty-result">
@@ -66,28 +49,23 @@
       </div>
     </div>
 
-    <div
-      v-if="selectedLesson"
-      :class="['lesson-contents', { 'show-content': !!selectedLesson }]"
-    >
+    <div v-if="selectedLesson" :class="['lesson-contents', { 'show-content': !!selectedLesson }]">
       <template v-if="isDetailLoading">
         <h2 class="lesson-title">📘 {{ selectedLesson.title }}</h2>
         <div class="loading-state">Loading lesson details...</div>
       </template>
       <template v-else>
         <h2 class="lesson-title">📘 {{ selectedLesson.title }}</h2>
-        <button
-          class="back-btn"
-          @click="
-            closeLessonDetail();
-            fetchCurriculumLessons();
-          "
-        >
+        <button class="back-btn" @click="
+          closeLessonDetail();
+        fetchCurriculumLessons();
+        ">
           🔙 Back to Lessons
         </button>
         <p class="lesson-main-content">🧠 {{ selectedLesson.content.text }}</p>
 
-        <div v-if="selectedLesson.content.url" class="reference-link">
+        <div v-if="selectedLesson.content.url && Object.keys(selectedLesson.content.url).length > 0"
+          class="reference-link">
           <h4 class="reference-title">
             🌐 Please go through reference link to learn more about lesson.
           </h4>
@@ -103,41 +81,30 @@
             ✅ Completed on: {{ formatCompletionDate(selectedLesson.completed_at) }}
           </p>
           <div class="content-buttons">
-            <AppButton
-              type="primary"
-              @click="
-                goToActivities(
-                  curriculum.curriculum_id,
-                  curriculum.name,
-                  selectedLesson.lesson_id,
-                  selectedLesson.title
-                )
-              "
-            >
+            <AppButton type="primary" @click="
+              goToActivities(
+                curriculum.curriculum_id,
+                curriculum.name,
+                selectedLesson.lesson_id,
+                selectedLesson.title
+              )
+              ">
               📝 Activities
             </AppButton>
-            <AppButton
-              type="secondary"
-              @click="
-                goToQuizzes(
-                  curriculum.curriculum_id,
-                  curriculum.name,
-                  selectedLesson.lesson_id,
-                  selectedLesson.title
-                )
-              "
-            >
+            <AppButton type="secondary" @click="
+              goToQuizzes(
+                curriculum.curriculum_id,
+                curriculum.name,
+                selectedLesson.lesson_id,
+                selectedLesson.title
+              )
+              ">
               ✍️ Quizzes
             </AppButton>
-            <AppButton
-              type="tertiary"
-              :class="[
-                'tertiary',
-                { 'disabled-tertiary': !!selectedLesson.completed_at },
-              ]"
-              :disabled="!!selectedLesson.completed_at"
-              @click="markAsRead(selectedLesson.lesson_id)"
-            >
+            <AppButton type="tertiary" :class="[
+              'tertiary',
+              { 'disabled-tertiary': !!selectedLesson.completed_at },
+            ]" :disabled="!!selectedLesson.completed_at" @click="markAsRead(selectedLesson.lesson_id)">
               {{ selectedLesson.completed_at ? "✔✔ Marked as read" : "✔ Mark as read" }}
             </AppButton>
             <AppButton type="quaternary" @click="downloadPDF">
@@ -247,7 +214,7 @@ function downloadPDF() {
   y += splitContent.length * 7 + 5;
 
   // Reference Links
-  if (lesson.content.url?.length > 0) {
+  if (Object.values(lesson.content.url).length > 0) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
     doc.text("Reference Links:", margin, y);
@@ -256,13 +223,14 @@ function downloadPDF() {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(12);
 
-    lesson.content.url.forEach((linkObj, index) => {
+    Object.values(lesson.content.url).forEach((linkObj, index) => {
       // Each linkObj is like { 0: "https://..." }
-      const link = Object.values(linkObj)[0];
-      const linkText = `${index + 1}. ${link}`;
+      const linkText = `${index + 1}. ${linkObj}`;
       const splitLink = doc.splitTextToSize(linkText, 180);
       doc.text(splitLink, margin, y);
       y += splitLink.length * 7;
+      console.log("Link", linkObj);
+      console.log("Link Text", splitLink);
     });
   }
 

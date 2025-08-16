@@ -883,7 +883,6 @@ def get_lesson_details(child_id, lesson_id):
             "lesson_id": lesson.lesson_id,
             "title": lesson.title,
             "content": lesson.content,
-            "image": lesson.image,
             "completed_at": (
                 lesson_history.created_at.isoformat() if lesson_history else None
             ),
@@ -972,6 +971,7 @@ def get_lesson_activities(child_id, lesson_id):
                     "name": activity.name,
                     "description": activity.description,
                     "image": image_base64,
+                    "difficulty": activity.difficulty,
                     "progress_status": (
                         100 if activity.activity_id in completed_activities else 0
                     ),
@@ -1010,7 +1010,7 @@ def get_activity_details(child_id, activity_id):
             "activity_id": activity.activity_id,
             "name": activity.name,
             "description": activity.description,
-            "image": activity.image,
+            "difficulty": activity.difficulty,
             "answer_format": activity.answer_format,
             "completed_at": (
                 activity_history.created_at.isoformat() if activity_history else None
@@ -2045,33 +2045,93 @@ def create_activity():
 def create_skills():
     skills = [
         {
-            "name": "Critical Thinking",
+            "name": "Critical Thinking I",
             "description": "Improve Critical Thinking",
             "min_age": 8,
-            "max_age": 14,
+            "max_age": 10,
         },
         {
-            "name": "Communication Skills",
+            "name": "Communication Skills I",
             "description": "Improve communication.",
             "min_age": 8,
-            "max_age": 14,
+            "max_age": 10,
         },
         {
-            "name": "Time Management",
+            "name": "Time Management I",
             "description": "Learn to manage Time",
             "min_age": 8,
-            "max_age": 14,
+            "max_age": 10,
         },
         {
-            "name": "Extracurricular Activities",
+            "name": "Extracurricular Activities I",
             "description": "Extra Activities",
             "min_age": 8,
+            "max_age": 10,
+        },
+        {
+            "name": "Financial Literacy I",
+            "description": "Understand Money",
+            "min_age": 8,
+            "max_age": 10,
+        },
+        {
+            "name": "Critical Thinking II",
+            "description": "Improve Critical Thinking",
+            "min_age": 10,
+            "max_age": 12,
+        },
+        {
+            "name": "Communication Skills II",
+            "description": "Improve communication.",
+            "min_age": 10,
+            "max_age": 12,
+        },
+        {
+            "name": "Time Management II",
+            "description": "Learn to manage Time",
+            "min_age": 10,
+            "max_age": 12,
+        },
+        {
+            "name": "Extracurricular Activities II",
+            "description": "Extra Activities",
+            "min_age": 10,
+            "max_age": 12,
+        },
+        {
+            "name": "Financial Literacy II",
+            "description": "Understand Money",
+            "min_age": 10,
+            "max_age": 12,
+        },
+        {
+            "name": "Critical Thinking III",
+            "description": "Improve Critical Thinking",
+            "min_age": 12,
             "max_age": 14,
         },
         {
-            "name": "Financial Literacy",
+            "name": "Communication Skills III",
+            "description": "Improve communication.",
+            "min_age": 12,
+            "max_age": 14,
+        },
+        {
+            "name": "Time Management III",
+            "description": "Learn to manage Time",
+            "min_age": 12,
+            "max_age": 14,
+        },
+        {
+            "name": "Extracurricular Activities III",
+            "description": "Extra Activities",
+            "min_age": 12,
+            "max_age": 14,
+        },
+        {
+            "name": "Financial Literacy III",
             "description": "Understand Money",
-            "min_age": 8,
+            "min_age": 12,
             "max_age": 14,
         },
     ]
