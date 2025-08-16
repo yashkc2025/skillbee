@@ -504,7 +504,21 @@ def get_auser(current_user, role):
 
 
 def get_child_dashboard_stats(child_id):
-    lessons_completed = LessonHistory.query.filter_by(child_id=child_id).count()
+    child = Child.query.get(child_id)
+    
+    age = age_calc(child.dob)
+    
+    # Get skills filtered by the child's age
+    skills: List[Skill] = Skill.query.filter(
+        Skill.min_age <= age, Skill.max_age > age
+    ).all()
+    
+    # lessons_completed = LessonHistory.query.filter_by(child_id=child_id).count()
+    lessons_completed = 0
+    
+    for skill in skills:
+        total_activites = 0
+    
     all_lessons = Lesson.query.all()
     skill_progress = {}
     for lesson in all_lessons:
@@ -519,7 +533,6 @@ def get_child_dashboard_stats(child_id):
         if completed == len(lesson_ids):
             completed_skills += 1
     badges_earned = BadgeHistory.query.filter_by(child_id=child_id).count()
-    child = Child.query.get(child_id)
     streak = child.streak if child else 0
     all_children = Child.query.filter_by(is_blocked=False).order_by(Child.points.desc()).all()
     leaderboard_rank = next(
@@ -871,7 +884,7 @@ def get_skill_lessons(child_id, skill_id):
 
         lessons_data = []
         for lesson in lessons:
-            lesson_read = LessonHistory.query.filter_by(lesson_id =lesson.lesson_id).count()
+            lesson_read = LessonHistory.query.filter_by(lesson_id =lesson.lesson_id, child_id=child_id).count()
             total_activities = Activity.query.filter_by(lesson_id = lesson.lesson_id).count()
             attempted_activities = (
                 db.session.query(
@@ -880,7 +893,7 @@ def get_skill_lessons(child_id, skill_id):
                 .join(Activity)
                 .join(Lesson)
                 .filter(
-                    Lesson.skill_id == skill.skill_id,
+                    lesson.lesson_id == Activity.lesson_id,
                     ActivityHistory.child_id == child_id,
                 )
                 .scalar()  # Use .scalar() to get the single count value
@@ -893,7 +906,7 @@ def get_skill_lessons(child_id, skill_id):
                 .join(Quiz)
                 .join(Lesson)
                 .filter(
-                    Lesson.skill_id == skill.skill_id,
+                    lesson.lesson_id == Quiz.lesson_id,
                     QuizHistory.child_id == child_id,
                 )
                 .scalar()  # Use .scalar() to get the single count value
@@ -911,16 +924,18 @@ def get_skill_lessons(child_id, skill_id):
                     "image": image_base64,
                     "description": lesson.description,
                     "progress_status": (
-                        int(
+                        int((
                             (lesson_read + attempted_quizzes + attempted_activities)
+                            / (total_activities + total_quizzes + 1))
                             * 100
-                            / (total_activities + total_quizzes + 1)
                         )
-                        if (total_activities + total_quizzes) > 0
+                        if (total_activities + total_quizzes + 1) > 0
                         else 100
                     ),
                 }
             )
+            
+        
 
         return (
             jsonify(
