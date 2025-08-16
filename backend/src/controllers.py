@@ -515,23 +515,96 @@ def get_child_dashboard_stats(child_id):
     
     # lessons_completed = LessonHistory.query.filter_by(child_id=child_id).count()
     lessons_completed = 0
+    completed_skills = 0
     
     for skill in skills:
-        total_activites = 0
-    
-    all_lessons = Lesson.query.all()
-    skill_progress = {}
-    for lesson in all_lessons:
-        if lesson.skill_id not in skill_progress:
-            skill_progress[lesson.skill_id] = []
-        skill_progress[lesson.skill_id].append(lesson.lesson_id)
-    completed_skills = 0
-    for skill_id, lesson_ids in skill_progress.items():
-        completed = LessonHistory.query.filter(
-            LessonHistory.child_id == child_id, LessonHistory.lesson_id.in_(lesson_ids)
-        ).count()
-        if completed == len(lesson_ids):
+        total_lessons_activity_quizzes = (
+            Lesson.query.filter_by(skill_id=skill.skill_id).count()
+            + Quiz.query.join(Lesson).filter(Quiz.lesson_id == Lesson.lesson_id).count()
+            + Activity.query.join(Lesson)
+            .filter(Activity.lesson_id == Lesson.lesson_id)
+            .count()
+        )
+        
+        completed_lesson_activity_quizzes = (
+            (
+                LessonHistory.query.join(Lesson)
+                .filter(
+                    Lesson.skill_id == skill.skill_id,
+                    LessonHistory.child_id == child_id,
+                )
+                .count()
+            )
+            + (
+                db.session.query(
+                    func.count(distinct(QuizHistory.quiz_id))
+                )  # This is the key change
+                .join(Quiz)
+                .join(Lesson)
+                .filter(
+                    Lesson.skill_id == skill.skill_id,
+                    QuizHistory.child_id == child_id,
+                )
+                .scalar()  # Use .scalar() to get the single count value
+            )
+            + (
+                db.session.query(
+                    func.count(distinct(ActivityHistory.activity_id))
+                )  # This is the key change
+                .join(Activity)
+                .join(Lesson)
+                .filter(
+                    Lesson.skill_id == skill.skill_id,
+                    ActivityHistory.child_id == child_id,
+                )
+                .scalar()  # Use .scalar() to get the single count value
+            )
+        )
+        
+        if total_lessons_activity_quizzes == completed_lesson_activity_quizzes:
             completed_skills += 1
+        
+        lessons = (
+            Lesson.query.filter_by(skill_id=skill.skill_id).order_by(Lesson.position).all()
+        )
+        if not lessons:
+            continue
+        
+        check = 0
+        
+        for lesson in lessons:
+            lesson_read = LessonHistory.query.filter_by(lesson_id =lesson.lesson_id, child_id=child_id).count()
+            total_activities = Activity.query.filter_by(lesson_id = lesson.lesson_id).count()
+            attempted_activities = (
+                db.session.query(
+                    func.count(distinct(ActivityHistory.activity_id))
+                )  # This is the key change
+                .join(Activity)
+                .join(Lesson)
+                .filter(
+                    lesson.lesson_id == Activity.lesson_id,
+                    ActivityHistory.child_id == child_id,
+                )
+                .scalar()  # Use .scalar() to get the single count value
+            )
+            total_quizzes = Quiz.query.filter_by(lesson_id = lesson.lesson_id).count()
+            attempted_quizzes = (
+                db.session.query(
+                    func.count(distinct(QuizHistory.quiz_id))
+                )  # This is the key change
+                .join(Quiz)
+                .join(Lesson)
+                .filter(
+                    lesson.lesson_id == Quiz.lesson_id,
+                    QuizHistory.child_id == child_id,
+                )
+                .scalar()  # Use .scalar() to get the single count value
+            )
+            
+            if (lesson_read + attempted_activities + attempted_quizzes) == (total_activities + total_quizzes + 1):
+                lessons_completed += 1
+            
+            
     badges_earned = BadgeHistory.query.filter_by(child_id=child_id).count()
     streak = child.streak if child else 0
     all_children = Child.query.filter_by(is_blocked=False).order_by(Child.points.desc()).all()
@@ -539,6 +612,7 @@ def get_child_dashboard_stats(child_id):
         (index + 1 for index, c in enumerate(all_children) if c.child_id == child_id),
         None,
     )
+    
 
     return (
         jsonify(
