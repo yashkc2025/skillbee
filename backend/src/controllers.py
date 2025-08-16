@@ -701,11 +701,10 @@ def get_user_skill_progress(child_id):
         # total_lessons_quizzes =
         total_lessons = (
             Lesson.query.filter_by(skill_id=skill.skill_id).count()
-            + Quiz.query.join(Lesson).filter(Quiz.lesson_id == Lesson.lesson_id).count()
-            + Activity.query.join(Lesson)
-            .filter(Activity.lesson_id == Lesson.lesson_id)
-            .count()
+            + Quiz.query.join(Lesson).filter(Quiz.lesson_id == Lesson.lesson_id, skill.skill_id == Lesson.skill_id).count()
+            + Activity.query.join(Lesson).filter(Activity.lesson_id == Lesson.lesson_id, skill.skill_id == Lesson.skill_id).count()
         )
+        
         completed = (
             (
                 LessonHistory.query.join(Lesson)
@@ -843,9 +842,9 @@ def get_curriculums_for_child(child_id):
         # total_lessons_quizzes =
         total_lessons = (
             Lesson.query.filter_by(skill_id=skill.skill_id).count()
-            + Quiz.query.join(Lesson).filter(Quiz.lesson_id == Lesson.lesson_id).count()
+            + Quiz.query.join(Lesson).filter(Quiz.lesson_id == Lesson.lesson_id, skill.skill_id == Lesson.skill_id).count()
             + Activity.query.join(Lesson)
-            .filter(Activity.lesson_id == Lesson.lesson_id)
+            .filter(Activity.lesson_id == Lesson.lesson_id, Lesson.skill_id == skill.skill_id)
             .count()
         )
         completed = (
