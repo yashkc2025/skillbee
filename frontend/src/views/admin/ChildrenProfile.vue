@@ -122,16 +122,26 @@ function tableEntries() {
   }));
 }
 
+const pageUrl = `/admin/children/${props.id}`;
+
 async function blockChild() {
-  await updateData(getBackendURL("admin/block_children"), {
-    id: profile.value?.info.child_id,
-  });
+  await updateData(
+    getBackendURL("admin/block_children"),
+    {
+      id: profile.value?.info.child_id,
+    },
+    pageUrl
+  );
 }
 
 async function unBlockChild() {
-  await updateData(getBackendURL("admin/unblock_children"), {
-    id: profile.value?.info.child_id,
-  });
+  await updateData(
+    getBackendURL("admin/unblock_children"),
+    {
+      id: profile.value?.info.child_id,
+    },
+    pageUrl
+  );
 }
 </script>
 
