@@ -16,6 +16,7 @@ import { fetchData, postData } from "@/fx/api";
 import { onMounted } from "vue";
 import ChildSkillChart from "@/components/admin/charts/ChildSkillChart.vue";
 import ParentAppLayout from "@/layouts/ParentAppLayout.vue";
+import InputComponent from "@/components/InputComponent.vue";
 
 export type ProfileType = {
   info: {
@@ -104,6 +105,7 @@ const assessmentLabels = [
   "Date",
   "Score",
   "Max Score",
+  "Feedback",
 ];
 
 function tableEntries() {
@@ -118,7 +120,30 @@ function tableEntries() {
     dt: p.date,
     score: p.score,
     max_score: p.max_score,
+    feedback: (
+      <i
+        class="bi bi-journal-text pointer"
+        onClick={() => showFeedbackForm(p.id, p.assessment_type, p.feedback)}
+      >
+        {" "}
+      </i>
+    ),
   }));
+}
+
+const showForm = ref(false);
+const assessmentId = ref<number | null>(null);
+const assessmentType = ref<string>(null);
+
+function showFeedbackForm(id: number, t: string, oldFeedback: string) {
+  assessmentId.value = id;
+  assessmentType.value = t;
+  showForm.value = true;
+  feedbackText.value = oldFeedback;
+}
+
+function hideFeedbackForm() {
+  showForm.value = false;
 }
 
 async function blockChild() {
@@ -130,6 +155,14 @@ async function blockChild() {
 async function unBlockChild() {
   await postData("", {
     children_id: profile.value?.info.child_id,
+  });
+}
+
+async function sendFeedback() {
+  await postData(getBackendURL("/feedback"), {
+    id: assessmentId.value,
+    skill_type: assessmentType.value,
+    text: feedbackText.value,
   });
 }
 </script>
@@ -164,12 +197,12 @@ async function unBlockChild() {
           :badges="profile.achievements.badges"
           v-if="profile?.achievements.badges"
         />
-        <button class="button-admin" v-if="profile?.info.status === 'Active'">
+        <!-- <button class="button-admin" v-if="profile?.info.status === 'Active'">
           Block User
         </button>
         <button class="button-admin" v-if="profile?.info.status !== 'Active'">
           Unblock User
-        </button>
+        </button> -->
       </div>
       <div class="second">
         <CardV2 label-title="Skills" label-image="bi bi-bar-chart">
@@ -193,6 +226,24 @@ async function unBlockChild() {
         <TableComponent :rows="tableEntries()" :header="assessmentLabels" />
       </template>
     </CardV2>
+    <section class="feedback-form box-shadow" v-show="showForm">
+      <div class="blur-background"></div>
+      <CardV2 label-image="bi bi-input-cursor-text" label-title="Feedback Form">
+        <template #top-content>
+          <i class="bi bi-x-circle" @click="hideFeedbackForm"></i>
+        </template>
+        <template #content>
+          <InputComponent
+            icon="bi bi-cursor-text"
+            name="feedback"
+            placeholder="Write something!"
+            input-type="TextArea"
+            v-model="feedbackText"
+          />
+          <button class="button-admin" @click="sendFeedback()">Submit</button>
+        </template>
+      </CardV2>
+    </section>
   </ParentAppLayout>
 </template>
 

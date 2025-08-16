@@ -7,13 +7,14 @@ const props = defineProps({
 });
 import CardV2 from "@/components/CardV2.vue";
 import InputComponent from "@/components/InputComponent.vue";
-import AdminAppLayout from "@/layouts/AdminAppLayout.vue";
+import ParentAppLayout from "@/layouts/ParentAppLayout.vue";
 import SelectComponent from "@/components/SelectComponent.vue";
 import { ref } from "vue";
 import { onMounted } from "vue";
 import { fetchData, postData, updateData } from "@/fx/api";
 import { getBackendURL, type OptionsType } from "@/fx/utils";
 
+const childId = ref()
 const lesson = ref("");
 const image = ref("");
 const title = ref("");
@@ -21,6 +22,8 @@ const description = ref("");
 const instructions = ref("");
 const difficulty = ref("");
 const answerFormat = ref<"Text" | "Image" | "PDF" | "">("");
+const children = ref()
+
 export interface ActInterface {
   answer_format: string
   description: string
@@ -51,7 +54,14 @@ const actDetails = ref<ActInterface>()
 onMounted(async () => {
   const lessonData = await fetchData(getBackendURL("lessons"))
   actDetails.value = await fetchData(getBackendURL(`admin/activity/${props.id}`))
+  const childData = await fetchData(getBackendURL("children"));
 
+  if (childData){
+    children.value = childData.map((c) => ({
+      label : c.name,
+      value : c.id
+    }))
+  }
   if (actDetails.value){
     lesson.value = actDetails.value.lesson_id
     title.value = actDetails.value.title
@@ -59,6 +69,7 @@ onMounted(async () => {
     instructions.value = actDetails.value.instructions
     difficulty.value = actDetails.value.difficulty
     answerFormat.value = actDetails.value.answer_format
+    childId.value = actDetails.value.child_id
   }
   lessons.value = lessonData.map((d) => ({ value: d.id, label: d.title }));
 });
@@ -72,18 +83,20 @@ async function updateActivity() {
     description: description.value,
     difficulty: difficulty.value,
     lesson_id: lesson.value,
-    answer_format : answerFormat.value
+    answer_format : answerFormat.value,
+    child_id : childId.value
+
   };
   if (image.value && image.value.trim() !== "") {
     data.image = image.value;
   }
 
-  await updateData(getBackendURL("admin/activity"), data, "/admin/activities");
+  await updateData(getBackendURL("admin/activity"), data, '/admin/activities');
 }
 </script>
 
 <template>
-  <AdminAppLayout>
+  <ParentAppLayout>
     <form class="outer" @submit.prevent="updateActivity">
       <p class="intro">
         <span class="darken">Update Activity</span>
@@ -104,6 +117,14 @@ async function updateActivity() {
               placeholder="Image"
               v-model="image"
               field-type="file"
+            />
+            <SelectComponent
+              v-model="childId"
+              name="child_id"
+              icon="bi bi-emoji-smile"
+              placeholder="Select a child"
+              :options="children"
+              :required="true"
             />
             <InputComponent
               icon="bi bi-book"
@@ -161,7 +182,7 @@ async function updateActivity() {
         </template>
       </CardV2>
     </form>
-  </AdminAppLayout>
+  </ParentAppLayout>
 </template>
 
 <style scoped>

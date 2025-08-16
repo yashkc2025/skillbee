@@ -64,7 +64,7 @@ async function updateLesson() {
     data.image = image.value;
   }
 
-  await updateData(getBackendURL("admin/lesson"), data);
+  await updateData(getBackendURL("admin/lesson"), data, "/admin/lessons");
 }
 </script>
 

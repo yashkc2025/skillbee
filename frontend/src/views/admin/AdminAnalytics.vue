@@ -12,7 +12,7 @@ import AdminAppLayout from "@/layouts/AdminAppLayout.vue";
   <AdminAppLayout>
     <div class="outer">
       <div class="top-charts">
-        <CardV2 class="first-chart" label-image="bi bi-people" label-title="Active users">
+        <CardV2 class="first-chart" label-image="bi bi-people" label-title="Users">
           <template #content>
             <ActiveUserChart />
           </template>
