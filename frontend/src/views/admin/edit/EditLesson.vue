@@ -12,7 +12,7 @@ import SelectComponent from "@/components/SelectComponent.vue";
 import { ref } from "vue";
 import { onMounted } from "vue";
 import { fetchData, updateData } from "@/fx/api";
-import { getBackendURL, type OptionsType } from "@/fx/utils";
+import { getBackendURL, type OptionsType, toCommaSeparatedString } from "@/fx/utils";
 
 const title = ref("");
 const content = ref("");
@@ -20,9 +20,13 @@ const image = ref("");
 const description = ref("");
 const curriculum_id = ref("");
 const curriculumSelectRef = ref<InstanceType<typeof SelectComponent> | null>(null);
+const links = ref("")
 
 interface LessonInterface {
-  content: string
+  content: {
+    text: string;
+    url: { [key: number]: string }[];
+  };
   description: string
   id: number
   skill_id: string
@@ -44,7 +48,8 @@ onMounted(async () => {
 
   if (lessonDetails.value){
     title.value = lessonDetails.value.title
-    content.value = lessonDetails.value.content
+    content.value = lessonDetails.value.content.text
+    links.value = toCommaSeparatedString(lessonDetails.value.content.url)
     description.value = lessonDetails.value.description
     curriculum_id.value = lessonDetails.value.skill_id
   }
@@ -54,7 +59,18 @@ async function updateLesson() {
   const data = {
     id : props.id,
     title: title.value,
-    content: content.value,
+    content: {
+      text: content.value,
+      url: links.value.trim() === ""
+        ? {}
+        : links.value
+            .split(",")
+            .map(link => link.trim())
+            .reduce((acc, link, index) => {
+              acc[index] = link;
+              return acc;
+            }, {})
+    },
     description: description.value,
     curriculum_id: curriculum_id.value,
   };
@@ -88,6 +104,13 @@ async function updateLesson() {
               name="content"
               placeholder="Content"
               v-model="content"
+              input-type="TextArea"
+            />
+            <InputComponent
+              icon="bi bi-link"
+              name="links"
+              placeholder="Links Comma Seperated"
+              v-model="links"
               input-type="TextArea"
             />
             <InputComponent

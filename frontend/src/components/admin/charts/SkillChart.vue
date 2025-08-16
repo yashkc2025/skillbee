@@ -113,12 +113,12 @@ onMounted(async () => {
         name: "Count",
       },
       series: [
-        {
-          name: "Lessons Started",
-          type: "bar",
-          data: chartData.value.total_lesson_started_count,
-          barGap: 0,
-        },
+        // {
+        //   name: "Lessons Started",
+        //   type: "bar",
+        //   data: chartData.value.total_lesson_started_count,
+        //   barGap: 0,
+        // },
         {
           name: "Lessons Completed",
           type: "bar",

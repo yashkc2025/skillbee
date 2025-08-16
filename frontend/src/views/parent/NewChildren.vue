@@ -15,15 +15,19 @@ const school = ref("");
 const image = ref("");
 
 async function newChildren() {
-  await postData(getBackendURL("parent/children"), {
-    name: name.value,
-    username: username.value,
-    confirmPass: confirmPass.value,
-    password: password.value,
-    dob: dob.value,
-    profile_image: image.value,
-    school: school.value,
-  });
+  await postData(
+    getBackendURL("parent/children"),
+    {
+      name: name.value,
+      username: username.value,
+      confirmPass: confirmPass.value,
+      password: password.value,
+      dob: dob.value,
+      profile_image: image.value,
+      school: school.value,
+    },
+    "/parent"
+  );
 }
 </script>
 

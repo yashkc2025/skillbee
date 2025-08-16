@@ -94,7 +94,7 @@ onMounted(async () => {
         data: chartData.value.skill_name,
         axisLabel: {
           interval: 0, // show all labels, no skipping
-          rotate: 5,
+          rotate: 30,
         },
       },
       yAxis: {
@@ -102,12 +102,12 @@ onMounted(async () => {
         name: "Count",
       },
       series: [
-        {
-          name: "Lessons Started",
-          type: "bar",
-          data: chartData.value.total_lesson_started_count,
-          barGap: 0,
-        },
+        // {
+        //   name: "Lessons Started",
+        //   type: "bar",
+        //   data: chartData.value.total_lesson_started_count,
+        //   barGap: 0,
+        // },
         {
           name: "Lessons Completed",
           type: "bar",

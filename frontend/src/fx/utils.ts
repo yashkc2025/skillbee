@@ -71,3 +71,7 @@ export type OptionsType = {
   value: number;
   label: string;
 };
+
+export function toCommaSeparatedString(obj) {
+  return Object.values(obj).join(", ");
+}

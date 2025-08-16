@@ -46,16 +46,16 @@ def parent_regisc(request):
         pic = data.get("profile_image")
         if pic == "":
             pic = None
-        
+
         # Validate base64 if provided
         if pic:
             try:
                 # Test if it's valid base64 (validation only)
                 base64.b64decode(pic)
             except Exception:
-                return jsonify({'error': 'Invalid base64 image'}), 400
-        if not all([name,email,password]):
-            return jsonify({'error':'Invalid/Missing fields'}), 400
+                return jsonify({"error": "Invalid base64 image"}), 400
+        if not all([name, email, password]):
+            return jsonify({"error": "Invalid/Missing fields"}), 400
         else:
             parent = Parent.query.filter_by(email_id=email).first()
             if parent:
@@ -127,14 +127,14 @@ def child_regisc(request):
         pic = data.get("profile_image")
         if pic == "":
             pic = None
-        
+
         # Validate base64 if provided
         if pic:
             try:
                 # Test if it's valid base64 (validation only)
                 base64.b64decode(pic)
             except Exception:
-                return jsonify({'error': 'Invalid base64 image'}), 400
+                return jsonify({"error": "Invalid base64 image"}), 400
         if dob_str:
             try:
                 dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
@@ -377,63 +377,63 @@ def child_loginc(request):
 def update_child_streak(child):
     now = datetime.now()
     today = now.date()
-    
+
     if child.last_login:
         last_login_date = child.last_login.date()
         days_diff = (today - last_login_date).days
-        
+
         if days_diff == 1:
             child.streak = (child.streak or 0) + 1
         elif days_diff > 1:
             child.streak = 1
     else:
         child.streak = 1
-    
+
     child.last_login = now
-    
+
     try:
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
         print(f"Error updating child streak: {e}")
 
+
 def check_and_award_badges(child_id):
     try:
         child = Child.query.get(child_id)
         if not child:
             return
-        
+
         existing_badge_ids = {
             bh.badge_id for bh in BadgeHistory.query.filter_by(child_id=child_id).all()
         }
-        
+
         available_badges = Badge.query.filter(
             ~Badge.badge_id.in_(existing_badge_ids)
         ).all()
-        
+
         current_points = child.points or 0
-        
+
         new_badges = []
         for badge in available_badges:
             if badge.points and current_points >= badge.points:
                 new_badges.append(badge)
-        
+
         for badge in new_badges:
             badge_history = BadgeHistory(
-                child_id=child_id,
-                badge_id=badge.badge_id,
-                created_at=datetime.now()
+                child_id=child_id, badge_id=badge.badge_id, created_at=datetime.now()
             )
             db.session.add(badge_history)
-        
+
         if new_badges:
             db.session.commit()
-            
+
     except SQLAlchemyError as e:
         db.session.rollback()
         print(f"Error checking and awarding badges: {e}")
     except Exception as e:
         print(f"Unexpected error in badge checking: {e}")
+
 
 def get_auser(current_user, role):
     # this is according to auth.md and fetches the details of users from the session id as authorisation bearer BUT it returns full profile info
@@ -450,7 +450,11 @@ def get_auser(current_user, role):
                             current_user.dob.isoformat() if current_user.dob else None
                         ),
                         "school": current_user.school,
-                        "profile_image": current_user.profile_image if current_user.profile_image else None,
+                        "profile_image": (
+                            current_user.profile_image
+                            if current_user.profile_image
+                            else None
+                        ),
                         "name": current_user.name,
                     }
                 }
@@ -466,7 +470,11 @@ def get_auser(current_user, role):
                         "role": "parent",
                         "name": current_user.name,
                         "email": current_user.email_id,
-                        "profile_image": current_user.profile_image if current_user.profile_image else None,
+                        "profile_image": (
+                            current_user.profile_image
+                            if current_user.profile_image
+                            else None
+                        ),
                     }
                 }
             ),
@@ -648,10 +656,7 @@ def get_user_badges(child_id):
     response = []
     for name, image in data:
         image_str = image if image else ""
-        response.append({
-            "name": name,
-            "image": image_str
-        })
+        response.append({"name": name, "image": image_str})
 
     return jsonify(response), 200
 
@@ -760,6 +765,7 @@ def get_curriculums_for_child(child_id):
         )
 
     return jsonify({"curriculums": result}), 200
+
 
 def get_skill_lessons(child_id, skill_id):
     try:
@@ -947,7 +953,7 @@ def get_lesson_activities(child_id, lesson_id):
 
         activities = Activity.query.filter(
             Activity.lesson_id == lesson_id,
-            (Activity.child_id == child_id) | (Activity.child_id.is_(None))
+            (Activity.child_id == child_id) | (Activity.child_id.is_(None)),
         ).all()
 
         activity_submissions = ActivityHistory.query.filter(
@@ -1024,9 +1030,7 @@ def get_activity_details(child_id, activity_id):
 
 def submit_activity(child_id, activity_id):
     try:
-        activity = Activity.query.filter_by(
-            activity_id=activity_id
-        ).first()
+        activity = Activity.query.filter_by(activity_id=activity_id).first()
         if not activity:
             return jsonify({"error": "Activity not found"}), 404
 
@@ -1088,7 +1092,10 @@ def submit_activity(child_id, activity_id):
         submission_time = datetime.now()
 
         activity_submission = ActivityHistory(
-            activity_id=activity_id, child_id=child_id, answer=file_data, created_at=submission_time
+            activity_id=activity_id,
+            child_id=child_id,
+            answer=file_data,
+            created_at=submission_time,
         )
 
         db.session.add(activity_submission)
@@ -1111,12 +1118,10 @@ def submit_activity(child_id, activity_id):
 
 def get_activity_history(child_id, activity_id):
     try:
-        activity = Activity.query.filter_by(
-            activity_id=activity_id
-        ).first()
+        activity = Activity.query.filter_by(activity_id=activity_id).first()
         if not activity:
             return jsonify({"error": "Activity not found"}), 404
-        
+
         if activity.child_id and activity.child_id != child_id:
             return jsonify({"error": "Activity does not belong to this child"}), 403
 
@@ -1149,13 +1154,11 @@ def get_activity_submission(child_id, activity_history_id):
         if not submission:
             return jsonify({"error": "Submission not found"}), 404
 
-        activity = Activity.query.filter_by(
-            activity_id=submission.activity_id
-        ).first()
+        activity = Activity.query.filter_by(activity_id=submission.activity_id).first()
 
         if not activity:
             return jsonify({"error": "Associated activity not found"}), 404
-        
+
         if activity.child_id and activity.child_id != child_id:
             return jsonify({"error": "Activity does not belong to this child"}), 403
 
@@ -1362,18 +1365,24 @@ def submit_quiz(child_id, quiz_id):
                 else:
                     selected_texts.append(str(option))
 
-            has_wrong_selection = any(text not in correct_answers for text in selected_texts)
+            has_wrong_selection = any(
+                text not in correct_answers for text in selected_texts
+            )
 
             if not has_wrong_selection and selected_texts:
-                correct_selections = [text for text in selected_texts if text in correct_answers]
-                
+                correct_selections = [
+                    text for text in selected_texts if text in correct_answers
+                ]
+
                 if len(correct_answers) == 1:
                     if len(correct_selections) == 1:
                         score += question_marks
                 else:
-                    partial_score = (len(correct_selections) / len(correct_answers)) * question_marks
+                    partial_score = (
+                        len(correct_selections) / len(correct_answers)
+                    ) * question_marks
                     score += partial_score
-        
+
         print([child_id, quiz_id, score])
         quiz_history = QuizHistory(
             child_id=child_id,
@@ -1390,28 +1399,35 @@ def submit_quiz(child_id, quiz_id):
             quiz_total_points = quiz.points or 0
             performance_percentage = score / total_score if total_score > 0 else 0
             earned_points = quiz_total_points * performance_percentage
-            
-            previous_attempts = QuizHistory.query.filter_by(
-                child_id=child_id, 
-                quiz_id=quiz_id
-            ).filter(QuizHistory.quiz_history_id != quiz_history.quiz_history_id).all()
-            
+
+            previous_attempts = (
+                QuizHistory.query.filter_by(child_id=child_id, quiz_id=quiz_id)
+                .filter(QuizHistory.quiz_history_id != quiz_history.quiz_history_id)
+                .all()
+            )
+
             if not previous_attempts:
                 points_to_add = earned_points
             else:
-                highest_previous_score = max(attempt.score for attempt in previous_attempts)
-                previous_performance_percentage = highest_previous_score / total_score if total_score > 0 else 0
-                previous_earned_points = quiz_total_points * previous_performance_percentage
-                
+                highest_previous_score = max(
+                    attempt.score for attempt in previous_attempts
+                )
+                previous_performance_percentage = (
+                    highest_previous_score / total_score if total_score > 0 else 0
+                )
+                previous_earned_points = (
+                    quiz_total_points * previous_performance_percentage
+                )
+
                 if earned_points > previous_earned_points:
                     points_to_add = earned_points - previous_earned_points
                 else:
                     points_to_add = 0
-            
+
             if points_to_add > 0:
                 child.points = (child.points or 0) + points_to_add
                 db.session.commit()
-                
+
                 # Check and award any new badges after points update
                 check_and_award_badges(child_id)
 
@@ -1657,29 +1673,38 @@ def child_profile_image(child_id):
     try:
         child = Child.query.get(child_id)
         if not child:
-            return jsonify({'status': 'error', 'message': 'Child not found'}), 404
-        
-        if request.method == 'POST':
+            return jsonify({"status": "error", "message": "Child not found"}), 404
+
+        if request.method == "POST":
             data = request.get_json()
             if not data:
-                return jsonify({'status': 'error', 'message': 'No data provided'}), 400
-            
-            pic = data.get('profile_image') if (data.get('profile_image') != '') else None
-            
+                return jsonify({"status": "error", "message": "No data provided"}), 400
+
+            pic = (
+                data.get("profile_image") if (data.get("profile_image") != "") else None
+            )
+
             if pic:
                 try:
                     base64.b64decode(pic)
                 except Exception:
-                    return jsonify({'status': 'error', 'message': 'Invalid base64 image'}), 400
-            
+                    return (
+                        jsonify({"status": "error", "message": "Invalid base64 image"}),
+                        400,
+                    )
+
             child.profile_image = pic
             db.session.commit()
-            
-            return jsonify({
-                'status': 'success',
-                'message': 'Profile image updated successfully'
-            }), 200
 
+            return (
+                jsonify(
+                    {
+                        "status": "success",
+                        "message": "Profile image updated successfully",
+                    }
+                ),
+                200,
+            )
 
         elif request.method == "GET":
             return (
@@ -1962,7 +1987,7 @@ def create_badge(current_user, role):
         name=name,
         description=description,
         image=image,  # Store base64 string directly
-        points=points
+        points=points,
     )
 
     db.session.add(badge)
@@ -2002,9 +2027,9 @@ def create_activity():
             base64.b64decode(image)
         except Exception:
             return jsonify({"error": "Invalid base64 image"}), 400
-        
-    allowed_formats = ['text', 'image', 'pdf']
-    
+
+    allowed_formats = ["text", "image", "pdf"]
+
     if answer_format not in allowed_formats:
         return (
             jsonify(
@@ -2014,13 +2039,13 @@ def create_activity():
         )
 
     activity = Activity(
-        name = title,
-        description = description,
-        instructions = instructions,
-        difficulty = difficulty,
-        image = image,  # Store base64 string directly
-        lesson_id = lesson_id,
-        answer_format = answer_format
+        name=title,
+        description=description,
+        instructions=instructions,
+        difficulty=difficulty,
+        image=image,  # Store base64 string directly
+        lesson_id=lesson_id,
+        answer_format=answer_format,
     )
 
     if child_id is not None:
@@ -2185,7 +2210,7 @@ def create_lesson(current_user, role):
             base64.b64decode(image_base64)
         except Exception as e:
             print("Image validation error:", e)
-            return jsonify({'error': 'Invalid base64 image'}), 400
+            return jsonify({"error": "Invalid base64 image"}), 400
 
     try:
         max_position = (
@@ -2201,7 +2226,7 @@ def create_lesson(current_user, role):
             content=content,
             description=description,
             image=image_base64,  # Store base64 string directly
-            position=next_position
+            position=next_position,
         )
 
         db.session.add(lesson)
@@ -2234,7 +2259,6 @@ def create_quiz(current_user, role):
         "image",
         "description",
         "difficulty",
-        "time_duration",
         "points",
         "questions",
         "lesson_id",
@@ -2251,7 +2275,7 @@ def create_quiz(current_user, role):
     description = data["description"]
     difficulty = data["difficulty"]
     points = data["points"]
-    time_duration = data["time_duration"]
+    time_duration = data.get("time_duration")
     questions = data["questions"]
 
     # Validate base64 if provided, but store as string
@@ -2260,7 +2284,7 @@ def create_quiz(current_user, role):
             # Test if it's valid base64 (validation only)
             base64.b64decode(picture)
         except Exception:
-            return jsonify({'error': 'Invalid base64 image'}), 400
+            return jsonify({"error": "Invalid base64 image"}), 400
 
     if not isinstance(questions, list) or not questions:
         return jsonify({"error": "questions must be a non-empty list"}), 400
@@ -2307,8 +2331,10 @@ def create_quiz(current_user, role):
         position=next_position,
         is_visible=True,
         created_at=datetime.now(),
-        time_duration=time_duration,
     )
+
+    if time_duration is not None:
+        quiz.time_duration = time_duration
 
     db.session.add(quiz)
     db.session.commit()
@@ -2447,12 +2473,18 @@ def admin_child_profile(current_user, role):
         if bh.badge and bh.badge.image:
             # Image is stored as base64 string directly
             badge_img_base64 = bh.badge.image
-        badges.append({
-            "badge_id": str(bh.badge_id),
-            "title": bh.badge.name if bh.badge else "",
-            "image": badge_img_base64,
-            "awarded_on": bh.created_at.strftime("%Y-%m-%d") if hasattr(bh, 'created_at') and bh.created_at else "N/A"
-        })
+        badges.append(
+            {
+                "badge_id": str(bh.badge_id),
+                "title": bh.badge.name if bh.badge else "",
+                "image": badge_img_base64,
+                "awarded_on": (
+                    bh.created_at.strftime("%Y-%m-%d")
+                    if hasattr(bh, "created_at") and bh.created_at
+                    else "N/A"
+                ),
+            }
+        )
 
     return (
         jsonify(
