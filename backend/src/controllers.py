@@ -1,6 +1,7 @@
 from io import BytesIO
 from functools import wraps
 import json
+import os
 from pydoc import describe
 from typing import List
 from flask import request, jsonify, send_file
@@ -2111,108 +2112,128 @@ def create_activity(current_user):
 
 
 def create_skills():
+    base_dir = os.path.dirname(__file__)
     skills = [
         {
             "name": "Critical Thinking I",
             "description": "Improve Critical Thinking",
             "min_age": 8,
             "max_age": 10,
+            "image": "../../docs/curriculums_image/Critical Thinking I.png",
         },
         {
             "name": "Communication Skills I",
             "description": "Improve communication.",
             "min_age": 8,
             "max_age": 10,
+            "image": "../../docs/curriculums_image/Communication Skills I.png",
         },
         {
             "name": "Time Management I",
             "description": "Learn to manage Time",
             "min_age": 8,
             "max_age": 10,
+            "image": "../../docs/curriculums_image/Time Management I.png",
         },
         {
             "name": "Extracurricular Activities I",
             "description": "Extra Activities",
             "min_age": 8,
             "max_age": 10,
+            "image": "../../docs/curriculums_image/Extracurricular Activities I.png",
         },
         {
             "name": "Financial Literacy I",
             "description": "Understand Money",
             "min_age": 8,
             "max_age": 10,
+            "image": "../../docs/curriculums_image/Financial Literacy I.png",
         },
         {
             "name": "Critical Thinking II",
             "description": "Improve Critical Thinking",
             "min_age": 10,
             "max_age": 12,
+            "image": "../../docs/curriculums_image/Critical Thinking II.png",
         },
         {
             "name": "Communication Skills II",
             "description": "Improve communication.",
             "min_age": 10,
             "max_age": 12,
+            "image": "../../docs/curriculums_image/Communication Skills II.png",
         },
         {
             "name": "Time Management II",
             "description": "Learn to manage Time",
             "min_age": 10,
             "max_age": 12,
+            "image": "../../docs/curriculums_image/Time Management II.png",
         },
         {
             "name": "Extracurricular Activities II",
             "description": "Extra Activities",
             "min_age": 10,
             "max_age": 12,
+            "image": "../../docs/curriculums_image/Extracurricular Activities II.png",
         },
         {
             "name": "Financial Literacy II",
             "description": "Understand Money",
             "min_age": 10,
             "max_age": 12,
+            "image": "../../docs/curriculums_image/Financial Literacy II.png",
         },
         {
             "name": "Critical Thinking III",
             "description": "Improve Critical Thinking",
             "min_age": 12,
             "max_age": 14,
+            "image": "../../docs/curriculums_image/Critical Thinking III.png",
         },
         {
             "name": "Communication Skills III",
             "description": "Improve communication.",
             "min_age": 12,
             "max_age": 14,
+            "image": "../../docs/curriculums_image/Communication Skills III.png",
         },
         {
             "name": "Time Management III",
             "description": "Learn to manage Time",
             "min_age": 12,
             "max_age": 14,
+            "image": "../../docs/curriculums_image/Time Management III.png",
         },
         {
             "name": "Extracurricular Activities III",
             "description": "Extra Activities",
             "min_age": 12,
             "max_age": 14,
+            "image": "../../docs/curriculums_image/Extracurricular Activities III.png",
         },
         {
             "name": "Financial Literacy III",
             "description": "Understand Money",
             "min_age": 12,
             "max_age": 14,
+            "image": "../../docs/curriculums_image/Financial Literacy III.png",
         },
     ]
 
     for skill in skills:
         existing = Skill.query.filter_by(name=skill["name"]).first()
+        image_path = os.path.abspath(os.path.join(base_dir, skill["image"]))
         if not existing:
+            with open(image_path, "rb") as img_file:
+                encoded_image = base64.b64encode(img_file.read()).decode("utf-8")
+
             skill = Skill(
                 name=skill["name"],
                 description=skill["description"],
                 min_age=skill["min_age"],
                 max_age=skill["max_age"],
-                image=None,
+                image=encoded_image,
             )
             db.session.add(skill)
     db.session.commit()
