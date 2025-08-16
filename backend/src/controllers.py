@@ -916,7 +916,7 @@ def get_skill_lessons(child_id, skill_id):
                             * 100
                             / (total_activities + total_quizzes + 1)
                         )
-                        if (total_activities + total_quizzes) > 0
+                        if (total_activities + total_quizzes + 1) > 0
                         else 100
                     ),
                 }
