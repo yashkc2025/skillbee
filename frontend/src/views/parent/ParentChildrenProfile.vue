@@ -164,6 +164,8 @@ async function sendFeedback() {
     skill_type: assessmentType.value,
     text: feedbackText.value,
   });
+
+  hideFeedbackForm();
 }
 </script>
 

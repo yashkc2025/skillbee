@@ -1,7 +1,12 @@
 <template>
   <div class="heatmap">
-    <CalendarHeatmap :values="heatmapValues" :end-date="endDate" :round="3"
-      :range-color="['rgb(230, 230, 230)', 'rgb(239, 71, 111)', 'rgb(239, 71, 111)']" class="chart" />
+    <CalendarHeatmap
+      :values="heatmapValues"
+      :end-date="endDate"
+      :round="3"
+      :range-color="['rgb(230, 230, 230)', 'rgb(239, 71, 111)', 'rgb(239, 71, 111)']"
+      class="chart"
+    />
   </div>
 </template>
 
@@ -41,7 +46,6 @@ async function fetchHeatmapData() {
     } else {
       throw new Error("Invalid data format from API");
     }
-
   } catch (error) {
     console.error("Error fetching heatmap data:", error);
   }
@@ -56,8 +60,19 @@ onMounted(() => {
 .heatmap {
   padding: var(--size-md);
 }
-
+/*
 .chart {
   margin-bottom: -100px;
+} */
+
+.chart {
+  width: 100%;
+  max-width: 800px; /* or whatever fits */
+  height: auto;
+}
+
+.chart svg {
+  width: 100%;
+  height: auto;
 }
 </style>

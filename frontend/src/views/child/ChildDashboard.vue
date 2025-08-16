@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ChildAppLayout from "../../layouts/ChildAppLayout.vue";
-import { getTodayName } from "../../fx/utils";
+import { fixImage, getTodayName } from "../../fx/utils";
 import ChildHeatmap from "../../components/child/dashboard/ChildHeatmap.vue";
 import Grid from "@/components/Grid.vue";
 import SkillTemplate from "@/components/child/dashboard/SkillTemplate.vue";
@@ -32,7 +32,6 @@ function getIntroText(name: string): string {
   return introOptions[randomIndex];
 }
 
-
 const user = ref({});
 
 const stats = ref([
@@ -44,7 +43,35 @@ const stats = ref([
 ]);
 
 const skillTypes = ref([]);
-const badges = ref([]);
+interface Badge {
+  id: number;
+  label: string;
+  image: string;
+}
+
+const badges = ref<Badge[]>([]);
+
+async function fetchBadges() {
+  const token = localStorage.getItem("authToken");
+  try {
+    const response = await fetch(`${base_url}child_badges`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch badges");
+    }
+    const data: Badge[] = await response.json();
+    badges.value = data;
+    console.log("Badges fetched successfully:", badges.value);
+  } catch (error) {
+    console.error("Error fetching badges:", error);
+  }
+}
 
 async function fetchDashboardData() {
   try {
@@ -133,8 +160,9 @@ async function fetchDashboardData() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   fetchDashboardData();
+  await fetchBadges();
 });
 </script>
 
@@ -154,8 +182,17 @@ onMounted(() => {
       </div>
       <ChildLeaderboard :user-name="user.name" />
       <SkillTemplate :skillTypes="skillTypes" />
-      <div class="kid-badges-section">
-        <BadgesTemplate :badges="badges" />
+      <div class="badges-section">
+        <h3>🎖️ Badges Earned</h3>
+
+        <div class="badges-list">
+          <div v-if="badges.length === 0">
+            You're on your way to your first badge — keep trying!
+          </div>
+          <div v-for="badge in badges" :key="badge.id" class="badge-card">
+            <img :src="fixImage(badge.image)" :alt="badge.label" class="badge-icon" />
+          </div>
+        </div>
       </div>
     </div>
   </ChildAppLayout>
@@ -231,5 +268,61 @@ onMounted(() => {
     width: 100%;
     min-width: unset;
   }
+}
+
+.badges-section {
+  margin-bottom: 36px;
+  background: #fff8e1;
+  border-radius: 18px;
+  padding: 18px 18px 12px 18px;
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.08);
+}
+
+.badges-section h3 {
+  color: var(--text-color);
+  font-family: "VAGRoundedNext";
+  font-size: var(--font-ml-lg);
+  margin-bottom: 12px;
+}
+
+.badges-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.badge-card {
+  background: #fff3e0;
+  border-radius: var(--border-radius);
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.13);
+  padding: 18px 16px;
+  min-width: 120px;
+  max-width: 160px;
+  text-align: center;
+  font-family: "Delius";
+  transition: transform 0.15s;
+}
+
+.badge-card:hover {
+  transform: scale(1.07);
+  box-shadow: 0 4px 16px rgba(255, 193, 7, 0.18);
+}
+
+.badge-icon {
+  width: 100%;
+  height: 100%;
+  margin-bottom: 8px;
+}
+
+.badge-name {
+  color: #4caf50;
+  font-weight: bold;
+  font-size: var(--font-md);
+  margin-bottom: 4px;
+}
+
+.badge-desc {
+  color: #6d4c41;
+  font-size: var(--font-sm);
 }
 </style>

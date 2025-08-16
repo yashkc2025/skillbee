@@ -91,7 +91,7 @@ async function updateActivity() {
     data.image = image.value;
   }
 
-  await updateData(getBackendURL("admin/activity"), data, '/admin/activities');
+  await updateData(getBackendURL("admin/activity"), data, '/parent/activity');
 }
 </script>
 

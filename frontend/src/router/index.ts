@@ -39,209 +39,236 @@ export const base_url = 'http://127.0.0.1:5000/'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    // {
-    //   path: '/',
-    //   name: 'landing-page',
-    //   component: LandingPage
-    // },
     {
       path: '/',
       name: 'sign',
       component: SignInSignUp,
+      meta: { title: 'Sign In / Sign Up' }
     },
     {
       path: sitemap.child_app.dashboard,
       name: 'child_dashboard',
-      component: ChildDashboard
+      component: ChildDashboard,
+      meta: { title: 'Child Dashboard' }
     },
     {
       path: sitemap.child_app.curriculum.curriculums,
       name: 'child_curriculums',
-      component: ChildCurriculum
+      component: ChildCurriculum,
+      meta: { title: 'Curriculums' }
     },
     {
       path: sitemap.child_app.curriculum.lessons,
       name: 'child_lessons',
       component: ChildLessons,
-      props: true
+      props: true,
+      meta: { title: 'Lessons' }
     },
     {
       path: sitemap.child_app.curriculum.activities,
       name: 'child_activities',
       component: ChildActivities,
-      props: true
+      props: true,
+      meta: { title: 'Activities' }
     },
     {
       path: sitemap.child_app.curriculum.quizzes,
       name: 'child_quizzes',
       component: ChildQuizzes,
-      props: true
+      props: true,
+      meta: { title: 'Quizzes' }
     },
     {
       path: sitemap.child_app.curriculum.attempt,
       name: 'child_quiz_attempt',
       component: ChildQuizQuestions,
-      props: true
+      props: true,
+      meta: { title: 'Quiz Attempt' }
     },
     {
       path: sitemap.child_app.curriculum.attempt_history,
       name: 'child_quiz_attempt_history',
       component: ChildQuizQuestions,
-      props: true
+      props: true,
+      meta: { title: 'Quiz Attempt History' }
     },
     {
       path: sitemap.child_app.achievements,
       name: 'child_achievements',
-      component: ChildAchievements
+      component: ChildAchievements,
+      meta: { title: 'Achievements' }
     },
     {
       path: sitemap.child_app.settings,
       name: 'child_settings',
-      component: ChildSettings
+      component: ChildSettings,
+      meta: { title: 'Settings' }
     },
-    // {
-    //   path: '/auth/parent_login',
-    //   name: 'Login as Parent',
-    //   component: ParentLoginView,
-    // },
     {
       path: '/parent_dashboard',
       name: 'parent_dashboard',
-      component: ParentDashboard
+      component: ParentDashboard,
+      meta: { title: 'Parent Dashboard' }
     },
     {
-      path: '/admin_dashboard',
-      name: 'admin_dashboard',
-      component: AdminDashboard
-    },
-    {
-
       path: sitemap.admin.dashboard,
       name: 'admin_dashboard',
-      component: AdminDashboard
+      component: AdminDashboard,
+      meta: { title: 'Admin Dashboard' }
     },
     {
       path: sitemap.admin.user_management.parent,
-      name: "parent_list",
-      component: ParentList
+      name: 'parent_list',
+      component: ParentList,
+      meta: { title: 'Parent Management' }
     },
     {
       path: sitemap.admin.user_management.children,
-      name: "child_list",
-      component: ChildrenList
+      name: 'child_list',
+      component: ChildrenList,
+      meta: { title: 'Children Management' }
     },
     {
-      path: "/admin/children/:id",
-      name: "child_profile_admin",
+      path: '/admin/children/:id',
+      name: 'child_profile_admin',
       component: ChildrenProfile,
-      props: true
+      props: true,
+      meta: { title: 'Child Profile' }
     },
     {
-      path: "/parent/children/:id",
-      name: "child_profile_parent",
+      path: '/parent/children/:id',
+      name: 'child_profile_parent',
       component: ParentChildrenProfile,
-      props: true
+      props: true,
+      meta: { title: 'Child Profile' }
     },
     {
       path: sitemap.admin.curriculum.lessons,
-      name: "admin_lessons",
+      name: 'admin_lessons',
       component: LessonList,
+      meta: { title: 'Lessons' }
     },
     {
       path: sitemap.admin.curriculum.quiz,
-      name: "admin_quiz",
+      name: 'admin_quiz',
       component: QuizList,
+      meta: { title: 'Quizzes' }
     },
     {
       path: sitemap.admin.curriculum.activities,
-      name: "admin_activities",
+      name: 'admin_activities',
       component: ActivitiesList,
+      meta: { title: 'Activities' }
     },
     {
       path: sitemap.admin.curriculum.badges,
-      name: "admin_badges",
+      name: 'admin_badges',
       component: BadgesList,
+      meta: { title: 'Badges' }
     },
     {
       path: sitemap.admin.settings,
-      name: "admin_settings",
-      component: AdminSettings
+      name: 'admin_settings',
+      component: AdminSettings,
+      meta: { title: 'Settings' }
     },
     {
       path: sitemap.admin.analytics.performance,
-      name: "admin_performance",
-      component: AdminAnalytics
+      name: 'admin_performance',
+      component: AdminAnalytics,
+      meta: { title: 'Performance Analytics' }
     },
     {
       path: sitemap.admin.new.lesson,
       name: 'new_lesson',
-      component: NewLesson
+      component: NewLesson,
+      meta: { title: 'Create New Lesson' }
     },
     {
       path: sitemap.admin.new.activity,
       name: 'new_activity',
-      component: NewActivity
+      component: NewActivity,
+      meta: { title: 'Create New Activity' }
     },
     {
       path: sitemap.parent.activity.new,
       name: 'new_activity_parent',
-      component: NewActivityByParent
+      component: NewActivityByParent,
+      meta: { title: 'Create New Activity (Parent)' }
     },
     {
       path: sitemap.parent.activity.list,
       name: 'activity_parent_list',
-      component: ActivitiesListByParent
+      component: ActivitiesListByParent,
+      meta: { title: 'Activities List' }
     },
     {
       path: sitemap.admin.new.badge,
       name: 'new_badge',
-      component: NewBadge
+      component: NewBadge,
+      meta: { title: 'Create New Badge' }
     },
     {
       path: sitemap.admin.new.quiz,
       name: 'new_quiz',
-      component: NewQuiz
+      component: NewQuiz,
+      meta: { title: 'Create New Quiz' }
     },
     {
       path: sitemap.admin.edit.lesson,
-      name: "edit_lesson",
+      name: 'edit_lesson',
       component: EditLesson,
-      props: true
+      props: true,
+      meta: { title: 'Edit Lesson' }
     },
     {
       path: sitemap.admin.edit.activity,
-      name: "edit_activity",
+      name: 'edit_activity',
       component: EditActivity,
-      props: true
+      props: true,
+      meta: { title: 'Edit Activity' }
     },
     {
       path: sitemap.parent.activity.edit,
-      name: "edit_activity_parent",
+      name: 'edit_activity_parent',
       component: EditActivityByParent,
-      props: true
+      props: true,
+      meta: { title: 'Edit Activity' }
     },
     {
       path: sitemap.admin.edit.quiz,
-      name: "edit_quiz",
+      name: 'edit_quiz',
       component: EditQuiz,
-      props: true
+      props: true,
+      meta: { title: 'Edit Quiz' }
     },
     {
       path: sitemap.parent.dashboard,
       name: 'parent_dashboard',
-      component: ParentDashboard
+      component: ParentDashboard,
+      meta: { title: 'Parent Dashboard' }
     },
     {
       path: sitemap.parent.new_children,
       name: 'parent_new_children',
-      component: NewChildren
+      component: NewChildren,
+      meta: { title: 'Add New Child' }
     },
     {
       path: sitemap.parent.settings,
-      name: "parent_settings",
-      component: ParentSettings
-    },
-  ],
+      name: 'parent_settings',
+      component: ParentSettings,
+      meta: { title: 'Settings' }
+    }
+  ]
+})
+
+router.afterEach((to) => {
+  if (to.meta && to.meta.title) {
+    document.title = `${to.meta.title} `
+  } else {
+    document.title = appName
+  }
 })
 
 export default router

@@ -29,6 +29,7 @@ from sqlalchemy import and_, func, case, cast, Integer
 from sqlalchemy import and_, func, case, cast, Integer, distinct
 import time
 import base64
+from collections import defaultdict
 
 # import imghdr
 
@@ -341,6 +342,8 @@ def child_loginc(request):
     if not child or not check_password_hash(child.password, password):
         return jsonify({"error": "Invalid email or password"}), 401
 
+    if child.is_blocked == 1:
+        return jsonify({"error": "You have been blocked"}), 401
     # Update streak and last_login
     update_child_streak(child)
 
@@ -607,25 +610,44 @@ def get_user_skill_progress(child_id):
         # total_lessons_quizzes =
         total_lessons = (
             Lesson.query.filter_by(skill_id=skill.skill_id).count()
-            + Quiz.query.join(Lesson).filter(Lesson.skill_id == skill.skill_id).count()
+            + Quiz.query.join(Lesson).filter(Quiz.lesson_id == Lesson.lesson_id).count()
+            + Activity.query.join(Lesson)
+            .filter(Activity.lesson_id == Lesson.lesson_id)
+            .count()
         )
         completed = (
-            LessonHistory.query.join(Lesson)
-            .filter(
-                Lesson.skill_id == skill.skill_id, LessonHistory.child_id == child_id
+            (
+                LessonHistory.query.join(Lesson)
+                .filter(
+                    Lesson.skill_id == skill.skill_id,
+                    LessonHistory.child_id == child_id,
+                )
+                .count()
             )
-            .count()
-        ) + (
-            db.session.query(
-                func.count(distinct(QuizHistory.quiz_id))
-            )  # This is the key change
-            .join(Quiz)
-            .join(Lesson)
-            .filter(
-                Lesson.skill_id == skill.skill_id,
-                QuizHistory.child_id == child_id,
+            + (
+                db.session.query(
+                    func.count(distinct(QuizHistory.quiz_id))
+                )  # This is the key change
+                .join(Quiz)
+                .join(Lesson)
+                .filter(
+                    Lesson.skill_id == skill.skill_id,
+                    QuizHistory.child_id == child_id,
+                )
+                .scalar()  # Use .scalar() to get the single count value
             )
-            .scalar()  # Use .scalar() to get the single count value
+            + (
+                db.session.query(
+                    func.count(distinct(ActivityHistory.activity_id))
+                )  # This is the key change
+                .join(Activity)
+                .join(Lesson)
+                .filter(
+                    Lesson.skill_id == skill.skill_id,
+                    ActivityHistory.child_id == child_id,
+                )
+                .scalar()  # Use .scalar() to get the single count value
+            )
         )
         percent = int((completed / total_lessons) * 100) if total_lessons else 0
         print(
@@ -676,6 +698,11 @@ def get_lesson_quizzes(child_id, lesson_id):
     }
     quiz_list = []
     for quiz in quizzes:
+        if quiz.image:
+            image_base64 = quiz.image
+        else:
+            image_base64 = ""
+
         quiz_data = {
             "quiz_id": quiz.quiz_id,
             "name": quiz.quiz_name,
@@ -689,7 +716,7 @@ def get_lesson_quizzes(child_id, lesson_id):
             "total_marks": len(quiz.questions),
             "no_questions": len(quiz.questions),
             "progress_status": 100 if quiz.quiz_id in attempted_quiz_ids else 0,
-            "image": None,
+            "image": image_base64,
         }
         quiz_list.append(quiz_data)
     return (
@@ -711,60 +738,74 @@ def get_curriculums_for_child(child_id):
     child = Child.query.get(child_id)
     if not child:
         return jsonify({"error": "Child not found"}), 404
-    age = age_calc(child.dob)
-    skills = Skill.query.filter(Skill.min_age <= age, Skill.max_age > age).all()
-    skill_ids = [s.skill_id for s in skills]
-    lessons = Lesson.query.filter(Lesson.skill_id.in_(skill_ids)).all()
-    lesson_ids = [l.lesson_id for l in lessons]
 
-    lesson_map = {}
-    for lesson in lessons:
-        lesson_map.setdefault(lesson.skill_id, []).append(lesson.lesson_id)
-    activities = Activity.query.filter(Activity.lesson_id.in_(lesson_ids)).all()
-    quizzes = Quiz.query.filter(Quiz.lesson_id.in_(lesson_ids)).all()
-    completed_lessons = {
-        lh.lesson_id
-        for lh in LessonHistory.query.filter(
-            LessonHistory.child_id == child_id, LessonHistory.lesson_id.in_(lesson_ids)
-        )
-    }
-    completed_activities = {
-        ah.activity_id
-        for ah in ActivityHistory.query.filter(
-            ActivityHistory.activity_id.in_([a.activity_id for a in activities])
-        )
-    }
-    passed_quizzes = {
-        qh.quiz_id
-        for qh in QuizHistory.query.filter(
-            QuizHistory.child_id == child_id,
-            QuizHistory.quiz_id.in_([q.quiz_id for q in quizzes]),
-            QuizHistory.score >= 40,
-        )
-    }
-    result = []
+    age = age_calc(child.dob)  # Assuming age_calc function is defined elsewhere
+
+    # Get skills filtered by the child's age
+    skills: List[Skill] = Skill.query.filter(
+        Skill.min_age <= age, Skill.max_age > age
+    ).all()
+
+    response = []
     for skill in skills:
-        lids = lesson_map.get(skill.skill_id, [])
-        aids = [a.activity_id for a in activities if a.lesson_id in lids]
-        qids = [q.quiz_id for q in quizzes if q.lesson_id in lids]
-        total = len(lids) + len(aids) + len(qids)
-        completed = (
-            sum(1 for lid in lids if lid in completed_lessons)
-            + sum(1 for aid in aids if aid in completed_activities)
-            + sum(1 for qid in qids if qid in passed_quizzes)
+        # I want total_lessons_quizzes as count of all lessons and quizzes in each lesson of a skill
+        # total_lessons_quizzes =
+        total_lessons = (
+            Lesson.query.filter_by(skill_id=skill.skill_id).count()
+            + Quiz.query.join(Lesson).filter(Quiz.lesson_id == Lesson.lesson_id).count()
+            + Activity.query.join(Lesson)
+            .filter(Activity.lesson_id == Lesson.lesson_id)
+            .count()
         )
-        progress = round((completed / total) * 100) if total else 0
-        result.append(
+        completed = (
+            (
+                LessonHistory.query.join(Lesson)
+                .filter(
+                    Lesson.skill_id == skill.skill_id,
+                    LessonHistory.child_id == child_id,
+                )
+                .count()
+            )
+            + (
+                db.session.query(
+                    func.count(distinct(QuizHistory.quiz_id))
+                )  # This is the key change
+                .join(Quiz)
+                .join(Lesson)
+                .filter(
+                    Lesson.skill_id == skill.skill_id,
+                    QuizHistory.child_id == child_id,
+                )
+                .scalar()  # Use .scalar() to get the single count value
+            )
+            + (
+                db.session.query(
+                    func.count(distinct(ActivityHistory.activity_id))
+                )  # This is the key change
+                .join(Activity)
+                .join(Lesson)
+                .filter(
+                    Lesson.skill_id == skill.skill_id,
+                    ActivityHistory.child_id == child_id,
+                )
+                .scalar()  # Use .scalar() to get the single count value
+            )
+        )
+        percent = int((completed / total_lessons) * 100) if total_lessons else 0
+        print(
+            f"Skill: {skill.name}, Total Lessons: {total_lessons}, Completed: {completed}, Percentage: {percent}%"
+        )
+        response.append(
             {
-                "curriculum_id": skill.skill_id,
                 "name": skill.name,
+                "curriculum_id": skill.skill_id,
                 "description": skill.description,
+                "progress_status": percent,
                 "image": (skill.image if skill.image else None),
-                "progress_status": progress,
             }
         )
 
-    return jsonify({"curriculums": result}), 200
+    return jsonify({"curriculums": response}), 200
 
 
 def get_skill_lessons(child_id, skill_id):
@@ -957,7 +998,8 @@ def get_lesson_activities(child_id, lesson_id):
         ).all()
 
         activity_submissions = ActivityHistory.query.filter(
-            ActivityHistory.activity_id.in_([a.activity_id for a in activities])
+            ActivityHistory.activity_id.in_([a.activity_id for a in activities]),
+            ActivityHistory.child_id == child_id,
         ).all()
 
         completed_activities = {
@@ -1996,7 +2038,7 @@ def create_badge(current_user, role):
     return jsonify({"message": "Badge Created"}, 201)
 
 
-def create_activity():
+def create_activity(current_user):
     data = request.get_json()
     required_fields = [
         "title",
@@ -2050,6 +2092,7 @@ def create_activity():
 
     if child_id is not None:
         activity.child_id = child_id
+        activity.parent_id = current_user.parent_id
 
     db.session.add(activity)
     db.session.commit()
@@ -2402,21 +2445,21 @@ def admin_child_profile(current_user, role):
         )
 
     # Points earned
-    point_earned = []
+    date_points = defaultdict(int)
     quiz_histories = (
         QuizHistory.query.join(Quiz).filter(QuizHistory.child_id == child_id).all()
     )
+
     for qh in quiz_histories:
-        point_earned.append(
-            {
-                "point": qh.score,
-                "date": (
-                    qh.quiz.created_at.strftime("%Y-%m-%d")
-                    if qh.quiz and qh.quiz.created_at
-                    else "N/A"
-                ),
-            }
+        date = (
+            qh.quiz.created_at.strftime("%Y-%m-%d")
+            if qh.quiz and qh.quiz.created_at
+            else "N/A"
         )
+        date_points[date] += qh.score
+
+    # if you still want a list of dicts (like your original structure)
+    point_earned = [{"date": d, "point": p} for d, p in date_points.items()]
 
     # Assessments (quizzes + activities)
     assessments = []

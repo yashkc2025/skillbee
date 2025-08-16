@@ -49,7 +49,7 @@ function tableEntries() {
     id: p.id,
     name: p.name,
     email: p.email,
-    blocked: <span class="chip pointer">{p.blocked ? "Active" : "Blocked"}</span>,
+    blocked: <span class="chip pointer">{p.blocked ? "Blocked" : "Active"}</span>,
     // p.view_children = <i class="bi bi-patch-plus pointer" onClick={() => viewKids()}></i>;
   }));
 
