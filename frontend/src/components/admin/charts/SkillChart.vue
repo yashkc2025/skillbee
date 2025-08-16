@@ -102,7 +102,10 @@ onMounted(async () => {
         data: chartData.value.skill_name,
         axisLabel: {
           interval: 0, // show all labels, no skipping
-          rotate: 5,
+          rotate: 40,
+          textStyle: {
+            fontSize: 10, // change this value as needed
+          },
         },
       },
       yAxis: {
