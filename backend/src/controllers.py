@@ -520,9 +520,9 @@ def get_child_dashboard_stats(child_id):
     for skill in skills:
         total_lessons_activity_quizzes = (
             Lesson.query.filter_by(skill_id=skill.skill_id).count()
-            + Quiz.query.join(Lesson).filter(Quiz.lesson_id == Lesson.lesson_id).count()
+            + Quiz.query.join(Lesson).filter(Quiz.lesson_id == Lesson.lesson_id, Lesson.skill_id == skill.skill_id).count()
             + Activity.query.join(Lesson)
-            .filter(Activity.lesson_id == Lesson.lesson_id)
+            .filter(Activity.lesson_id == Lesson.lesson_id, Lesson.skill_id == skill.skill_id)
             .count()
         )
         
@@ -561,7 +561,7 @@ def get_child_dashboard_stats(child_id):
             )
         )
         
-        if total_lessons_activity_quizzes == completed_lesson_activity_quizzes:
+        if total_lessons_activity_quizzes == completed_lesson_activity_quizzes and total_lessons_activity_quizzes > 0:
             completed_skills += 1
         
         lessons = (
@@ -569,8 +569,6 @@ def get_child_dashboard_stats(child_id):
         )
         if not lessons:
             continue
-        
-        check = 0
         
         for lesson in lessons:
             lesson_read = LessonHistory.query.filter_by(lesson_id =lesson.lesson_id, child_id=child_id).count()
