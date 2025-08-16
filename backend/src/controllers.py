@@ -585,9 +585,10 @@ def get_user_skill_progress(child_id):
     child = Child.query.get(child_id)
     if not child:
         return jsonify({"error": "Child not found"}), 404
-    
-    age = age_calc(child.dob)
-    
+
+    age = age_calc(child.dob)  # Assuming age_calc function is defined elsewhere
+
+    # Get skills filtered by the child's age
     skills: List[Skill] = Skill.query.filter(
         Skill.min_age <= age, Skill.max_age > age
     ).all()
@@ -635,6 +636,8 @@ def get_user_skill_progress(child_id):
 
 
 def get_user_badges(child_id):
+    # child_id = current_user.child_id
+
     data = (
         db.session.query(Badge.name, Badge.image)
         .join(BadgeHistory)
