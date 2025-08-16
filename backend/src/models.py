@@ -114,8 +114,8 @@ class Activity(db.Model):
     instructions = db.Column(db.Text, nullable=True)
     difficulty = db.Column(db.Text, nullable=True)
     
-    child_id = db.Column(db.Integer, db.ForeignKey('child.child_id'), index=True)
-    parent_id = db.Column(db.Integer, db.ForeignKey('parent.parent_id'), index=True)
+    child_id = db.Column(db.Integer, db.ForeignKey('child.child_id'), index=True, nullable=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey('parent.parent_id'), index=True, nullable=True)
     lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.lesson_id'))
 
     activity_histories = db.relationship('ActivityHistory', backref='activity', lazy=True)
