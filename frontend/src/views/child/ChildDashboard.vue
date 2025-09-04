@@ -32,7 +32,17 @@ function getIntroText(name: string): string {
   return introOptions[randomIndex];
 }
 
-const user = ref({});
+interface User {
+  id?: number;
+  role?: string;
+  username?: string;
+  name?: string;
+  email?: string;
+  dob?: string;
+  school?: string;
+}
+
+const user = ref<User>({});
 
 const stats = ref([
   { label: "Lessons Completed", answer: "-" },
@@ -180,7 +190,7 @@ onMounted(async () => {
           <ChildHeatmap class="heatmap-fullwidth" />
         </div>
       </div>
-      <ChildLeaderboard :user-name="user.name" />
+      <ChildLeaderboard :userName="user.username" />
       <SkillTemplate :skillTypes="skillTypes" />
       <div class="badges-section">
         <h3>🎖️ Badges Earned</h3>

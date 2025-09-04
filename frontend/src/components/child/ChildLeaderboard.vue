@@ -13,10 +13,10 @@ const props = defineProps({
   },
 });
 
-const leaderboardStats = ref<Array<{ position: number; name: string; points: number; promoted_on: string }>>([]);
+const leaderboardStats = ref<Array<{ position: number; name: string; username: string; points: number }>>([]);
 const showAll = ref(false);
 
-const userIndex = computed(() => leaderboardStats.value.findIndex(s => s.name === props.userName));
+const userIndex = computed(() => leaderboardStats.value.findIndex(s => s.username === props.userName));
 
 const visibleRows = computed(() => {
   if (showAll.value) {
@@ -64,6 +64,7 @@ async function fetchLeaderboard() {
     leaderboardStats.value = data.map((item: any) => ({
       position: item.rank,
       name: item.name,
+      username: item.username,
       points: item.points,
     }));
   } catch (error) {
@@ -93,9 +94,9 @@ onMounted(() => {
       </div>
       <CardItem v-for="(s, i) in visibleRows" :key="i">
         <div class="leaderboard-row" :class="{
-          'leaderboard-me': s.name === props.userName,
+          'leaderboard-me': s.username === props.userName,
           'leaderboard-top': s.position === 1,
-          'leaderboard-other': s.name !== props.userName && s.position !== 1
+          'leaderboard-other': s.username !== props.userName && s.position !== 1
         }">
           <span class="leaderboard-rank">
             <span v-if="s.position === 1">🥇</span>
@@ -103,7 +104,7 @@ onMounted(() => {
             <span v-else-if="s.position === 3">🥉</span>
             <span v-else>#{{ s.position }}</span>
           </span>
-          <span class="leaderboard-name">{{ s.name === props.userName ? "👦 You" : s.name }}</span>
+          <span class="leaderboard-name">{{ s.username === props.userName ? "👦 You" : s.name }}</span>
           <span class="leaderboard-date">{{ s.points }}</span>
         </div>
       </CardItem>
